@@ -41,6 +41,22 @@ model WeighingSheet {
   buyer  Person @relation("BuyerSheets", fields: [buyerId], references: [id])
 
   createdBy User @relation(fields: [createdById], references: [id])
+cattle Cattle[]
+totalWeight   Float?
+averageWeight Float?
+
+}
+
+model Cattle {
+  id              Int      @id @default(autoincrement())
+  weighingSheetId Int
+  number          String
+  type            String   // vaca, toro, bufalo, etc.
+  sex             String   // macho/hembra
+  weight          Float
+  mark            String?  // letras o marca opcional
+
+  weighingSheet   WeighingSheet @relation(fields: [weighingSheetId], references: [id])
 }
 
 enum Role {
