@@ -1,0 +1,34 @@
+{
+  "name": "cattle-weighing-system",
+  "version": "1.0.0",
+  "description": "Web-based system to digitize cattle weighing records, manage clients, and provide secure access to weighing history.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jfmonterocortes/cattle-weighing-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jfmonterocortes/cattle-weighing-system/issues"
+  },
+  "homepage": "https://github.com/jfmonterocortes/cattle-weighing-system#readme",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.1.2",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
