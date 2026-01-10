@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Person {
+  id     Int     @id @default(autoincrement())
+  cedula String  @unique
+  name   String
+  phone  String?
+
+  users        User[]
+  sellerSheets WeighingSheet[] @relation("SellerSheets")
+  buyerSheets  WeighingSheet[] @relation("BuyerSheets")
+}
+
+model User {
+  id       Int    @id @default(autoincrement())
+  email    String @unique
+  password String
+  role     Role
+  personId Int
+
+  person Person @relation(fields: [personId], references: [id])
+
+  createdSheets WeighingSheet[]
+}
+
+model WeighingSheet {
+  id   Int      @id @default(autoincrement())
+  date DateTime @default(now())
+
+  sellerId    Int
+  buyerId     Int
+  createdById Int
+
+  seller Person @relation("SellerSheets", fields: [sellerId], references: [id])
+  buyer  Person @relation("BuyerSheets", fields: [buyerId], references: [id])
+
+  createdBy User @relation(fields: [createdById], references: [id])
+}
+
+enum Role {
+  ADMIN
+  CLIENT
+}
