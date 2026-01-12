@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { parseJwt } from "../utils/jwt";
+import { ArrowLeft, BadgePlus, User, Users, Weight } from "lucide-react";
+
+function Card({ children }) {
+  return (
+    <div className="rounded-3xl border border-zinc-800 bg-zinc-900/35 p-6 backdrop-blur">
+      {children}
+    </div>
+  );
+}
 
 export default function SheetDetail({ sheetId, onBack }) {
   const [sheet, setSheet] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Form state
+  // Admin form
   const [number, setNumber] = useState("");
   const [type, setType] = useState("vaca");
   const [sex, setSex] = useState("hembra");
@@ -51,15 +60,12 @@ export default function SheetDetail({ sheetId, onBack }) {
         mark: mark.trim() ? mark.trim() : null,
       });
 
-      // Clear inputs
       setNumber("");
       setWeight("");
       setMark("");
 
-      // Refresh sheet (to see new cattle + new totals)
       await loadSheet();
     } catch (err) {
-      // If not admin, backend returns 403
       const msg =
         err?.response?.data?.message ||
         (err?.response?.status === 403
@@ -71,118 +77,228 @@ export default function SheetDetail({ sheetId, onBack }) {
     }
   };
 
-  if (loading) return <p style={{ fontFamily: "system-ui", margin: 40 }}>Loading...</p>;
-  if (!sheet) return <p style={{ fontFamily: "system-ui", margin: 40 }}>Not found</p>;
+  if (loading) {
+    return (
+      <div className="rounded-3xl border border-zinc-800 bg-zinc-900/35 p-6 text-zinc-400">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!sheet) {
+    return (
+      <div className="rounded-3xl border border-zinc-800 bg-zinc-900/35 p-6 text-zinc-400">
+        Not found.
+      </div>
+    );
+  }
 
   return (
-    <div style={{ maxWidth: 900, margin: "40px auto", fontFamily: "system-ui" }}>
-      <button onClick={onBack}>← Back</button>
-      <h2>Planilla #{sheet.id}</h2>
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-2 text-sm hover:bg-zinc-900"
+        >
+          <ArrowLeft size={16} />
+          Back
+        </button>
 
-      <p><b>Fecha:</b> {new Date(sheet.date).toLocaleString()}</p>
-
-      <div style={{ display: "flex", gap: 40, flexWrap: "wrap" }}>
-        <div>
-          <h3>Vendedor</h3>
-          <div>{sheet.seller.name}</div>
-          <div>Cédula: {sheet.seller.cedula}</div>
-        </div>
-
-        <div>
-          <h3>Comprador</h3>
-          <div>{sheet.buyer.name}</div>
-          <div>Cédula: {sheet.buyer.cedula}</div>
+        <div className="text-right">
+          <div className="text-sm text-zinc-400">Weighing sheet</div>
+          <div className="text-2xl font-semibold tracking-tight">
+            #{sheet.id}
+          </div>
+          <div className="text-xs text-zinc-500">
+            {new Date(sheet.date).toLocaleString()}
+          </div>
         </div>
       </div>
 
-      <p><b>Total:</b> {sheet.totalWeight ?? "-"}</p>
-      <p><b>Promedio:</b> {sheet.averageWeight ?? "-"}</p>
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">
+              Overview
+            </h2>
+            <p className="mt-1 text-sm text-zinc-400">
+              Seller, buyer and computed totals.
+            </p>
+          </div>
 
-      {/* ✅ Admin form to add cattle */}
+          <div className="flex gap-4">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-right">
+              <div className="text-xs text-zinc-400">Total</div>
+              <div className="text-lg font-semibold">{sheet.totalWeight ?? "-"}</div>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-right">
+              <div className="text-xs text-zinc-400">Average</div>
+              <div className="text-lg font-semibold">{sheet.averageWeight ?? "-"}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+            <div className="flex items-center gap-2 text-zinc-300">
+              <User size={16} className="text-zinc-400" />
+              <span className="font-semibold">Seller</span>
+            </div>
+            <div className="mt-2 text-sm text-zinc-200">{sheet.seller.name}</div>
+            <div className="text-sm text-zinc-400">Cedula: {sheet.seller.cedula}</div>
+            {sheet.seller.phone && (
+              <div className="text-sm text-zinc-400">Phone: {sheet.seller.phone}</div>
+            )}
+          </div>
+
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+            <div className="flex items-center gap-2 text-zinc-300">
+              <Users size={16} className="text-zinc-400" />
+              <span className="font-semibold">Buyer</span>
+            </div>
+            <div className="mt-2 text-sm text-zinc-200">{sheet.buyer.name}</div>
+            <div className="text-sm text-zinc-400">Cedula: {sheet.buyer.cedula}</div>
+            {sheet.buyer.phone && (
+              <div className="text-sm text-zinc-400">Phone: {sheet.buyer.phone}</div>
+            )}
+          </div>
+        </div>
+      </Card>
+
       {isAdmin && (
-        <div style={{ marginTop: 24, padding: 16, border: "1px solid #ddd", borderRadius: 8 }}>
-          <h3>Agregar res</h3>
+        <Card>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold tracking-tight">Add cattle</h3>
+              <p className="text-sm text-zinc-400">
+                Add a record; totals update automatically.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-2 text-zinc-300">
+              <BadgePlus size={18} />
+            </div>
+          </div>
 
-          <form onSubmit={submitCattle} style={{ display: "grid", gap: 10, maxWidth: 420 }}>
-            <label>
-              Número
+          <form onSubmit={submitCattle} className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-sm text-zinc-300">Number</label>
               <input
-                style={{ width: "100%", padding: 10 }}
+                className="mt-1 w-full rounded-2xl bg-zinc-950/60 border border-zinc-800 px-3 py-2 outline-none focus:border-zinc-600"
                 value={number}
                 onChange={(e) => setNumber(e.target.value)}
-                placeholder="Ej: 15"
+                placeholder="15"
               />
-            </label>
+            </div>
 
-            <label>
-              Tipo
-              <select style={{ width: "100%", padding: 10 }} value={type} onChange={(e) => setType(e.target.value)}>
+            <div>
+              <label className="text-sm text-zinc-300">Mark (optional)</label>
+              <input
+                className="mt-1 w-full rounded-2xl bg-zinc-950/60 border border-zinc-800 px-3 py-2 outline-none focus:border-zinc-600"
+                value={mark}
+                onChange={(e) => setMark(e.target.value)}
+                placeholder="AB"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-zinc-300">Type</label>
+              <select
+                className="mt-1 w-full rounded-2xl bg-zinc-950/60 border border-zinc-800 px-3 py-2 outline-none focus:border-zinc-600"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+              >
                 <option value="vaca">vaca</option>
                 <option value="toro">toro</option>
                 <option value="bufalo">bufalo</option>
               </select>
-            </label>
+            </div>
 
-            <label>
-              Sexo
-              <select style={{ width: "100%", padding: 10 }} value={sex} onChange={(e) => setSex(e.target.value)}>
+            <div>
+              <label className="text-sm text-zinc-300">Sex</label>
+              <select
+                className="mt-1 w-full rounded-2xl bg-zinc-950/60 border border-zinc-800 px-3 py-2 outline-none focus:border-zinc-600"
+                value={sex}
+                onChange={(e) => setSex(e.target.value)}
+              >
                 <option value="hembra">hembra</option>
                 <option value="macho">macho</option>
               </select>
-            </label>
+            </div>
 
-            <label>
-              Peso
-              <input
-                style={{ width: "100%", padding: 10 }}
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                placeholder="Ej: 450"
-              />
-            </label>
+            <div className="sm:col-span-2">
+              <label className="text-sm text-zinc-300">Weight</label>
+              <div className="mt-1 flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-950/60 px-3 py-2 focus-within:border-zinc-600">
+                <Weight size={16} className="text-zinc-400" />
+                <input
+                  className="w-full bg-transparent outline-none text-sm"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  placeholder="450"
+                />
+              </div>
+            </div>
 
-            <label>
-              Marca (opcional)
-              <input
-                style={{ width: "100%", padding: 10 }}
-                value={mark}
-                onChange={(e) => setMark(e.target.value)}
-                placeholder="Ej: AB"
-              />
-            </label>
+            {formError && (
+              <div className="sm:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                {formError}
+              </div>
+            )}
 
-            {formError && <p style={{ color: "crimson", margin: 0 }}>{formError}</p>}
-
-            <button disabled={saving} style={{ padding: 10 }}>
-              {saving ? "Guardando..." : "Agregar"}
-            </button>
+            <div className="sm:col-span-2 flex justify-end">
+              <button
+                disabled={saving}
+                className="rounded-2xl bg-gradient-to-r from-indigo-400 via-fuchsia-400 to-cyan-300 px-4 py-2 text-sm font-semibold text-zinc-950 hover:opacity-95 disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Add cattle"}
+              </button>
+            </div>
           </form>
-        </div>
+        </Card>
       )}
 
-      <h3 style={{ marginTop: 24 }}>Reses</h3>
-      <table width="100%" cellPadding="10" style={{ borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}>
-            <th>#</th>
-            <th>Tipo</th>
-            <th>Sexo</th>
-            <th>Peso</th>
-            <th>Marca</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sheet.cattle.map((c) => (
-            <tr key={c.id} style={{ borderBottom: "1px solid #eee" }}>
-              <td>{c.number}</td>
-              <td>{c.type}</td>
-              <td>{c.sex}</td>
-              <td>{c.weight}</td>
-              <td>{c.mark ?? "-"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="rounded-3xl border border-zinc-800 bg-zinc-900/35 backdrop-blur overflow-hidden">
+        <div className="px-6 py-5 border-b border-zinc-800 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold tracking-tight">Cattle</h3>
+            <p className="text-sm text-zinc-400">Records linked to this sheet.</p>
+          </div>
+          <span className="text-xs text-zinc-400 rounded-full border border-zinc-800 bg-zinc-950/60 px-3 py-1">
+            {sheet.cattle.length} items
+          </span>
+        </div>
+
+        {sheet.cattle.length === 0 ? (
+          <div className="p-6 text-zinc-400">No cattle yet.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-zinc-400">
+                <tr className="border-b border-zinc-800">
+                  <th className="px-6 py-3 font-medium">Number</th>
+                  <th className="px-6 py-3 font-medium">Type</th>
+                  <th className="px-6 py-3 font-medium">Sex</th>
+                  <th className="px-6 py-3 font-medium">Weight</th>
+                  <th className="px-6 py-3 font-medium">Mark</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sheet.cattle.map((c) => (
+                  <tr
+                    key={c.id}
+                    className="border-b border-zinc-800/60 hover:bg-zinc-950/40 transition"
+                  >
+                    <td className="px-6 py-3 font-semibold">{c.number}</td>
+                    <td className="px-6 py-3">{c.type}</td>
+                    <td className="px-6 py-3">{c.sex}</td>
+                    <td className="px-6 py-3">{c.weight}</td>
+                    <td className="px-6 py-3">{c.mark ?? "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
