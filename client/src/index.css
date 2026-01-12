@@ -1,14 +1,10 @@
 @import "tailwindcss";
 
-:root {
-  color-scheme: dark;
-}
+/* ✅ Tailwind v4: hacer que dark: dependa de .dark (no del sistema) */
+@custom-variant dark (&:where(.dark, .dark *));
 
-* {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* Opcional: que inputs/scroll sigan el tema */
+html.dark { color-scheme: dark; }
+html:not(.dark) { color-scheme: light; }
 
-body {
-  margin: 0;
-}
+body { margin: 0; }
