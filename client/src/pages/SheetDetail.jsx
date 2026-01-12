@@ -1,14 +1,78 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
+import { parseJwt } from "../utils/jwt";
 
 export default function SheetDetail({ sheetId, onBack }) {
   const [sheet, setSheet] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Form state
+  const [number, setNumber] = useState("");
+  const [type, setType] = useState("vaca");
+  const [sex, setSex] = useState("hembra");
+  const [weight, setWeight] = useState("");
+  const [mark, setMark] = useState("");
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const token = localStorage.getItem("token");
+  const payload = useMemo(() => (token ? parseJwt(token) : null), [token]);
+  const isAdmin = payload?.role === "ADMIN";
+
+  const loadSheet = async () => {
+    setLoading(true);
+    const res = await api.get(`/planillas/${sheetId}`);
+    setSheet(res.data);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    api.get(`/planillas/${sheetId}`).then((res) => setSheet(res.data));
+    loadSheet();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheetId]);
 
-  if (!sheet) return <p style={{ fontFamily: "system-ui", margin: 40 }}>Loading...</p>;
+  const submitCattle = async (e) => {
+    e.preventDefault();
+    setFormError("");
+
+    const parsedWeight = Number(weight);
+    if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
+      setFormError("Weight must be a positive number.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await api.post(`/planillas/${sheetId}/reses`, {
+        number,
+        type,
+        sex,
+        weight: parsedWeight,
+        mark: mark.trim() ? mark.trim() : null,
+      });
+
+      // Clear inputs
+      setNumber("");
+      setWeight("");
+      setMark("");
+
+      // Refresh sheet (to see new cattle + new totals)
+      await loadSheet();
+    } catch (err) {
+      // If not admin, backend returns 403
+      const msg =
+        err?.response?.data?.message ||
+        (err?.response?.status === 403
+          ? "Only ADMIN can add cattle."
+          : "Could not add cattle.");
+      setFormError(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <p style={{ fontFamily: "system-ui", margin: 40 }}>Loading...</p>;
+  if (!sheet) return <p style={{ fontFamily: "system-ui", margin: 40 }}>Not found</p>;
 
   return (
     <div style={{ maxWidth: 900, margin: "40px auto", fontFamily: "system-ui" }}>
@@ -17,7 +81,7 @@ export default function SheetDetail({ sheetId, onBack }) {
 
       <p><b>Fecha:</b> {new Date(sheet.date).toLocaleString()}</p>
 
-      <div style={{ display: "flex", gap: 40 }}>
+      <div style={{ display: "flex", gap: 40, flexWrap: "wrap" }}>
         <div>
           <h3>Vendedor</h3>
           <div>{sheet.seller.name}</div>
@@ -31,10 +95,72 @@ export default function SheetDetail({ sheetId, onBack }) {
         </div>
       </div>
 
-      <p><b>Total:</b> {sheet.totalWeight}</p>
-      <p><b>Promedio:</b> {sheet.averageWeight}</p>
+      <p><b>Total:</b> {sheet.totalWeight ?? "-"}</p>
+      <p><b>Promedio:</b> {sheet.averageWeight ?? "-"}</p>
 
-      <h3>Reses</h3>
+      {/* ✅ Admin form to add cattle */}
+      {isAdmin && (
+        <div style={{ marginTop: 24, padding: 16, border: "1px solid #ddd", borderRadius: 8 }}>
+          <h3>Agregar res</h3>
+
+          <form onSubmit={submitCattle} style={{ display: "grid", gap: 10, maxWidth: 420 }}>
+            <label>
+              Número
+              <input
+                style={{ width: "100%", padding: 10 }}
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+                placeholder="Ej: 15"
+              />
+            </label>
+
+            <label>
+              Tipo
+              <select style={{ width: "100%", padding: 10 }} value={type} onChange={(e) => setType(e.target.value)}>
+                <option value="vaca">vaca</option>
+                <option value="toro">toro</option>
+                <option value="bufalo">bufalo</option>
+              </select>
+            </label>
+
+            <label>
+              Sexo
+              <select style={{ width: "100%", padding: 10 }} value={sex} onChange={(e) => setSex(e.target.value)}>
+                <option value="hembra">hembra</option>
+                <option value="macho">macho</option>
+              </select>
+            </label>
+
+            <label>
+              Peso
+              <input
+                style={{ width: "100%", padding: 10 }}
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="Ej: 450"
+              />
+            </label>
+
+            <label>
+              Marca (opcional)
+              <input
+                style={{ width: "100%", padding: 10 }}
+                value={mark}
+                onChange={(e) => setMark(e.target.value)}
+                placeholder="Ej: AB"
+              />
+            </label>
+
+            {formError && <p style={{ color: "crimson", margin: 0 }}>{formError}</p>}
+
+            <button disabled={saving} style={{ padding: 10 }}>
+              {saving ? "Guardando..." : "Agregar"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      <h3 style={{ marginTop: 24 }}>Reses</h3>
       <table width="100%" cellPadding="10" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}>
