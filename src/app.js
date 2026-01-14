@@ -6,6 +6,7 @@ const authRoutes = require('./routes/auth.routes');
 const pesajesRoutes = require('./routes/pesajes.routes');
 const cattleRoutes = require('./routes/cattle.routes');
 const planillasRoutes = require('./routes/planillas.routes');
+const personasRoutes = require("./routes/personas.routes");
 
 const app = express();
 
@@ -23,5 +24,6 @@ app.use('/auth', authRoutes);
 app.use('/pesajes', pesajesRoutes);
 app.use('/', cattleRoutes);
 app.use('/', planillasRoutes);
+app.use("/personas", personasRoutes);
 
 module.exports = app;

@@ -31,8 +31,8 @@ const addCattleToSheet = async (req, res) => {
       select: { weight: true },
     });
 
-    const totalWeight = weights.reduce((sum, r) => sum + r.weight, 0);
-    const averageWeight = weights.length ? totalWeight / weights.length : null;
+    const totalWeight = weights.reduce((sum, r) => sum + Number(r.weight), 0);
+    const averageWeight = weights.length ? Math.floor(totalWeight / weights.length) : null;
 
     // 3) Update sheet
     const updatedSheet = await prisma.weighingSheet.update({
