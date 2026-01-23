@@ -66,7 +66,7 @@ const agregarRes = async (e) => {
     return;
   }
 
-  const pesoTrunc = Math.trunc(pesoNum); // ✅ truncar
+  const pesoTrunc = Math.trunc(pesoNum);
 
   setGuardando(true);
   try {

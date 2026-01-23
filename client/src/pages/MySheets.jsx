@@ -61,23 +61,28 @@ export default function MySheets({ onOpen }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounce: sugerencias para buscador de planillas (nombre o teléfono)
+  // Sugerencias: usa el MISMO endpoint que ya te funciona en PersonAutocomplete
   useEffect(() => {
     const query = q.trim();
+
     if (query.length < 2) {
       setSugs([]);
       setOpenSug(false);
+      setLoadingSug(false);
       return;
     }
 
     const t = setTimeout(async () => {
       setLoadingSug(true);
       try {
-        const res = await api.get("/pesajes/sugerencias-personas", {
-          params: { q: query },
-        });
+        const res = await api.get(
+          `/personas/buscar?query=${encodeURIComponent(query)}`
+        );
         setSugs(res.data || []);
         setOpenSug(true);
+      } catch {
+        setSugs([]);
+        setOpenSug(false);
       } finally {
         setLoadingSug(false);
       }
@@ -112,7 +117,6 @@ export default function MySheets({ onOpen }) {
     e.preventDefault();
     setErrorCrear("");
 
-    // Backend: requiere nombres (teléfono solo para autocompletar/mostrar)
     if (!nombreVendedor.trim() || !nombreComprador.trim()) {
       setErrorCrear("El nombre del vendedor y del comprador es obligatorio.");
       return;
@@ -133,8 +137,7 @@ export default function MySheets({ onOpen }) {
       setNombreComprador("");
       setTelefonoComprador("");
     } catch (err) {
-      const msg =
-        err?.response?.data?.message || "No se pudo crear la planilla.";
+      const msg = err?.response?.data?.message || "No se pudo crear la planilla.";
       setErrorCrear(msg);
     } finally {
       setCreando(false);
@@ -145,33 +148,22 @@ export default function MySheets({ onOpen }) {
     <div className="space-y-6">
       {/* Estadísticas */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          icon={<FileText size={18} />}
-          label="Planillas"
-          value={totalPlanillas}
-        />
-        <StatCard
-          icon={<Sigma size={18} />}
-          label="Peso total (suma)"
-          value={pesoTotal || 0}
-        />
-        <StatCard
-          icon={<Scale size={18} />}
-          label="Promedio por planilla"
-          value={promedioPorPlanilla || 0}
-        />
+        <StatCard icon={<FileText size={18} />} label="Planillas" value={totalPlanillas} />
+        <StatCard icon={<Sigma size={18} />} label="Peso total (suma)" value={pesoTotal || 0} />
+        <StatCard icon={<Scale size={18} />} label="Promedio por planilla" value={promedioPorPlanilla || 0} />
       </div>
 
-      {/* Filtros (para CLIENT y también ADMIN) */}
-      <div className="rounded-3xl border border-zinc-200 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/35">
+      {/* Buscar planillas */}
+      {/* z-50 para que el dropdown quede por encima de la tabla */}
+      <div className="relative z-50 rounded-3xl border border-zinc-200 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/35">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
               Buscar planillas
             </h3>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Busca por <span className="font-medium">nombre o teléfono</span>{" "}
-              del vendedor o comprador, y filtra por fechas si quieres.
+              Busca por <span className="font-medium">nombre o teléfono</span> del vendedor o comprador,
+              y filtra por fechas si quieres.
             </p>
           </div>
           <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-300">
@@ -187,10 +179,7 @@ export default function MySheets({ onOpen }) {
             </label>
 
             <div className="mt-1 flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-2 focus-within:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950/60 dark:focus-within:border-zinc-600">
-              <Search
-                size={16}
-                className="text-zinc-500 dark:text-zinc-400"
-              />
+              <Search size={16} className="text-zinc-500 dark:text-zinc-400" />
               <input
                 className="w-full bg-transparent outline-none text-sm text-zinc-900 placeholder:text-zinc-400 dark:text-zinc-100"
                 value={q}
@@ -204,50 +193,59 @@ export default function MySheets({ onOpen }) {
                 placeholder="Ej: Lucas o 300"
               />
               {loadingSug && (
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                  ...
-                </span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">...</span>
               )}
             </div>
 
-            {openSug && sugs.length > 0 && (
-              <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-950">
-                {sugs.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={async () => {
-                      // ✅ Si tiene teléfono, usamos teléfono (mejor precisión). Si no, nombre.
-                      const value = p.phone ? p.phone : p.name;
-                      setQ(value);
-                      setOpenSug(false);
+            {/* Dropdown: muestra también “Buscando…” y “Sin resultados” */}
+            {openSug && (loadingSug || sugs.length > 0) && (
+              <div className="absolute z-[9999] mt-2 w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-950">
+                {loadingSug && (
+                  <div className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
+                    Buscando...
+                  </div>
+                )}
 
-                      await cargarPlanillas({
-                        q: value,
-                        from: from || undefined,
-                        to: to || undefined,
-                      });
-                    }}
-                    className="w-full px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                  >
-                    <div className="font-medium text-zinc-900 dark:text-zinc-100">
-                      {p.name}
-                    </div>
-                    <div className="text-xs text-zinc-600 dark:text-zinc-400">
-                      {p.phone ? p.phone : "Sin teléfono"}
-                    </div>
-                  </button>
-                ))}
+                {!loadingSug && sugs.length === 0 && (
+                  <div className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
+                    Sin resultados.
+                  </div>
+                )}
+
+                {!loadingSug &&
+                  sugs.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={async () => {
+                        const value = p.phone ? p.phone : p.name;
+                        setQ(value);
+                        setOpenSug(false);
+
+                        await cargarPlanillas({
+                          q: value,
+                          from: from || undefined,
+                          to: to || undefined,
+                        });
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                    >
+                      <div className="font-medium text-zinc-900 dark:text-zinc-100">
+                        {p.name}
+                      </div>
+                      <div className="text-xs text-zinc-600 dark:text-zinc-400">
+                        {p.phone ? p.phone : "Sin teléfono"}
+                      </div>
+                    </button>
+                  ))}
               </div>
             )}
           </div>
 
           {/* Fecha desde */}
           <div>
-            <label className="text-sm text-zinc-700 dark:text-zinc-300">
-              Desde
-            </label>
+            <label className="text-sm text-zinc-700 dark:text-zinc-300">Desde</label>
             <input
               type="date"
               className="mt-1 w-full rounded-2xl bg-white border border-zinc-200 px-3 py-2 outline-none focus:border-zinc-400 dark:bg-zinc-950/60 dark:border-zinc-800 dark:focus:border-zinc-600"
@@ -258,9 +256,7 @@ export default function MySheets({ onOpen }) {
 
           {/* Fecha hasta */}
           <div>
-            <label className="text-sm text-zinc-700 dark:text-zinc-300">
-              Hasta
-            </label>
+            <label className="text-sm text-zinc-700 dark:text-zinc-300">Hasta</label>
             <input
               type="date"
               className="mt-1 w-full rounded-2xl bg-white border border-zinc-200 px-3 py-2 outline-none focus:border-zinc-400 dark:bg-zinc-950/60 dark:border-zinc-800 dark:focus:border-zinc-600"
@@ -290,15 +286,15 @@ export default function MySheets({ onOpen }) {
 
       {/* Crear planilla (Admin) */}
       {esAdmin && (
-        <div className="rounded-3xl border border-zinc-200 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/35">
+        <div className="relative z-50 rounded-3xl border border-zinc-200 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/35">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
                 Crear nueva planilla
               </h3>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Busca por <span className="font-medium">nombre o teléfono</span>{" "}
-                y selecciona. Si no existe, escribe los datos para crearlo.
+                Busca por <span className="font-medium">nombre o teléfono</span> y selecciona.
+                Si no existe, escribe los datos para crearlo.
               </p>
             </div>
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-300">
@@ -330,9 +326,7 @@ export default function MySheets({ onOpen }) {
             <div className="sm:col-span-2 flex items-center justify-between gap-3">
               <div className="min-h-[20px]">
                 {errorCrear && (
-                  <p className="text-sm text-red-600 dark:text-red-300">
-                    {errorCrear}
-                  </p>
+                  <p className="text-sm text-red-600 dark:text-red-300">{errorCrear}</p>
                 )}
               </div>
 
@@ -348,7 +342,7 @@ export default function MySheets({ onOpen }) {
       )}
 
       {/* Tabla planillas */}
-      <div className="rounded-3xl border border-zinc-200 bg-white/80 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/35 overflow-hidden">
+      <div className="relative z-0 rounded-3xl border border-zinc-200 bg-white/80 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/35">
         <div className="px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -367,9 +361,7 @@ export default function MySheets({ onOpen }) {
         {cargando ? (
           <div className="p-6 text-zinc-600 dark:text-zinc-400">Cargando…</div>
         ) : planillas.length === 0 ? (
-          <div className="p-6 text-zinc-600 dark:text-zinc-400">
-            No hay planillas.
-          </div>
+          <div className="p-6 text-zinc-600 dark:text-zinc-400">No hay planillas.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

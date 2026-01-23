@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ✅ Tailwind v4: hacer que dark: dependa de .dark (no del sistema) */
+/* Tailwind v4: hacer que dark: dependa de .dark (no del sistema) */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Opcional: que inputs/scroll sigan el tema */
