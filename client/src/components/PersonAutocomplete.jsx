@@ -1,185 +1,166 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { api } from "../api";
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { api } from '../api';
 
 export default function PersonAutocomplete({
   label,
-  valueName,
-  valuePhone,
-  onChangeName,
-  onChangePhone,
-  placeholderName = "Nombre",
-  placeholderPhone = "Teléfono",
+  value,
+  onSelect,
+  onCreate,
+  onError,
+  placeholder = 'Buscar persona por nombre o teléfono',
 }) {
-  const [query, setQuery] = useState("");
-  const [items, setItems] = useState([]);
+  const [query, setQuery] = useState(value?.name || '');
+  const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [dropdownStyle, setDropdownStyle] = useState({ top: 0, left: 0, width: 0 });
 
-  const boxRef = useRef(null);
-  const debounceRef = useRef(null);
+  const containerRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const timeoutRef = useRef(null);
 
-  // posición del dropdown (fixed)
-  const [pos, setPos] = useState({ left: 0, top: 0, width: 0 });
+  const showCreate = useMemo(
+    () => query.trim().length >= 2 && !loading && results.length === 0 && !error && typeof onCreate === 'function',
+    [query, loading, results, error, onCreate]
+  );
 
-  const shouldShow = useMemo(() => open && (loading || items.length > 0), [open, loading, items]);
-
-  const updatePosition = () => {
-    const el = boxRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    setPos({
-      left: rect.left,
-      top: rect.bottom + 8,
-      width: rect.width,
-    });
-  };
-
-  // Click afuera cierra
   useEffect(() => {
-    const onDoc = (e) => {
-      if (!boxRef.current) return;
-      if (!boxRef.current.contains(e.target)) setOpen(false);
+    setQuery(value?.name || '');
+  }, [value?.id, value?.name]);
+
+  useEffect(() => {
+    const handleOutside = (event) => {
+      const target = event.target;
+      const insideInput = containerRef.current?.contains(target);
+      const insideDropdown = dropdownRef.current?.contains(target);
+      if (!insideInput && !insideDropdown) {
+        setOpen(false);
+      }
     };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
   }, []);
 
-  // Debounce búsqueda (sirve para nombre o teléfono)
+  useEffect(() => {
+    if (!open || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setDropdownStyle({
+      top: rect.bottom + 8,
+      left: rect.left,
+      width: rect.width,
+    });
+  }, [open, results.length, query.length]);
+
   useEffect(() => {
     const q = query.trim();
-    if (!q) {
-      setItems([]);
-      setOpen(false);
+    if (q.length < 2) {
+      setResults([]);
+      setError('');
       return;
     }
 
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    debounceRef.current = setTimeout(async () => {
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(async () => {
+      setLoading(true);
+      setError('');
       try {
-        setLoading(true);
-        const res = await api.get("/personas/buscar", { params: { query: q } });
-        setItems(res.data || []);
+        const res = await api.get('/people/search', { params: { q, limit: 8 } });
+        setResults(res.data || []);
         setOpen(true);
-      } catch {
-        setItems([]);
-        setOpen(true);
+      } catch (err) {
+        const msg = err?.response?.data?.message || 'Error buscando personas';
+        setResults([]);
+        setError(msg);
+        onError?.(msg);
       } finally {
         setLoading(false);
       }
     }, 250);
 
-    return () => debounceRef.current && clearTimeout(debounceRef.current);
-  }, [query]);
+    return () => clearTimeout(timeoutRef.current);
+  }, [query, onError]);
 
-  // recalcula posición cuando abre / cambia contenido
-  useLayoutEffect(() => {
-    if (!open) return;
-    updatePosition();
-
-    const onScroll = () => updatePosition();
-    const onResize = () => updatePosition();
-
-    window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      window.removeEventListener("scroll", onScroll, true);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [open, items.length, valueName, valuePhone]);
-
-  const pick = (p) => {
-    onChangeName(p.name);
-    onChangePhone(p.phone || "");
-    setQuery("");
+  const selectItem = (person) => {
+    setQuery(person.name);
     setOpen(false);
+    setError('');
+    onSelect?.(person);
   };
-
-  const nameInputOnChange = (v) => {
-    onChangeName(v);
-    setQuery(v); // busca por nombre
-    setOpen(true);
-  };
-
-  const phoneInputOnChange = (v) => {
-    onChangePhone(v);
-    setQuery(v); // busca por teléfono
-    setOpen(true);
-  };
-
-  const dropdown = shouldShow
-    ? createPortal(
-      <div
-        style={{
-          position: "fixed",
-          left: pos.left,
-          top: pos.top,
-          width: pos.width,
-          zIndex: 999999,
-        }}
-        className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
-      >
-        {loading && (
-          <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400">
-            Buscando...
-          </div>
-        )}
-
-        {!loading && items.length === 0 && (
-          <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400">
-            Sin resultados.
-          </div>
-        )}
-
-        {!loading &&
-          items.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onMouseDown={(e) => e.preventDefault()} // evita blur antes del click
-              onClick={() => pick(p)}
-              className="w-full px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
-            >
-              <div className="font-medium text-zinc-900 dark:text-zinc-100">{p.name}</div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                {p.phone || "Sin teléfono"}
-              </div>
-            </button>
-          ))}
-      </div>,
-      document.body
-    )
-    : null;
 
   return (
     <>
-      <div ref={boxRef}>
-        <label className="text-sm text-zinc-700 dark:text-zinc-300">{label}</label>
-
-        <div className="mt-1 grid gap-2 sm:grid-cols-2">
-          <input
-            className="w-full rounded-2xl bg-white border border-zinc-200 px-3 py-2 outline-none focus:border-zinc-400 dark:bg-zinc-950/60 dark:border-zinc-800 dark:focus:border-zinc-600"
-            value={valueName}
-            onChange={(e) => nameInputOnChange(e.target.value)}
-            onFocus={() => (items.length ? setOpen(true) : null)}
-            placeholder={placeholderName}
-            autoComplete="off"
-          />
-
-          <input
-            className="w-full rounded-2xl bg-white border border-zinc-200 px-3 py-2 outline-none focus:border-zinc-400 dark:bg-zinc-950/60 dark:border-zinc-800 dark:focus:border-zinc-600"
-            value={valuePhone}
-            onChange={(e) => phoneInputOnChange(e.target.value)}
-            onFocus={() => (items.length ? setOpen(true) : null)}
-            placeholder={placeholderPhone}
-            autoComplete="off"
-          />
-        </div>
+      <div ref={containerRef}>
+        <label className="text-sm text-zinc-300">{label}</label>
+        <input
+          className="mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setOpen(true)}
+          placeholder={placeholder}
+          autoComplete="off"
+        />
       </div>
 
-      {dropdown}
+      {open &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            style={{
+              position: 'fixed',
+              top: dropdownStyle.top,
+              left: dropdownStyle.left,
+              width: dropdownStyle.width,
+              zIndex: 10000,
+            }}
+            className="overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {loading && <div className="px-3 py-2 text-sm text-zinc-400">Buscando...</div>}
+
+            {!loading && error && <div className="px-3 py-2 text-sm text-red-300">{error}</div>}
+
+            {!loading && !error && results.length === 0 && query.trim().length >= 2 && (
+              <div className="px-3 py-2 text-sm text-zinc-400">Sin resultados.</div>
+            )}
+
+            {!loading &&
+              !error &&
+              results.map((person) => (
+                <button
+                  key={person.id}
+                  type="button"
+                  className="w-full px-3 py-2 text-left hover:bg-zinc-800"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => selectItem(person)}
+                >
+                  <div className="text-sm font-medium text-zinc-100">{person.name}</div>
+                  <div className="text-xs text-zinc-400">
+                    {person.phone || 'Sin teléfono'} {person.cedula ? `- CI ${person.cedula}` : ''}
+                  </div>
+                </button>
+              ))}
+
+            {showCreate && (
+              <button
+                type="button"
+                className="w-full border-t border-zinc-700 px-3 py-2 text-left text-sm text-emerald-300 hover:bg-zinc-800"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setOpen(false);
+                  onCreate(query.trim());
+                }}
+              >
+                Crear persona "{query.trim()}"
+              </button>
+            )}
+          </div>,
+          document.body
+        )}
     </>
   );
 }
+
+

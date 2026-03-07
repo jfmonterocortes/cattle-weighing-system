@@ -1,29 +1,42 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
 
 const authRoutes = require('./routes/auth.routes');
-const pesajesRoutes = require('./routes/pesajes.routes');
-const cattleRoutes = require('./routes/cattle.routes');
-const planillasRoutes = require('./routes/planillas.routes');
-const personasRoutes = require("./routes/personas.routes");
+const personRoutes = require('./routes/person.routes');
+const sheetRoutes = require('./routes/sheet.routes');
+const linkRoutes = require('./routes/link.routes');
+const settingsRoutes = require('./routes/settings.routes');
+const exportRoutes = require('./routes/export.routes');
+const userRoutes = require('./routes/user.routes');
+const { notFoundHandler, errorHandler } = require('./middlewares/error.middleware');
 
 const app = express();
 
-// Middlewares
-app.use(cors());
-app.use(express.json());
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || '*',
+  })
+);
+app.use(helmet());
+app.use(express.json({ limit: '1mb' }));
+app.use(morgan('dev'));
 
-// Test route
-app.get('/', (req, res) => {
-  res.json({ message: 'Cattle Weighing API running' });
+app.get('/health', (req, res) => {
+  res.json({ ok: true, service: 'cattle-weighing-api' });
 });
 
-// Routes
 app.use('/auth', authRoutes);
-app.use('/pesajes', pesajesRoutes);
-app.use('/', cattleRoutes);
-app.use('/', planillasRoutes);
-app.use("/personas", personasRoutes);
+app.use('/people', personRoutes);
+app.use('/sheets', sheetRoutes);
+app.use('/link-requests', linkRoutes);
+app.use('/settings', settingsRoutes);
+app.use('/exports', exportRoutes);
+app.use('/users', userRoutes);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 module.exports = app;

@@ -1,362 +1,436 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { api } from "../api";
-import { parseJwt } from "../utils/jwt";
-import { ArrowLeft, BadgePlus, User, Users, Weight } from "lucide-react";
+﻿import { useEffect, useMemo, useState } from 'react';
+import { api } from '../api';
+import { parseJwt } from '../utils/jwt';
 
-function Card({ children }) {
-  return (
-    <div className="rounded-3xl border border-zinc-200 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/35">
-      {children}
-    </div>
-  );
+const TYPE_OPTIONS = ['VACA', 'TORO', 'BUFALO', 'NOVILLO', 'TERNERO'];
+const SEX_OPTIONS = ['MACHO', 'HEMBRA'];
+
+function canEdit(role, sheet, userId) {
+  if (role === 'ADMIN') return true;
+  if (role === 'LIQUIDADOR' && sheet.createdById === userId) {
+    return new Date() <= new Date(sheet.editableUntilByLiquidador);
+  }
+  return false;
+}
+
+function feedbackClass(type) {
+  if (type === 'error') return 'text-red-300';
+  if (type === 'success') return 'text-emerald-300';
+  return 'text-zinc-400';
 }
 
 export default function SheetDetail({ sheetId, onBack }) {
-  const [planilla, setPlanilla] = useState(null);
-  const [cargando, setCargando] = useState(true);
-
-  // Admin form
-  const [numero, setNumero] = useState("");
-  const [tipo, setTipo] = useState("vaca");
-  const [sexo, setSexo] = useState("hembra");
-  const [peso, setPeso] = useState("");
-  const [marca, setMarca] = useState("");
-  const [errorForm, setErrorForm] = useState("");
-  const [guardando, setGuardando] = useState(false);
-
-  const typeRef = useRef(null);
-const sexRef = useRef(null);
-const weightRef = useRef(null);
-const numberRef = useRef(null);
-const markRef = useRef(null);
-
-const token = localStorage.getItem("token");
+  const token = localStorage.getItem('token');
   const payload = useMemo(() => (token ? parseJwt(token) : null), [token]);
-  const esAdmin = payload?.role === "ADMIN";
+  const role = payload?.role;
+  const userId = payload?.userId;
 
-  const cargarPlanilla = async () => {
-    setCargando(true);
-    const res = await api.get(`/planillas/${sheetId}`);
-    setPlanilla(res.data);
-    setCargando(false);
+  const [sheet, setSheet] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [actionFeedback, setActionFeedback] = useState({ type: '', message: '' });
+  const [draftRow, setDraftRow] = useState({ type: 'TERNERO', sex: 'MACHO', weight: '', cattleNumber: '', letters: '' });
+  const [saving, setSaving] = useState(false);
 
+  const loadDetail = async () => {
+    setLoading(true);
+    setLoadError('');
+
+    try {
+      const res = await api.get(`/sheets/${sheetId}`);
+      setSheet(res.data);
+    } catch (error) {
+      setSheet(null);
+      setLoadError(error.response?.data?.message || 'No se pudo cargar la planilla.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    cargarPlanilla();
+    loadDetail();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheetId]);
 
-const onQuickKeyDown = (e) => {
-  if (e.key !== "Enter") return;
+  const editable = sheet ? canEdit(role, sheet, userId) : false;
 
-  // Enter o Ctrl+Enter (ambos)
-  e.preventDefault();
-  agregarRes(e);
-};
-  
-const agregarRes = async (e) => {
-  e.preventDefault();
-  setErrorForm("");
+  const suggestNumber = async () => {
+    try {
+      const res = await api.get(`/sheets/${sheetId}/rows/next-number`);
+      setDraftRow((prev) => ({ ...prev, cattleNumber: res.data.cattleNumber }));
+    } catch {
+      // no-op
+    }
+  };
 
-  const pesoNum = Number(peso);
-  if (!Number.isFinite(pesoNum) || pesoNum <= 0) {
-    setErrorForm("El peso debe ser un número positivo.");
-    weightRef.current?.focus();
-    return;
-  }
+  useEffect(() => {
+    if (sheet) suggestNumber();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheet?.id]);
 
-  const pesoTrunc = Math.trunc(pesoNum);
+  const addRow = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setActionFeedback({ type: '', message: '' });
 
-  setGuardando(true);
-  try {
-    await api.post(`/planillas/${sheetId}/reses`, {
-      number: numero,
-      type: tipo,
-      sex: sexo,
-      weight: pesoTrunc,
-      mark: marca.trim() ? marca.trim() : null,
-    });
+    try {
+      await api.post(`/sheets/${sheetId}/rows`, {
+        type: draftRow.type,
+        sex: draftRow.sex,
+        weight: Math.trunc(Number(draftRow.weight || 0)),
+        cattleNumber: draftRow.cattleNumber || '1',
+        letters: draftRow.letters || null,
+      });
+      setDraftRow({ type: 'TERNERO', sex: 'MACHO', weight: '', cattleNumber: '', letters: '' });
+      setActionFeedback({ type: 'success', message: 'Fila agregada correctamente.' });
+      await loadDetail();
+    } catch (error) {
+      setActionFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo agregar la fila.' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    setNumero("");
-    setPeso("");
-    setMarca("");
+  const updateRowField = async (rowId, patch) => {
+    setActionFeedback({ type: '', message: '' });
+    try {
+      await api.patch(`/sheets/${sheetId}/rows/${rowId}`, patch);
+      await loadDetail();
+    } catch (error) {
+      setActionFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar la fila.' });
+    }
+  };
 
-    await cargarPlanilla();
+  const deleteRow = async (rowId) => {
+    setActionFeedback({ type: '', message: '' });
+    try {
+      await api.delete(`/sheets/${sheetId}/rows/${rowId}`);
+      setActionFeedback({ type: 'success', message: 'Fila eliminada.' });
+      await loadDetail();
+    } catch (error) {
+      setActionFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo eliminar la fila.' });
+    }
+  };
 
-    // ✅ vuelve el foco al tipo para seguir rápido
-    typeRef.current?.focus();
-  } catch (err) {
-    const msg =
-      err?.response?.data?.message ||
-      (err?.response?.status === 403
-        ? "Solo ADMIN puede agregar reses."
-        : "No se pudo agregar la res.");
-    setErrorForm(msg);
-  } finally {
-    setGuardando(false);
-  }
-};
+  const onDragStart = (event, rowId) => {
+    event.dataTransfer.setData('text/plain', String(rowId));
+  };
 
+  const onDropRow = async (event, targetRowId) => {
+    event.preventDefault();
+    const sourceId = Number(event.dataTransfer.getData('text/plain'));
+    if (!sourceId || sourceId === targetRowId) return;
 
-  if (cargando) {
-    return (
-      <div className="rounded-3xl border border-zinc-200 bg-white/80 p-6 text-zinc-600 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/35 dark:text-zinc-400">
-        Cargando…
-      </div>
-    );
-  }
+    const ids = sheet.rows.map((row) => row.id);
+    const sourceIndex = ids.indexOf(sourceId);
+    const targetIndex = ids.indexOf(targetRowId);
+    if (sourceIndex === -1 || targetIndex === -1) return;
 
-  if (!planilla) {
-    return (
-      <div className="rounded-3xl border border-zinc-200 bg-white/80 p-6 text-zinc-600 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/35 dark:text-zinc-400">
-        No encontrada.
-      </div>
-    );
-  }
+    ids.splice(sourceIndex, 1);
+    ids.splice(targetIndex, 0, sourceId);
+
+    setActionFeedback({ type: '', message: '' });
+    try {
+      await api.post(`/sheets/${sheetId}/rows/reorder`, { orderedRowIds: ids });
+      setActionFeedback({ type: 'success', message: 'Filas reordenadas.' });
+      await loadDetail();
+    } catch (error) {
+      setActionFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudieron reordenar las filas.' });
+    }
+  };
+
+  const togglePayment = async () => {
+    setActionFeedback({ type: '', message: '' });
+    try {
+      await api.post(`/sheets/${sheetId}/payment-status`, {
+        isPaid: !sheet.isPaid,
+        notes: sheet.isPaid ? 'Marcada pendiente' : 'Marcada pagada',
+      });
+      setActionFeedback({ type: 'success', message: `Estado actualizado: ${sheet.isPaid ? 'Pendiente' : 'Pagada'}.` });
+      await loadDetail();
+    } catch (error) {
+      setActionFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar el pago.' });
+    }
+  };
+
+  const exportPdf = async () => {
+    setActionFeedback({ type: '', message: '' });
+    try {
+      const res = await api.get(`/exports/sheet/${sheetId}/pdf`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `planilla-${sheet.visibleNumber}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setActionFeedback({ type: 'success', message: 'PDF generado correctamente.' });
+    } catch (error) {
+      setActionFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo exportar el PDF.' });
+    }
+  };
+
+  if (loading) return <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">Cargando...</div>;
+  if (loadError) return <div className="rounded-2xl border border-red-700/50 bg-red-950/30 p-6 text-red-200">{loadError}</div>;
+  if (!sheet) return <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">Planilla no encontrada.</div>;
+
+  const groupedStats = sheet.computed?.totalsByTypeSex || [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <button
-          onClick={onBack}
-          className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm shadow-sm hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40 dark:hover:bg-zinc-900"
-        >
-          <ArrowLeft size={16} />
-          Volver
-        </button>
-
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <button onClick={onBack} className="rounded-xl border border-zinc-700 px-3 py-2 text-sm">Volver</button>
         <div className="text-right">
-          <div className="text-sm text-zinc-600 dark:text-zinc-400">Planilla</div>
-          <div className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-            #{planilla.id}
+          <h2 className="text-xl font-semibold">Planilla {sheet.visibleNumber}</h2>
+          <p className="text-sm text-zinc-400">{new Date(sheet.date).toLocaleString()}</p>
+        </div>
+      </div>
+
+      {actionFeedback.message && (
+        <div className={`rounded-lg border px-3 py-2 text-sm ${actionFeedback.type === 'error' ? 'border-red-700/50 bg-red-950/30' : 'border-emerald-700/40 bg-emerald-950/20'}`}>
+          <span className={feedbackClass(actionFeedback.type)}>{actionFeedback.message}</span>
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 grid gap-3 md:grid-cols-3">
+        <div>
+          <div className="text-xs text-zinc-500">Vendedor</div>
+          <div className="font-medium">{sheet.seller.name}</div>
+          <div className="text-xs text-zinc-500">{sheet.seller.phone || 'Sin teléfono'}</div>
+        </div>
+        <div>
+          <div className="text-xs text-zinc-500">Comprador</div>
+          <div className="font-medium">{sheet.buyer.name}</div>
+          <div className="text-xs text-zinc-500">{sheet.buyer.phone || 'Sin teléfono'}</div>
+        </div>
+        <div>
+          <div className="text-xs text-zinc-500">Liquidador</div>
+          <div className="font-medium">{sheet.liquidadorAliasSnapshot}</div>
+          <div className="text-xs text-zinc-500">Precio/cabeza: {sheet.pricePerHead}</div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+        <h3 className="text-lg font-semibold">Resumen de pesos</h3>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <div className="text-xs text-zinc-500">Cabezas</div>
+            <div className="text-lg font-semibold">{sheet.headCount}</div>
           </div>
-          <div className="text-xs text-zinc-500 dark:text-zinc-500">
-            {new Date(planilla.date).toLocaleString()}
+          <div>
+            <div className="text-xs text-zinc-500">Peso total</div>
+            <div className="text-lg font-semibold">{sheet.totalWeight}</div>
+          </div>
+          <div>
+            <div className="text-xs text-zinc-500">Promedio general</div>
+            <div className="text-lg font-semibold">{sheet.averageWeight}</div>
+          </div>
+          <div>
+            <div className="text-xs text-zinc-500">Valor total</div>
+            <div className="text-lg font-semibold">{sheet.totalValue}</div>
+          </div>
+          <div>
+            <div className="text-xs text-zinc-500">Total machos</div>
+            <div className="text-lg font-semibold">{sheet.totalMaleWeight}</div>
+          </div>
+          <div>
+            <div className="text-xs text-zinc-500">Promedio machos</div>
+            <div className="text-lg font-semibold">{sheet.averageMaleWeight}</div>
+          </div>
+          <div>
+            <div className="text-xs text-zinc-500">Total hembras</div>
+            <div className="text-lg font-semibold">{sheet.totalFemaleWeight}</div>
+          </div>
+          <div>
+            <div className="text-xs text-zinc-500">Promedio hembras</div>
+            <div className="text-lg font-semibold">{sheet.averageFemaleWeight}</div>
           </div>
         </div>
       </div>
 
-      <Card>
-        <div className="flex flex-wrap items-start justify-between gap-6">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              Resumen
-            </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Vendedor, comprador y cálculos de peso.
-            </p>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right dark:border-zinc-800 dark:bg-zinc-950/60">
-              <div className="text-xs text-zinc-600 dark:text-zinc-400">Total</div>
-              <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                {planilla.totalWeight ?? "-"}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right dark:border-zinc-800 dark:bg-zinc-950/60">
-              <div className="text-xs text-zinc-600 dark:text-zinc-400">Promedio</div>
-              <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                {planilla.averageWeight ?? "-"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-3xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950/60">
-            <div className="flex items-center gap-2 text-zinc-800 dark:text-zinc-200">
-              <User size={16} className="text-zinc-500 dark:text-zinc-400" />
-              <span className="font-semibold">Vendedor</span>
-            </div>
-            <div className="mt-2 text-sm text-zinc-900 dark:text-zinc-100">{planilla.seller.name}</div>
-            <div className="text-sm text-zinc-600 dark:text-zinc-400">Cédula: {planilla.seller.cedula}</div>
-            {planilla.seller.phone && (
-              <div className="text-sm text-zinc-600 dark:text-zinc-400">Teléfono: {planilla.seller.phone}</div>
-            )}
-          </div>
-
-          <div className="rounded-3xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950/60">
-            <div className="flex items-center gap-2 text-zinc-800 dark:text-zinc-200">
-              <Users size={16} className="text-zinc-500 dark:text-zinc-400" />
-              <span className="font-semibold">Comprador</span>
-            </div>
-            <div className="mt-2 text-sm text-zinc-900 dark:text-zinc-100">{planilla.buyer.name}</div>
-            <div className="text-sm text-zinc-600 dark:text-zinc-400">Cédula: {planilla.buyer.cedula}</div>
-            {planilla.buyer.phone && (
-              <div className="text-sm text-zinc-600 dark:text-zinc-400">Teléfono: {planilla.buyer.phone}</div>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {esAdmin && (
-        <Card>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                Agregar res
-              </h3>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Agrega un registro; el total y el promedio se actualizan automáticamente.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-300">
-              <BadgePlus size={18} />
-            </div>
-          </div>
-
-          <form onSubmit={agregarRes} className="mt-5 grid gap-3 sm:grid-cols-2">
-  {/* Tipo */}
-  <div>
-    <label className="text-sm text-zinc-700 dark:text-zinc-300">Tipo</label>
-    <select
-      ref={typeRef}
-      onKeyDown={onQuickKeyDown}
-      className="mt-1 w-full rounded-2xl bg-white border border-zinc-200 px-3 py-2 outline-none focus:border-zinc-400 dark:bg-zinc-950/60 dark:border-zinc-800 dark:focus:border-zinc-600"
-      value={tipo}
-      onChange={(e) => {
-        const t = e.target.value;
-        setTipo(t);
-        if (t === "vaca") setSexo("hembra");
-        else if (t === "toro") setSexo("macho");
-      }}
-    >
-      <option value="vaca">VACA</option>
-      <option value="toro">TORO</option>
-      <option value="bufalo">BÚFALO</option>
-      <option value="ternero">TERNERO</option>
-      <option value="novillo">NOVILLO</option>
-    </select>
-  </div>
-
-  {/* Sexo */}
-  <div>
-    <label className="text-sm text-zinc-700 dark:text-zinc-300">Sexo</label>
-    <select
-      ref={sexRef}
-      onKeyDown={onQuickKeyDown}
-      className="mt-1 w-full rounded-2xl bg-white border border-zinc-200 px-3 py-2 outline-none focus:border-zinc-400 dark:bg-zinc-950/60 dark:border-zinc-800 dark:focus:border-zinc-600"
-      value={sexo}
-      onChange={(e) => setSexo(e.target.value)}
-    >
-      <option value="hembra">HEMBRA</option>
-      <option value="macho">MACHO</option>
-    </select>
-  </div>
-
-  {/* Peso */}
-  <div className="sm:col-span-2">
-    <label className="text-sm text-zinc-700 dark:text-zinc-300">Peso</label>
-    <div className="mt-1 flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-2 focus-within:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950/60 dark:focus-within:border-zinc-600">
-      <Weight size={16} className="text-zinc-500 dark:text-zinc-400" />
-      <input
-        ref={weightRef}
-        onKeyDown={onQuickKeyDown}
-        className="w-full bg-transparent outline-none text-sm"
-        value={peso}
-        onChange={(e) => setPeso(e.target.value)}
-        placeholder="450"
-        inputMode="decimal"
-      />
-    </div>
-  </div>
-
-  {/* Número */}
-  <div>
-    <label className="text-sm text-zinc-700 dark:text-zinc-300">Número</label>
-    <input
-      ref={numberRef}
-      onKeyDown={onQuickKeyDown}
-      className="mt-1 w-full rounded-2xl bg-white border border-zinc-200 px-3 py-2 outline-none focus:border-zinc-400 dark:bg-zinc-950/60 dark:border-zinc-800 dark:focus:border-zinc-600"
-      value={numero}
-      onChange={(e) => setNumero(e.target.value)}
-      placeholder="15"
-    />
-  </div>
-
-  {/* Marca */}
-  <div>
-    <label className="text-sm text-zinc-700 dark:text-zinc-300">Marca (opcional)</label>
-    <input
-      ref={markRef}
-      onKeyDown={onQuickKeyDown}
-      className="mt-1 w-full rounded-2xl bg-white border border-zinc-200 px-3 py-2 outline-none focus:border-zinc-400 dark:bg-zinc-950/60 dark:border-zinc-800 dark:focus:border-zinc-600"
-      value={marca}
-      onChange={(e) => setMarca(e.target.value)}
-      placeholder="AB"
-    />
-  </div>
-
-  {/* Errores + botón */}
-  {errorForm && (
-    <div className="sm:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-300">
-      {errorForm}
-    </div>
-  )}
-
-  <div className="sm:col-span-2 flex justify-end">
-    <button
-      disabled={guardando}
-      className="rounded-2xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-      title="Enter o Ctrl+Enter para guardar"
-    >
-      {guardando ? "Guardando..." : "Agregar res"}
-    </button>
-  </div>
-</form>
-
-        </Card>
-      )}
-
-      <div className="rounded-3xl border border-zinc-200 bg-white/80 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/35 overflow-hidden">
-        <div className="px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              Reses
-            </h3>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Registros asociados a esta planilla.
-            </p>
-          </div>
-          <span className="text-xs text-zinc-600 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 dark:text-zinc-400 dark:border-zinc-800 dark:bg-zinc-950/60">
-            {planilla.cattle.length} registros
-          </span>
-        </div>
-
-        {planilla.cattle.length === 0 ? (
-          <div className="p-6 text-zinc-600 dark:text-zinc-400">Aún no hay reses.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-zinc-600 dark:text-zinc-400">
-                <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                  <th className="px-6 py-3 font-medium">Número</th>
-                  <th className="px-6 py-3 font-medium">Tipo</th>
-                  <th className="px-6 py-3 font-medium">Sexo</th>
-                  <th className="px-6 py-3 font-medium">Peso</th>
-                  <th className="px-6 py-3 font-medium">Marca</th>
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+        <h3 className="text-lg font-semibold">Desglose por tipo y sexo</h3>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-zinc-400">
+              <tr>
+                <th className="px-2 py-2">Especificación</th>
+                <th className="px-2 py-2">Cantidad</th>
+                <th className="px-2 py-2">Peso total</th>
+                <th className="px-2 py-2">Promedio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groupedStats.length === 0 && (
+                <tr>
+                  <td className="px-2 py-3 text-zinc-500" colSpan={4}>Sin datos de desglose.</td>
                 </tr>
-              </thead>
-              <tbody>
-                {planilla.cattle.map((r) => (
-                  <tr
-                    key={r.id}
-                    className="border-b border-zinc-200/70 hover:bg-zinc-50 transition dark:border-zinc-800/60 dark:hover:bg-zinc-950/40"
-                  >
-                    <td className="px-6 py-3 font-semibold text-zinc-900 dark:text-zinc-100">{r.number}</td>
-                    <td className="px-6 py-3 uppercase">{r.type}</td>
-                    <td className="px-6 py-3 uppercase">{r.sex}</td>
-                    <td className="px-6 py-3">{r.weight}</td>
-                    <td className="px-6 py-3">{r.mark ?? "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              )}
+              {groupedStats.map((group) => (
+                <tr key={`${group.type}-${group.sex}`} className="border-t border-zinc-800 text-zinc-200">
+                  <td className="px-2 py-2 capitalize">{group.specification}</td>
+                  <td className="px-2 py-2">{group.count}</td>
+                  <td className="px-2 py-2">{group.totalWeight}</td>
+                  <td className="px-2 py-2">{group.averageWeight}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-lg font-semibold">Reses</h3>
+          <div className="flex gap-2">
+            <button onClick={exportPdf} className="rounded-xl border border-zinc-700 px-3 py-2 text-xs">Exportar PDF</button>
+            {(role === 'ADMIN' || role === 'LIQUIDADOR') && (
+              <button onClick={togglePayment} className="rounded-xl border border-zinc-700 px-3 py-2 text-xs">
+                {sheet.isPaid ? 'Marcar pendiente' : 'Marcar pagada'}
+              </button>
+            )}
           </div>
+        </div>
+
+        <p className="mt-1 text-xs text-zinc-400">Estado de pago: {sheet.isPaid ? 'Pagada' : 'Pendiente'}</p>
+
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-zinc-400">
+              <tr>
+                <th className="px-2 py-2">Nº</th>
+                <th className="px-2 py-2">Especificación</th>
+                <th className="px-2 py-2">Kilos</th>
+                <th className="px-2 py-2">Nº Res</th>
+                <th className="px-2 py-2">Letras</th>
+                {editable && <th className="px-2 py-2" />}
+              </tr>
+            </thead>
+            <tbody>
+              {sheet.rows.map((row) => (
+                <tr
+                  key={row.id}
+                  draggable={editable}
+                  onDragStart={(e) => onDragStart(e, row.id)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => onDropRow(e, row.id)}
+                  className="border-t border-zinc-800 text-zinc-200"
+                >
+                  <td className="px-2 py-2">{row.rowOrder}</td>
+                  <td className="px-2 py-2 lowercase">{row.type.toLowerCase()} {row.sex.toLowerCase()}</td>
+                  <td className="px-2 py-2">
+                    {editable ? (
+                      <input
+                        className="w-20 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
+                        value={row.weight}
+                        onChange={(e) => {
+                          const value = Math.trunc(Number(e.target.value || 0));
+                          setSheet((prev) => ({
+                            ...prev,
+                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, weight: value } : item)),
+                          }));
+                        }}
+                        onBlur={() => updateRowField(row.id, { weight: row.weight })}
+                      />
+                    ) : (
+                      row.weight
+                    )}
+                  </td>
+                  <td className="px-2 py-2">
+                    {editable ? (
+                      <input
+                        className="w-24 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
+                        value={row.cattleNumber}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSheet((prev) => ({
+                            ...prev,
+                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, cattleNumber: value } : item)),
+                          }));
+                        }}
+                        onBlur={() => updateRowField(row.id, { cattleNumber: row.cattleNumber })}
+                      />
+                    ) : (
+                      row.cattleNumber
+                    )}
+                  </td>
+                  <td className="px-2 py-2">
+                    {editable ? (
+                      <input
+                        className="w-24 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
+                        value={row.letters || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSheet((prev) => ({
+                            ...prev,
+                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, letters: value } : item)),
+                          }));
+                        }}
+                        onBlur={() => updateRowField(row.id, { letters: row.letters || null })}
+                      />
+                    ) : (
+                      row.letters || '-'
+                    )}
+                  </td>
+                  {editable && (
+                    <td className="px-2 py-2 text-right">
+                      <button className="rounded-md border border-red-800 px-2 py-1 text-xs text-red-300" onClick={() => deleteRow(row.id)}>
+                        Eliminar
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {editable && (
+          <form onSubmit={addRow} className="mt-4 grid gap-2 md:grid-cols-6 items-end">
+            <div>
+              <label className="text-xs text-zinc-400">Tipo</label>
+              <select className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.type} onChange={(e) => setDraftRow((prev) => ({ ...prev, type: e.target.value }))}>
+                {TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400">Sexo</label>
+              <select className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.sex} onChange={(e) => setDraftRow((prev) => ({ ...prev, sex: e.target.value }))}>
+                {SEX_OPTIONS.map((sex) => (
+                  <option key={sex} value={sex}>{sex}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400">Kilos</label>
+              <input className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.weight} onChange={(e) => setDraftRow((prev) => ({ ...prev, weight: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && addRow(e)} />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400">Nº Res</label>
+              <input className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.cattleNumber} onChange={(e) => setDraftRow((prev) => ({ ...prev, cattleNumber: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400">Letras</label>
+              <input className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.letters} onChange={(e) => setDraftRow((prev) => ({ ...prev, letters: e.target.value }))} />
+            </div>
+            <button disabled={saving} className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-black disabled:opacity-60">{saving ? 'Guardando...' : 'Agregar'}</button>
+          </form>
         )}
+      </div>
+
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+        <h3 className="text-lg font-semibold">Bitácora de pagos</h3>
+        <div className="mt-3 space-y-2 text-sm">
+          {sheet.paymentLogs.length === 0 && <div className="text-zinc-500">Sin eventos de pago.</div>}
+          {sheet.paymentLogs.map((log) => (
+            <div key={log.id} className="rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2">
+              {new Date(log.changedAt).toLocaleString()} - {log.newStatus ? 'Pagada' : 'Pendiente'} por {log.changedBy.email}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
+

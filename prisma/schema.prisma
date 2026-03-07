@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-engineType      = "library"
+  engineType = "library"
 }
 
 datasource db {
@@ -8,61 +8,206 @@ datasource db {
 }
 
 model Person {
-  id     Int     @id @default(autoincrement())
-  name   String
-nameKey String  @unique
-  phone  String? // opcional pero lo usaremos como identificador junto con name
-  cedula String? @unique
-  user   User?
+  id         Int      @id @default(autoincrement())
+  name       String
+  nameKey    String   @unique
+  phone      String?
+  phoneKey   String?
+  cedula     String?  @unique
+  cedulaKey  String?  @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  // Relaciones inversas (si no las tienes)
+  user User?
+
   sellerSheets WeighingSheet[] @relation("SellerSheets")
   buyerSheets  WeighingSheet[] @relation("BuyerSheets")
+  linkRequests PersonAccountLinkRequest[]
 
+  @@index([nameKey])
+  @@index([phoneKey])
 }
 
 model User {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
-  password String
-  role     Role
-  personId Int    @unique
+  id              Int      @id @default(autoincrement())
+  email           String   @unique
+  passwordHash    String
+  role            Role
+  personId        Int?     @unique
+  liquidadorAlias String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  person Person @relation(fields: [personId], references: [id])
+  person Person? @relation(fields: [personId], references: [id])
 
   createdSheets WeighingSheet[]
+  paidSheets    WeighingSheet[]            @relation("SheetPaidBy")
+  reviewedLinks PersonAccountLinkRequest[] @relation("ReviewedBy")
+  linkRequests  PersonAccountLinkRequest[] @relation("RequestedBy")
+  paymentLogs   PaymentLog[]
+  sheetAudits   SheetAuditLog[]
+
+  @@index([role])
+  @@index([isActive])
 }
 
 model WeighingSheet {
-  id            Int      @id @default(autoincrement())
-  date          DateTime @default(now())
-  totalWeight   Int?
-  averageWeight Int?
-
-  sellerId    Int
-  buyerId     Int
-  createdById Int
+  id                        Int      @id @default(autoincrement())
+  visibleNumber             String   @unique
+  sheetYear                 Int
+  sheetSequence             Int
+  date                      DateTime @default(now())
+  sellerId                  Int
+  buyerId                   Int
+  createdById               Int
+  liquidadorAliasSnapshot   String
+  pricePerHead              Int
+  totalValue                Int      @default(0)
+  totalWeight               Int      @default(0)
+  averageWeight             Int      @default(0)
+  totalMaleWeight           Int      @default(0)
+  averageMaleWeight         Int      @default(0)
+  totalFemaleWeight         Int      @default(0)
+  averageFemaleWeight       Int      @default(0)
+  headCount                 Int      @default(0)
+  isPaid                    Boolean  @default(false)
+  paidAt                    DateTime?
+  paidById                  Int?
+  editableUntilByLiquidador DateTime
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   seller    Person @relation("SellerSheets", fields: [sellerId], references: [id])
   buyer     Person @relation("BuyerSheets", fields: [buyerId], references: [id])
   createdBy User   @relation(fields: [createdById], references: [id])
+  paidBy    User?  @relation("SheetPaidBy", fields: [paidById], references: [id])
 
-  cattle Cattle[]
+  rows        CattleRow[]
+  paymentLogs PaymentLog[]
+  auditLogs   SheetAuditLog[]
+
+  @@unique([sheetYear, sheetSequence])
+  @@index([sellerId])
+  @@index([buyerId])
+  @@index([createdById])
+  @@index([date])
+  @@index([isPaid, paidAt])
+  @@index([editableUntilByLiquidador])
 }
 
-model Cattle {
-  id              Int     @id @default(autoincrement())
+model CattleRow {
+  id              Int        @id @default(autoincrement())
   weighingSheetId Int
-  number          String
-  type            String // vaca, toro, bufalo, etc.
-  sex             String // macho/hembra
+  rowOrder        Int
+  type            CattleType
+  sex             CattleSex
   weight          Int
-  mark            String? // letras o marca opcional
+  cattleNumber    String
+  letters         String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
   weighingSheet WeighingSheet @relation(fields: [weighingSheetId], references: [id])
+
+  @@unique([weighingSheetId, rowOrder])
+  @@index([weighingSheetId, cattleNumber])
+  @@index([type, sex])
+}
+
+model PersonAccountLinkRequest {
+  id           Int               @id @default(autoincrement())
+  userId       Int
+  personId     Int
+  status       LinkRequestStatus @default(PENDING)
+  notes        String?
+  requestedAt  DateTime          @default(now())
+  reviewedAt   DateTime?
+  reviewedById Int?
+
+  user       User   @relation("RequestedBy", fields: [userId], references: [id])
+  person     Person @relation(fields: [personId], references: [id])
+  reviewedBy User?  @relation("ReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([status, requestedAt])
+  @@unique([userId, personId, status])
+}
+
+model PaymentLog {
+  id              Int      @id @default(autoincrement())
+  weighingSheetId Int
+  previousStatus  Boolean
+  newStatus       Boolean
+  changedAt       DateTime @default(now())
+  changedById     Int
+  amount          Int?
+  notes           String?
+
+  weighingSheet WeighingSheet @relation(fields: [weighingSheetId], references: [id])
+  changedBy     User         @relation(fields: [changedById], references: [id])
+
+  @@index([weighingSheetId, changedAt])
+}
+
+model SheetAuditLog {
+  id              Int              @id @default(autoincrement())
+  weighingSheetId Int
+  action          SheetAuditAction
+  changedAt       DateTime         @default(now())
+  actorUserId     Int
+  metadata        Json?
+
+  weighingSheet WeighingSheet @relation(fields: [weighingSheetId], references: [id])
+  actor         User         @relation(fields: [actorUserId], references: [id])
+
+  @@index([weighingSheetId, changedAt])
+}
+
+model SystemSetting {
+  key       String   @id
+  intValue  Int?
+  textValue String?
+  updatedAt DateTime @updatedAt
 }
 
 enum Role {
   ADMIN
+  LIQUIDADOR
   CLIENT
+}
+
+enum LinkRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CattleType {
+  VACA
+  TORO
+  BUFALO
+  NOVILLO
+  TERNERO
+}
+
+enum CattleSex {
+  MACHO
+  HEMBRA
+}
+
+enum SheetAuditAction {
+  PLANILLA_CREATED
+  PLANILLA_UPDATED
+  PLANILLA_DELETED
+  ROW_ADDED
+  ROW_UPDATED
+  ROW_DELETED
+  ROW_REORDERED
+  PRICE_CHANGED
+  PAYMENT_STATUS_CHANGED
+  SELLER_CHANGED
+  BUYER_CHANGED
+  LIQUIDADOR_ALIAS_CHANGED
+  LINK_REQUEST_APPROVED
+  LINK_REQUEST_REJECTED
 }

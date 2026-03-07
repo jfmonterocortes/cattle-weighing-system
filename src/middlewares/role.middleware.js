@@ -1,6 +1,18 @@
-const requireAdmin = (req, res, next) => {
-  if (req.user?.role !== 'ADMIN') return res.status(403).json({ message: 'Admin only' });
-  return next();
-};
+function requireRoles(...roles) {
+  return (req, res, next) => {
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    return next();
+  };
+}
 
-module.exports = { requireAdmin };
+function requireAdmin(req, res, next) {
+  return requireRoles('ADMIN')(req, res, next);
+}
+
+module.exports = {
+  requireRoles,
+  requireAdmin,
+};

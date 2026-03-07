@@ -5,7 +5,12 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "seed": "node prisma/seed.js",
+    "test": "vitest run"
   },
   "repository": {
     "type": "git",
@@ -21,17 +26,24 @@
   "homepage": "https://github.com/jfmonterocortes/cattle-weighing-system#readme",
   "dependencies": {
     "@prisma/adapter-pg": "^7.2.0",
-    "@prisma/client": "^7.2.0",
+    "@prisma/client": "^7.4.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.1.2",
-    "pg": "^8.16.3"
+    "morgan": "^1.10.1",
+    "pdfkit": "^0.17.2",
+    "pg": "^8.16.3",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "nodemon": "^3.1.11",
-    "prisma": "^7.2.0"
+    "prisma": "^7.4.2",
+    "supertest": "^7.1.4",
+    "vitest": "^3.2.4"
   }
 }
