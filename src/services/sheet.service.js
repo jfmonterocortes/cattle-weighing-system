@@ -1,8 +1,27 @@
-const prisma = require('../db/prisma');
+﻿const prisma = require('../db/prisma');
 const { calculateSheetStats, resolveDefaultSex } = require('../utils/sheet-calculations');
 const { ROLE, SHEET_AUDIT_ACTION } = require('../constants/domain');
 const { getDefaultPricePerHead } = require('./settings.service');
 const { addSheetAudit } = require('./audit.service');
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+
+function toSafePositiveInt(value, fallback) {
+  const parsed = Number.parseInt(String(value ?? fallback), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return parsed;
+}
+
+function toSafePage(value) {
+  return toSafePositiveInt(value, DEFAULT_PAGE);
+}
+
+function toSafePageSize(value) {
+  const parsed = toSafePositiveInt(value, DEFAULT_PAGE_SIZE);
+  return Math.min(parsed, MAX_PAGE_SIZE);
+}
 
 function assertCanEditSheet(user, sheet) {
   if (user.role === ROLE.ADMIN) return;
@@ -152,14 +171,15 @@ async function listSheets({ user, filters }) {
     if (filters.paymentStatus === 'paid_yesterday') where.AND.push({ isPaid: true, paidAt: { gte: yesterdayStart, lt: todayStart } });
   }
 
-  const page = filters.page || 1;
-  const pageSize = filters.pageSize || 20;
+  const page = toSafePage(filters.page);
+  const pageSize = toSafePageSize(filters.pageSize);
+  const skip = (page - 1) * pageSize;
 
   const [items, total] = await Promise.all([
     prisma.weighingSheet.findMany({
       where,
       orderBy: { date: 'desc' },
-      skip: (page - 1) * pageSize,
+      skip,
       take: pageSize,
       include: {
         seller: { select: { id: true, name: true, phone: true } },
@@ -174,7 +194,7 @@ async function listSheets({ user, filters }) {
     total,
     page,
     pageSize,
-    totalPages: Math.ceil(total / pageSize),
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
   };
 }
 
@@ -567,4 +587,7 @@ module.exports = {
   updatePaymentStatus,
   suggestNextCattleNumber,
   recalculateAndPersistSheet,
+  toSafePage,
+  toSafePageSize,
 };
+

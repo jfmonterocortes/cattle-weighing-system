@@ -1,8 +1,8 @@
-const prisma = require('../db/prisma');
+﻿const prisma = require('../db/prisma');
 const { normalizeNameKey, normalizePhone, normalizeCedula, normalizeSpace } = require('../utils/normalization');
 
 const DEFAULT_SEARCH_LIMIT = 10;
-const MAX_SEARCH_LIMIT = 25;
+const MAX_SEARCH_LIMIT = 100;
 
 function sanitizeSearchLimit(limit) {
   const parsed = Number.parseInt(String(limit ?? DEFAULT_SEARCH_LIMIT), 10);
@@ -181,3 +181,5 @@ module.exports = {
   searchPeople,
   sanitizeSearchLimit,
 };
+
+
