@@ -7,6 +7,7 @@ const { addSheetAudit } = require('./audit.service');
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
+const REORDER_OFFSET = 1000;
 
 function toSafePositiveInt(value, fallback) {
   const parsed = Number.parseInt(String(value ?? fallback), 10);
@@ -378,7 +379,7 @@ async function addRow({ user, sheetId, data }) {
   await recalculateAndPersistSheet(sheetId);
 
   await addSheetAudit({
-    weighingSheetId: sheetId,
+    weighingSheetId: sheet.id,
     action: SHEET_AUDIT_ACTION.ROW_ADDED,
     actorUserId: user.userId,
     metadata: { rowId: row.id, rowOrder: row.rowOrder },
@@ -488,14 +489,21 @@ async function reorderRows({ user, sheetId, orderedRowIds }) {
     throw err;
   }
 
-  await prisma.$transaction(
-    orderedRowIds.map((rowId, index) =>
-      prisma.cattleRow.update({
-        where: { id: rowId },
+  await prisma.$transaction(async (tx) => {
+    for (const row of sheet.rows) {
+      await tx.cattleRow.update({
+        where: { id: row.id },
+        data: { rowOrder: row.rowOrder + REORDER_OFFSET },
+      });
+    }
+
+    for (let index = 0; index < orderedRowIds.length; index += 1) {
+      await tx.cattleRow.update({
+        where: { id: orderedRowIds[index] },
         data: { rowOrder: index + 1 },
-      })
-    )
-  );
+      });
+    }
+  });
 
   await addSheetAudit({
     weighingSheetId: sheetId,
@@ -590,4 +598,3 @@ module.exports = {
   toSafePage,
   toSafePageSize,
 };
-

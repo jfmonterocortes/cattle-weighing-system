@@ -1,0 +1,18 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 280" role="img" aria-label="BASCULA LA ESPERANZA">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#0b0f1a"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="820" height="280" rx="24" fill="url(#bg)"/>
+  <g fill="none" stroke="#e5e7eb" stroke-width="8" transform="translate(40,30)">
+    <line x1="80" y1="40" x2="560" y2="40" />
+    <line x1="80" y1="40" x2="80" y2="170" />
+    <line x1="560" y1="40" x2="560" y2="170" />
+    <line x1="80" y1="170" x2="560" y2="170" />
+    <circle cx="320" cy="40" r="26" />
+  </g>
+  <text x="410" y="195" text-anchor="middle" fill="#f9fafb" font-size="68" font-family="Georgia, 'Times New Roman', serif" font-weight="700">BASCULA</text>
+  <text x="410" y="242" text-anchor="middle" fill="#f9fafb" font-size="42" font-family="Georgia, 'Times New Roman', serif" font-weight="700">LA ESPERANZA</text>
+</svg>

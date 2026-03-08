@@ -1,4 +1,9 @@
-﻿const { getSettingsForUser, setDefaultPricePerHead } = require('../services/settings.service');
+﻿const {
+  getSettingsForUser,
+  setDefaultPricePerHead,
+  updateClientProfile,
+  updateOwnPassword,
+} = require('../services/settings.service');
 
 async function getSettingsController(req, res, next) {
   try {
@@ -18,7 +23,35 @@ async function updateSettingsController(req, res, next) {
   }
 }
 
+async function updateOwnProfileController(req, res, next) {
+  try {
+    const result = await updateClientProfile({
+      user: req.user,
+      phone: req.body.phone,
+      cedula: req.body.cedula,
+    });
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateOwnPasswordController(req, res, next) {
+  try {
+    const result = await updateOwnPassword({
+      userId: req.user.userId,
+      currentPassword: req.body.currentPassword,
+      newPassword: req.body.newPassword,
+    });
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   getSettingsController,
   updateSettingsController,
+  updateOwnProfileController,
+  updateOwnPasswordController,
 };

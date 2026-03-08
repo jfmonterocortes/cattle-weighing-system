@@ -1,5 +1,7 @@
 ﻿const prisma = require('../db/prisma');
-const { SYSTEM_SETTING_KEYS } = require('../constants/domain');
+const bcrypt = require('bcrypt');
+const { SYSTEM_SETTING_KEYS, ROLE } = require('../constants/domain');
+const { updatePersonRecord } = require('./person.service');
 
 async function getDefaultPricePerHead() {
   const row = await prisma.systemSetting.findUnique({
@@ -35,7 +37,7 @@ async function getSettingsForUser(user) {
   });
 
   let linkRequest = null;
-  if (user.role === 'CLIENT') {
+  if (user.role === ROLE.CLIENT) {
     linkRequest = await prisma.personAccountLinkRequest.findFirst({
       where: { userId: user.userId },
       orderBy: { requestedAt: 'desc' },
@@ -51,13 +53,74 @@ async function getSettingsForUser(user) {
     link: {
       hasUsedRequest: Boolean(linkRequest),
       latestRequest: linkRequest,
-      canRequest: user.role === 'CLIENT' ? !linkRequest && !account?.personId : false,
+      canRequest: user.role === ROLE.CLIENT ? !linkRequest && !account?.personId : false,
     },
   };
+}
+
+async function updateClientProfile({ user, phone, cedula }) {
+  if (user.role !== ROLE.CLIENT) {
+    const err = new Error('Forbidden');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const account = await prisma.user.findUnique({
+    where: { id: user.userId },
+    select: { id: true, personId: true },
+  });
+
+  if (!account?.personId) {
+    const err = new Error('Debes vincular tu cuenta a una persona antes de actualizar teléfono o cédula.');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const updated = await updatePersonRecord(account.personId, { phone, cedula }, user);
+  return {
+    person: {
+      id: updated.id,
+      name: updated.name,
+      phone: updated.phone,
+      cedula: updated.cedula,
+    },
+  };
+}
+
+async function updateOwnPassword({ userId, currentPassword, newPassword }) {
+  const account = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, passwordHash: true },
+  });
+
+  if (!account) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const valid = await bcrypt.compare(currentPassword, account.passwordHash);
+  if (!valid) {
+    const err = new Error('La contraseña actual no es correcta.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (currentPassword === newPassword) {
+    const err = new Error('La nueva contraseña debe ser diferente a la actual.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  return { success: true };
 }
 
 module.exports = {
   getDefaultPricePerHead,
   setDefaultPricePerHead,
   getSettingsForUser,
+  updateClientProfile,
+  updateOwnPassword,
 };

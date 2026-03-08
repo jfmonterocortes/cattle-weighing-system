@@ -1,14 +1,9 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import PersonAutocomplete from '../components/PersonAutocomplete';
 import { getSession } from '../utils/authSession';
-
-function feedbackClass(type) {
-  if (type === 'error') return 'text-red-300';
-  if (type === 'success') return 'text-emerald-300';
-  return 'text-zinc-400';
-}
+import FeedbackBanner from '../components/FeedbackBanner';
 
 export default function NewSheetPage() {
   const { user } = getSession();
@@ -98,7 +93,7 @@ export default function NewSheetPage() {
         </div>
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 pt-4">
-          <span className={`text-sm ${feedbackClass(sheetFeedback.type)}`}>{sheetFeedback.message}</span>
+          <div className="min-w-0 flex-1"><FeedbackBanner message={sheetFeedback.message} type={sheetFeedback.type || 'info'} /></div>
           <button type="submit" disabled={creatingSheet} className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black disabled:opacity-60">
             {creatingSheet ? 'Creando...' : 'Guardar planilla'}
           </button>

@@ -1,5 +1,7 @@
-﻿const ExcelJS = require('exceljs');
+const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
 const prisma = require('../db/prisma');
 const { calculateSheetStats } = require('../utils/sheet-calculations');
 const { assertCanViewSheet } = require('./sheet.service');
@@ -80,7 +82,18 @@ async function exportSheetPdf(sheetId, user) {
   const chunks = [];
   doc.on('data', (chunk) => chunks.push(chunk));
 
-  doc.fontSize(16).text(`Planilla ${sheet.visibleNumber}`, { align: 'center' });
+  const logoPath = path.join(process.cwd(), 'client', 'public', 'logo-bascula-la-esperanza.png');
+  if (fs.existsSync(logoPath)) {
+    const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const logoWidth = Math.min(220, pageWidth);
+    const logoX = doc.page.margins.left + (pageWidth - logoWidth) / 2;
+    doc.image(logoPath, logoX, doc.y, { width: logoWidth });
+    doc.moveDown(2.7);
+  }
+
+  doc.fontSize(11).text('BASCULA LA ESPERANZA', { align: 'center' });
+  doc.moveDown(0.2);
+  doc.fontSize(16).text('Planilla ' + sheet.visibleNumber, { align: 'center' });
   doc.moveDown(0.7);
 
   doc.fontSize(10);
@@ -123,3 +136,5 @@ module.exports = {
   exportSheetsExcel,
   exportSheetPdf,
 };
+
+

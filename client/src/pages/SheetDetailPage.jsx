@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import FeedbackBanner from '../components/FeedbackBanner';
 import { api } from '../api';
 import { getSession } from '../utils/authSession';
 
@@ -14,10 +15,16 @@ function canEdit(role, sheet, userId) {
   return false;
 }
 
-function feedbackClass(type) {
-  if (type === 'error') return 'text-red-300';
-  if (type === 'success') return 'text-emerald-300';
-  return 'text-zinc-400';
+function getSexDefaultByType(type, currentSex = 'MACHO') {
+  if (type === 'VACA') return 'HEMBRA';
+  if (type === 'TORO') return 'MACHO';
+  if (type === 'NOVILLO') return 'MACHO';
+  return currentSex;
+}
+
+function toNumericOrNull(value) {
+  const parsed = Number.parseInt(String(value || '').trim(), 10);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 export default function SheetDetailPage() {
@@ -32,6 +39,7 @@ export default function SheetDetailPage() {
   const [loadError, setLoadError] = useState('');
   const [actionFeedback, setActionFeedback] = useState({ type: '', message: '' });
   const [draftRow, setDraftRow] = useState({ type: 'TERNERO', sex: 'MACHO', weight: '', cattleNumber: '', letters: '' });
+  const [sessionDefaults, setSessionDefaults] = useState({ type: 'TERNERO', sex: 'MACHO', lastNumericCattleNumber: null });
   const [saving, setSaving] = useState(false);
 
   const loadDetail = async () => {
@@ -41,6 +49,12 @@ export default function SheetDetailPage() {
     try {
       const res = await api.get(`/sheets/${sheetId}`);
       setSheet(res.data);
+
+      const numericRows = (res.data.rows || [])
+        .map((row) => toNumericOrNull(row.cattleNumber))
+        .filter((v) => Number.isFinite(v));
+      const maxNumeric = numericRows.length ? Math.max(...numericRows) : null;
+      setSessionDefaults((prev) => ({ ...prev, lastNumericCattleNumber: maxNumeric }));
     } catch (error) {
       setSheet(null);
       setLoadError(error.response?.data?.message || 'No se pudo cargar la planilla.');
@@ -56,7 +70,16 @@ export default function SheetDetailPage() {
 
   const editable = sheet ? canEdit(role, sheet, userId) : false;
 
-  const suggestNumber = async () => {
+  const suggestNumber = async (force = false) => {
+    const localNext = Number.isFinite(sessionDefaults.lastNumericCattleNumber)
+      ? String(sessionDefaults.lastNumericCattleNumber + 1)
+      : '';
+
+    if (localNext && !force) {
+      setDraftRow((prev) => ({ ...prev, cattleNumber: localNext }));
+      return;
+    }
+
     try {
       const res = await api.get(`/sheets/${sheetId}/rows/next-number`);
       setDraftRow((prev) => ({ ...prev, cattleNumber: res.data.cattleNumber }));
@@ -66,27 +89,51 @@ export default function SheetDetailPage() {
   };
 
   useEffect(() => {
-    if (sheet) suggestNumber();
-  }, [sheet?.id]);
-
-  const groupedStats = useMemo(() => sheet?.computed?.totalsByTypeSex || [], [sheet]);
+    if (!sheet) return;
+    setDraftRow((prev) => ({
+      ...prev,
+      type: sessionDefaults.type,
+      sex: getSexDefaultByType(sessionDefaults.type, sessionDefaults.sex),
+    }));
+    suggestNumber();
+  }, [sheet?.id, sessionDefaults.type, sessionDefaults.sex, sessionDefaults.lastNumericCattleNumber]);
 
   const addRow = async (event) => {
     event.preventDefault();
     setSaving(true);
     setActionFeedback({ type: '', message: '' });
 
+    const rowPayload = {
+      type: draftRow.type,
+      sex: draftRow.sex,
+      weight: Math.trunc(Number(draftRow.weight || 0)),
+      cattleNumber: draftRow.cattleNumber || '1',
+      letters: draftRow.letters || null,
+    };
+
     try {
-      await api.post(`/sheets/${sheetId}/rows`, {
-        type: draftRow.type,
-        sex: draftRow.sex,
-        weight: Math.trunc(Number(draftRow.weight || 0)),
-        cattleNumber: draftRow.cattleNumber || '1',
-        letters: draftRow.letters || null,
-      });
-      const nextType = draftRow.type;
-      const nextSex = draftRow.sex;
-      setDraftRow({ type: nextType, sex: nextSex, weight: '', cattleNumber: '', letters: '' });
+      await api.post(`/sheets/${sheetId}/rows`, rowPayload);
+
+      const numeric = toNumericOrNull(rowPayload.cattleNumber);
+      setSessionDefaults((prev) => ({
+        ...prev,
+        type: rowPayload.type,
+        sex: rowPayload.sex,
+        lastNumericCattleNumber: Number.isFinite(numeric) ? numeric : prev.lastNumericCattleNumber,
+      }));
+
+      setDraftRow((prev) => ({
+        type: rowPayload.type,
+        sex: rowPayload.sex,
+        weight: '',
+        cattleNumber: Number.isFinite(numeric) ? String(numeric + 1) : '',
+        letters: '',
+      }));
+
+      if (!Number.isFinite(numeric)) {
+        await suggestNumber(true);
+      }
+
       setActionFeedback({ type: 'success', message: 'Fila agregada correctamente.' });
       await loadDetail();
     } catch (error) {
@@ -178,6 +225,8 @@ export default function SheetDetailPage() {
   if (loadError) return <div className="rounded-2xl border border-red-700/50 bg-red-950/30 p-6 text-red-200">{loadError}</div>;
   if (!sheet) return <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">Planilla no encontrada.</div>;
 
+  const groupedStats = sheet?.computed?.totalsByTypeSex || [];
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -188,22 +237,18 @@ export default function SheetDetailPage() {
         </div>
       </div>
 
-      {actionFeedback.message && (
-        <div className={`rounded-lg border px-3 py-2 text-sm ${actionFeedback.type === 'error' ? 'border-red-700/50 bg-red-950/30' : 'border-emerald-700/40 bg-emerald-950/20'}`}>
-          <span className={feedbackClass(actionFeedback.type)}>{actionFeedback.message}</span>
-        </div>
-      )}
+      <FeedbackBanner message={actionFeedback.message} type={actionFeedback.type || 'info'} />
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 grid gap-3 md:grid-cols-3">
         <div>
           <div className="text-xs text-zinc-500">Vendedor</div>
           <div className="font-medium">{sheet.seller.name}</div>
-          <div className="text-xs text-zinc-500">{sheet.seller.phone || 'Sin teléfono'}</div>
+          <div className="text-xs text-zinc-500">{sheet.seller.phone || 'Sin tel\u00E9fono'}</div>
         </div>
         <div>
           <div className="text-xs text-zinc-500">Comprador</div>
           <div className="font-medium">{sheet.buyer.name}</div>
-          <div className="text-xs text-zinc-500">{sheet.buyer.phone || 'Sin teléfono'}</div>
+          <div className="text-xs text-zinc-500">{sheet.buyer.phone || 'Sin tel\u00E9fono'}</div>
         </div>
         <div>
           <div className="text-xs text-zinc-500">Liquidador</div>
@@ -232,7 +277,7 @@ export default function SheetDetailPage() {
           <table className="w-full text-sm">
             <thead className="text-left text-zinc-400">
               <tr>
-                <th className="px-2 py-2">Especificación</th>
+                <th className="px-2 py-2">{'Especificaci\u00F3n'}</th>
                 <th className="px-2 py-2">Cantidad</th>
                 <th className="px-2 py-2">Peso total</th>
                 <th className="px-2 py-2">Promedio</th>
@@ -272,10 +317,12 @@ export default function SheetDetailPage() {
           <table className="w-full text-sm">
             <thead className="text-left text-zinc-400">
               <tr>
-                <th className="px-2 py-2">Nº</th>
-                <th className="px-2 py-2">Especificación</th>
+                <th className="px-2 py-2">{'N\u00BA'}</th>
+                <th className="px-2 py-2">{'Especificaci\u00F3n'}</th>
+                <th className="px-2 py-2">Tipo</th>
+                <th className="px-2 py-2">Sexo</th>
                 <th className="px-2 py-2">Kilos</th>
-                <th className="px-2 py-2">Nº Res</th>
+                <th className="px-2 py-2">{'N\u00BA Res'}</th>
                 <th className="px-2 py-2">Letras</th>
                 {editable && <th className="px-2 py-2" />}
               </tr>
@@ -292,6 +339,47 @@ export default function SheetDetailPage() {
                 >
                   <td className="px-2 py-2">{row.rowOrder}</td>
                   <td className="px-2 py-2">{`${row.type} ${row.sex}`}</td>
+                  <td className="px-2 py-2">
+                    {editable ? (
+                      <select
+                        className="w-28 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
+                        value={row.type}
+                        onChange={(e) => {
+                          const nextType = e.target.value;
+                          const nextSex = getSexDefaultByType(nextType, row.sex);
+                          setSheet((prev) => ({
+                            ...prev,
+                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type: nextType, sex: nextSex } : item)),
+                          }));
+                        }}
+                        onBlur={() => updateRowField(row.id, { type: row.type, sex: row.sex })}
+                      >
+                        {TYPE_OPTIONS.map((type) => <option key={type} value={type}>{type}</option>)}
+                      </select>
+                    ) : (
+                      row.type
+                    )}
+                  </td>
+                  <td className="px-2 py-2">
+                    {editable ? (
+                      <select
+                        className="w-24 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
+                        value={row.sex}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSheet((prev) => ({
+                            ...prev,
+                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, sex: value } : item)),
+                          }));
+                        }}
+                        onBlur={() => updateRowField(row.id, { sex: row.sex, type: row.type })}
+                      >
+                        {SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}
+                      </select>
+                    ) : (
+                      row.sex
+                    )}
+                  </td>
                   <td className="px-2 py-2">
                     {editable ? (
                       <input
@@ -354,13 +442,30 @@ export default function SheetDetailPage() {
           <form onSubmit={addRow} className="mt-4 grid gap-2 md:grid-cols-6 items-end">
             <div>
               <label className="text-xs text-zinc-400">Tipo</label>
-              <select className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.type} onChange={(e) => setDraftRow((prev) => ({ ...prev, type: e.target.value }))}>
+              <select
+                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
+                value={draftRow.type}
+                onChange={(e) => {
+                  const nextType = e.target.value;
+                  const nextSex = getSexDefaultByType(nextType, draftRow.sex);
+                  setDraftRow((prev) => ({ ...prev, type: nextType, sex: nextSex }));
+                  setSessionDefaults((prev) => ({ ...prev, type: nextType, sex: nextSex }));
+                }}
+              >
                 {TYPE_OPTIONS.map((type) => <option key={type} value={type}>{type}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs text-zinc-400">Sexo</label>
-              <select className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.sex} onChange={(e) => setDraftRow((prev) => ({ ...prev, sex: e.target.value }))}>
+              <select
+                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
+                value={draftRow.sex}
+                onChange={(e) => {
+                  const nextSex = e.target.value;
+                  setDraftRow((prev) => ({ ...prev, sex: nextSex }));
+                  setSessionDefaults((prev) => ({ ...prev, sex: nextSex }));
+                }}
+              >
                 {SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}
               </select>
             </div>
@@ -369,7 +474,7 @@ export default function SheetDetailPage() {
               <input className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.weight} onChange={(e) => setDraftRow((prev) => ({ ...prev, weight: e.target.value }))} />
             </div>
             <div>
-              <label className="text-xs text-zinc-400">Nº Res</label>
+              <label className="text-xs text-zinc-400">{'N\u00BA Res'}</label>
               <input className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.cattleNumber} onChange={(e) => setDraftRow((prev) => ({ ...prev, cattleNumber: e.target.value }))} />
             </div>
             <div>
@@ -382,7 +487,7 @@ export default function SheetDetailPage() {
       </div>
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <h3 className="text-lg font-semibold">Bitácora de pagos</h3>
+        <h3 className="text-lg font-semibold">{'Bit\u00E1cora de pagos'}</h3>
         <div className="mt-3 space-y-2 text-sm">
           {sheet.paymentLogs.length === 0 && <div className="text-zinc-500">Sin eventos de pago.</div>}
           {sheet.paymentLogs.map((log) => (
@@ -395,3 +500,4 @@ export default function SheetDetailPage() {
     </div>
   );
 }
+

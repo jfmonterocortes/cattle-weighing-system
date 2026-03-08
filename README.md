@@ -1,4 +1,4 @@
-﻿# Cattle Weighing Management System
+﻿# BASCULA LA ESPERANZA
 
 Sistema full-stack para digitalizar planillas de pesaje de ganado con separación `Person`/`User`, control por roles, pagos, auditoría y exportes.
 
@@ -71,7 +71,7 @@ Resumen operativo por rol.
 - crear `CLIENT`/`LIQUIDADOR`
 - activar/desactivar y edición de datos
 - alias de liquidador
-- vinculación manual `User ↔ Person`
+- vinculación manual `User ? Person`
 - gestión de solicitudes de vinculación
 - reset de contraseña:
   - generar link/token de reset
@@ -190,4 +190,5 @@ npm test
 ```
 
 ## Estado
-Versión reorganizada por producto con React Router, módulos separados, reglas de rol reforzadas y adaptación frontend↔backend alineada.
+Versión reorganizada por producto con React Router, módulos separados, reglas de rol reforzadas y adaptación frontend?backend alineada.
+

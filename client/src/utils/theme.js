@@ -1,15 +1,24 @@
-const THEME_KEY = "theme";
+﻿const THEME_KEY = 'theme';
 
 export function getStoredTheme() {
   const t = localStorage.getItem(THEME_KEY);
-  return t === "light" || t === "dark" ? t : null;
+  return t === 'light' || t === 'dark' ? t : null;
 }
 
 export function applyTheme(theme) {
-  const root = document.documentElement; // <html>
-  if (theme === "dark") root.classList.add("dark");
-  else root.classList.remove("dark");
-  localStorage.setItem(THEME_KEY, theme);
+  const root = document.documentElement;
+  const nextTheme = theme === 'dark' ? 'dark' : 'light';
+
+  root.dataset.theme = nextTheme;
+
+  if (nextTheme === 'dark') {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
+
+  root.style.colorScheme = nextTheme;
+  localStorage.setItem(THEME_KEY, nextTheme);
 }
 
 export function initTheme() {
@@ -19,9 +28,8 @@ export function initTheme() {
     return stored;
   }
 
-  // Default: seguir el sistema
-  const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
-  const theme = prefersDark ? "dark" : "light";
+  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
+  const theme = prefersDark ? 'dark' : 'light';
   applyTheme(theme);
   return theme;
 }

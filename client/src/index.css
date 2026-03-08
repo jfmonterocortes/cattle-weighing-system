@@ -1,10 +1,59 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
-/* Tailwind v4: hacer que dark: dependa de .dark (no del sistema) */
+/* Tailwind v4: dark variant dependiente de clase .dark */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Opcional: que inputs/scroll sigan el tema */
-html.dark { color-scheme: dark; }
-html:not(.dark) { color-scheme: light; }
+html.dark {
+  color-scheme: dark;
+}
 
-body { margin: 0; }
+html:not(.dark) {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+}
+
+/*
+  Tema claro global para una app originalmente estilizada en oscuro.
+  Esto garantiza que el toggle sea visible y usable aunque el SO esté en dark.
+*/
+html:not(.dark) body {
+  background-color: #f5f7fb;
+  color: #111827;
+}
+
+html:not(.dark) .bg-zinc-950,
+html:not(.dark) .bg-zinc-950\/95,
+html:not(.dark) .bg-zinc-900,
+html:not(.dark) .bg-zinc-900\/95,
+html:not(.dark) .bg-zinc-900\/60,
+html:not(.dark) .bg-zinc-950\/50 {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .border-zinc-800,
+html:not(.dark) .border-zinc-700 {
+  border-color: #d1d5db !important;
+}
+
+html:not(.dark) .text-zinc-100,
+html:not(.dark) .text-zinc-200,
+html:not(.dark) .text-zinc-300,
+html:not(.dark) .text-zinc-400,
+html:not(.dark) .text-zinc-500 {
+  color: #1f2937 !important;
+}
+
+html:not(.dark) .hover\:bg-zinc-800:hover {
+  background-color: #e5e7eb !important;
+}
+
+html:not(.dark) .bg-zinc-200 {
+  background-color: #111827 !important;
+}
+
+html:not(.dark) .text-zinc-900 {
+  color: #ffffff !important;
+}

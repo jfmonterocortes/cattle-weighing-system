@@ -1,6 +1,12 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import FeedbackBanner from '../components/FeedbackBanner';
+
+function homeForRole(role) {
+  if (role === 'CLIENT') return '/planillas';
+  return '/dashboard';
+}
 
 export default function Login({ onLogin }) {
   const navigate = useNavigate();
@@ -18,7 +24,7 @@ export default function Login({ onLogin }) {
       const res = await api.post('/auth/login', { email, password });
       localStorage.setItem('token', res.data.token);
       onLogin?.(res.data.user || null);
-      navigate('/dashboard', { replace: true });
+      navigate(homeForRole(res.data?.user?.role), { replace: true });
     } catch (err) {
       setError(err?.response?.data?.message || 'No fue posible iniciar sesión.');
     } finally {
@@ -29,10 +35,14 @@ export default function Login({ onLogin }) {
   return (
     <div className="min-h-screen bg-zinc-950 px-4 py-10 text-zinc-100">
       <div className="mx-auto max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
-        <h2 className="text-xl font-semibold">Iniciar Sesión</h2>
-        <p className="mt-1 text-sm text-zinc-400">Sistema de Pesaje de Ganado</p>
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div className="flex h-20 w-20 items-center justify-center">
+            <img src="/logo-bascula-la-esperanza.png" alt="BASCULA LA ESPERANZA" className="max-h-full max-w-full object-contain" />
+          </div>
+          <h2 className="mt-2 text-xl font-semibold">Iniciar sesión</h2>
+        </div>
 
-        <form className="mt-5 space-y-3" onSubmit={submit}>
+        <form className="space-y-3" onSubmit={submit}>
           <div>
             <label className="text-sm text-zinc-300">Correo</label>
             <input
@@ -55,7 +65,7 @@ export default function Login({ onLogin }) {
             />
           </div>
 
-          {error && <div className="rounded-lg border border-red-700/50 bg-red-950/30 px-3 py-2 text-sm text-red-200">{error}</div>}
+          <FeedbackBanner message={error} type='error' />
 
           <button className="w-full rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black disabled:opacity-60" disabled={loading}>
             {loading ? 'Ingresando...' : 'Ingresar'}

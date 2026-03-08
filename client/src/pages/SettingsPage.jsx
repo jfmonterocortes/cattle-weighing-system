@@ -2,16 +2,11 @@
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import PersonAutocomplete from '../components/PersonAutocomplete';
+import FeedbackBanner from '../components/FeedbackBanner';
 import { getSession } from '../utils/authSession';
 
 const ONE_TIME_MSG =
   'Tu solicitud de vinculación ya fue utilizada. Si necesitas hacer una corrección, por favor comunícate con atención al cliente o con el administrador.';
-
-function feedbackClass(type) {
-  if (type === 'error') return 'text-red-300';
-  if (type === 'success') return 'text-emerald-300';
-  return 'text-zinc-500';
-}
 
 export default function SettingsPage() {
   const { user } = getSession();
@@ -22,7 +17,9 @@ export default function SettingsPage() {
   const [clientLink, setClientLink] = useState(null);
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [priceInput, setPriceInput] = useState('5000');
-  const [resetPassword, setResetPassword] = useState('');
+  const [tokenResetPassword, setTokenResetPassword] = useState('');
+  const [clientProfileForm, setClientProfileForm] = useState({ phone: '', cedula: '' });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
   const isAdmin = user?.role === 'ADMIN';
@@ -34,6 +31,10 @@ export default function SettingsPage() {
       const res = await api.get('/settings');
       setSettings(res.data);
       setPriceInput(String(res.data?.defaultPricePerHead || 5000));
+      setClientProfileForm({
+        phone: res.data?.profile?.person?.phone || '',
+        cedula: res.data?.profile?.person?.cedula || '',
+      });
     } catch (error) {
       setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo cargar configuración.' });
     }
@@ -80,25 +81,56 @@ export default function SettingsPage() {
   };
 
   const submitResetByToken = async () => {
-    if (!resetToken || !resetPassword) {
+    if (!resetToken || !tokenResetPassword) {
       setFeedback({ type: 'error', message: 'Completa token y nueva contraseña.' });
       return;
     }
+
     try {
-      await api.post('/auth/reset-password', { token: resetToken, newPassword: resetPassword });
+      await api.post('/auth/reset-password', { token: resetToken, newPassword: tokenResetPassword });
       setFeedback({ type: 'success', message: 'Contraseña actualizada correctamente con token.' });
-      setResetPassword('');
+      setTokenResetPassword('');
     } catch (error) {
       setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo restablecer la contraseña.' });
     }
   };
 
+  const submitClientProfile = async () => {
+    try {
+      await api.patch('/settings/profile', {
+        phone: clientProfileForm.phone,
+        cedula: clientProfileForm.cedula,
+      });
+      setFeedback({ type: 'success', message: 'Teléfono y cédula actualizados.' });
+      await load();
+    } catch (error) {
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar perfil.' });
+    }
+  };
+
+  const submitOwnPassword = async () => {
+    try {
+      await api.patch('/settings/password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      setPasswordForm({ currentPassword: '', newPassword: '' });
+      setFeedback({ type: 'success', message: 'Contraseña actualizada correctamente.' });
+    } catch (error) {
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar contraseña.' });
+    }
+  };
+
+  const clientLinked = Boolean(settings?.profile?.personId);
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <h2 className="text-xl font-semibold">Settings</h2>
-        <p className="text-sm text-zinc-400">Configuración de perfil y ajustes por rol.</p>
+        <h2 className="text-xl font-semibold">Configuración</h2>
+        <p className="text-sm text-zinc-400">Perfil y ajustes de cuenta.</p>
       </div>
+
+      <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
 
       {settings?.profile && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
@@ -124,32 +156,85 @@ export default function SettingsPage() {
       )}
 
       {isClient && (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-          <h3 className="text-lg font-semibold">Vinculación de cuenta</h3>
-          {clientLink?.linkedPerson && (
-            <div className="mb-3 rounded-lg border border-emerald-700/50 bg-emerald-950/30 px-3 py-2 text-sm text-emerald-200">
-              Cuenta vinculada con: {clientLink.linkedPerson.name}
+        <>
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+            <h3 className="text-lg font-semibold">Datos de contacto</h3>
+            {!clientLinked && (
+              <FeedbackBanner
+                type="warning"
+                className="mt-3"
+                message="Debes vincular tu cuenta a una persona antes de actualizar teléfono o cédula."
+              />
+            )}
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              <input
+                className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm disabled:opacity-60"
+                placeholder="Teléfono"
+                value={clientProfileForm.phone}
+                disabled={!clientLinked}
+                onChange={(e) => setClientProfileForm((prev) => ({ ...prev, phone: e.target.value }))}
+              />
+              <input
+                className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm disabled:opacity-60"
+                placeholder="Cédula"
+                value={clientProfileForm.cedula}
+                disabled={!clientLinked}
+                onChange={(e) => setClientProfileForm((prev) => ({ ...prev, cedula: e.target.value }))}
+              />
             </div>
-          )}
+            <button
+              className="mt-3 rounded-xl border border-zinc-700 px-4 py-2 text-sm disabled:opacity-60"
+              onClick={submitClientProfile}
+              disabled={!clientLinked}
+            >
+              Guardar datos
+            </button>
+          </div>
 
-          {clientLink?.used && (
-            <div className="mb-3 rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-sm text-amber-200">{ONE_TIME_MSG}</div>
-          )}
-
-          {!clientLink?.used && !clientLink?.linkedPerson && (
-            <div className="space-y-3">
-              <PersonAutocomplete label="Buscar persona existente" value={selectedPerson} onSelect={setSelectedPerson} />
-              {selectedPerson?.id && <div className="text-xs text-zinc-400">Seleccionada: {selectedPerson.name} (ID {selectedPerson.id})</div>}
-              <button className="rounded-xl border border-zinc-700 px-4 py-2 text-sm" onClick={submitLinkRequest}>Enviar solicitud</button>
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+            <h3 className="text-lg font-semibold">Cambiar contraseña</h3>
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              <input
+                className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+                type="password"
+                placeholder="Contraseña actual"
+                value={passwordForm.currentPassword}
+                onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
+              />
+              <input
+                className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+                type="password"
+                placeholder="Nueva contraseña"
+                value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
+              />
             </div>
-          )}
+            <button className="mt-3 rounded-xl border border-zinc-700 px-4 py-2 text-sm" onClick={submitOwnPassword}>Actualizar contraseña</button>
+          </div>
 
-          {clientLink?.latestRequest && (
-            <div className="mt-4 text-sm text-zinc-300">
-              Estado actual: <span className="font-semibold">{clientLink.latestRequest.status}</span>
-            </div>
-          )}
-        </div>
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+            <h3 className="text-lg font-semibold">Vinculación de cuenta</h3>
+            {clientLink?.linkedPerson && (
+              <FeedbackBanner type="success" className="mb-3" message={`Cuenta vinculada con: ${clientLink.linkedPerson.name}`} />
+            )}
+
+            {clientLink?.used && <FeedbackBanner type="warning" className="mb-3" message={ONE_TIME_MSG} />}
+
+            {!clientLink?.used && !clientLink?.linkedPerson && (
+              <div className="space-y-3">
+                <PersonAutocomplete label="Buscar persona existente" value={selectedPerson} onSelect={setSelectedPerson} />
+                {selectedPerson?.id && <div className="text-xs text-zinc-400">Seleccionada: {selectedPerson.name} (ID {selectedPerson.id})</div>}
+                <button className="rounded-xl border border-zinc-700 px-4 py-2 text-sm" onClick={submitLinkRequest}>Enviar solicitud</button>
+              </div>
+            )}
+
+            {clientLink?.latestRequest && (
+              <div className="mt-4 text-sm text-zinc-300">
+                Estado actual: <span className="font-semibold">{clientLink.latestRequest.status}</span>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {resetToken && (
@@ -157,13 +242,11 @@ export default function SettingsPage() {
           <h3 className="text-lg font-semibold">Restablecer contraseña</h3>
           <p className="text-sm text-zinc-400">Token detectado en URL. Ingresa tu nueva contraseña.</p>
           <div className="mt-3 flex gap-2">
-            <input className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" type="password" placeholder="Nueva contraseña" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} />
+            <input className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" type="password" placeholder="Nueva contraseña" value={tokenResetPassword} onChange={(e) => setTokenResetPassword(e.target.value)} />
             <button className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black" onClick={submitResetByToken}>Actualizar</button>
           </div>
         </div>
       )}
-
-      {feedback.message && <div className={`text-sm ${feedbackClass(feedback.type)}`}>{feedback.message}</div>}
     </div>
   );
 }

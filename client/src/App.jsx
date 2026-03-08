@@ -16,6 +16,11 @@ function getAuth() {
   return { token, user };
 }
 
+function homeForRole(role) {
+  if (role === 'CLIENT') return '/planillas';
+  return '/dashboard';
+}
+
 function RequireAuth() {
   const { token } = getAuth();
   if (!token) return <Navigate to="/login" replace />;
@@ -24,13 +29,13 @@ function RequireAuth() {
 
 function RequireRole({ roles }) {
   const { user } = getAuth();
-  if (!user || !roles.includes(user.role)) return <Navigate to="/dashboard" replace />;
+  if (!user || !roles.includes(user.role)) return <Navigate to={homeForRole(user?.role)} replace />;
   return <Outlet />;
 }
 
 function RootRedirect() {
-  const { token } = getAuth();
-  return <Navigate to={token ? '/dashboard' : '/login'} replace />;
+  const { token, user } = getAuth();
+  return <Navigate to={token ? homeForRole(user?.role) : '/login'} replace />;
 }
 
 export default function App() {
@@ -42,7 +47,9 @@ export default function App() {
 
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route element={<RequireRole roles={['ADMIN', 'LIQUIDADOR']} />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+            </Route>
             <Route path="/planillas" element={<PlanillasPage />} />
             <Route path="/planillas/new" element={<NewSheetPage />} />
             <Route path="/planillas/:id" element={<SheetDetailPage />} />

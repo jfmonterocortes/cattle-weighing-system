@@ -1,7 +1,8 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { getSession } from '../utils/authSession';
+import FeedbackBanner from '../components/FeedbackBanner';
 
 function parseFilters(input) {
   return {
@@ -21,6 +22,7 @@ function parseFilters(input) {
 export default function PlanillasPage() {
   const { user } = getSession();
   const isAdmin = user?.role === 'ADMIN';
+  const isClient = user?.role === 'CLIENT';
 
   const [filters, setFilters] = useState({
     q: '',
@@ -51,6 +53,9 @@ export default function PlanillasPage() {
       ),
     [filters]
   );
+
+  const paidCount = useMemo(() => state.items.filter((sheet) => sheet.isPaid).length, [state.items]);
+  const unpaidCount = useMemo(() => state.items.filter((sheet) => !sheet.isPaid).length, [state.items]);
 
   useEffect(() => {
     let active = true;
@@ -111,8 +116,29 @@ export default function PlanillasPage() {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <h2 className="text-xl font-semibold">Planillas</h2>
-        <p className="text-sm text-zinc-400">Búsqueda instantánea por nombre, teléfono, fecha y estado de pago.</p>
+        <h2 className="text-xl font-semibold">{isClient ? 'Mis planillas' : 'Planillas'}</h2>
+        <p className="text-sm text-zinc-400">
+          {isClient
+            ? 'Consulta tu historial, estado de pago y movimientos recientes.'
+            : 'Búsqueda instantánea por nombre, teléfono, fecha y estado de pago.'}
+        </p>
+
+        {isClient && (
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
+              <div className="text-xs text-zinc-500">Historial</div>
+              <div className="text-xl font-semibold">{state.total}</div>
+            </div>
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
+              <div className="text-xs text-zinc-500">Pagadas</div>
+              <div className="text-xl font-semibold">{paidCount}</div>
+            </div>
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
+              <div className="text-xs text-zinc-500">Pendientes</div>
+              <div className="text-xl font-semibold">{unpaidCount}</div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-3 grid gap-3 md:grid-cols-4">
           <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" placeholder="Buscar general" value={filters.q} onChange={(e) => setFilters((p) => ({ ...p, q: e.target.value, page: 1 }))} />
@@ -123,7 +149,7 @@ export default function PlanillasPage() {
           <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" type="date" value={filters.from} onChange={(e) => setFilters((p) => ({ ...p, from: e.target.value, page: 1 }))} />
           <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" type="date" value={filters.to} onChange={(e) => setFilters((p) => ({ ...p, to: e.target.value, page: 1 }))} />
           <select className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" value={filters.paymentStatus} onChange={(e) => setFilters((p) => ({ ...p, paymentStatus: e.target.value, page: 1 }))}>
-            <option value="">Todos los pagos</option>
+            <option value="">Todos los estados de pago</option>
             <option value="paid">Pagadas</option>
             <option value="unpaid">Pendientes</option>
             <option value="paid_today">Pagadas hoy</option>
@@ -133,13 +159,11 @@ export default function PlanillasPage() {
 
         <div className="mt-3 flex flex-wrap gap-2">
           <button onClick={clearFilters} className="rounded-xl border border-zinc-700 px-4 py-2 text-sm">Limpiar filtros</button>
-          {isAdmin && (
-            <button onClick={exportExcel} className="rounded-xl border border-zinc-700 px-4 py-2 text-sm">Exportar Excel</button>
-          )}
+          {isAdmin && <button onClick={exportExcel} className="rounded-xl border border-zinc-700 px-4 py-2 text-sm">Exportar Excel</button>}
         </div>
       </div>
 
-      {state.error && <div className="rounded-xl border border-red-700/50 bg-red-950/30 px-3 py-2 text-sm text-red-200">{state.error}</div>}
+      <FeedbackBanner message={state.error} type='error' />
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
         <div className="border-b border-zinc-800 px-5 py-3 text-sm text-zinc-400">{state.loading ? 'Cargando...' : `${state.items.length} planillas en página / ${state.total} totales`}</div>
@@ -152,7 +176,7 @@ export default function PlanillasPage() {
                 <th className="px-4 py-2">Vendedor</th>
                 <th className="px-4 py-2">Comprador</th>
                 <th className="px-4 py-2">Liquidador</th>
-                <th className="px-4 py-2">Pago</th>
+                <th className="px-4 py-2">Estado de pago</th>
                 <th className="px-4 py-2">Valor</th>
                 <th className="px-4 py-2" />
               </tr>
@@ -161,7 +185,7 @@ export default function PlanillasPage() {
               {!state.loading && state.items.length === 0 && (
                 <tr>
                   <td className="px-4 py-6 text-sm text-zinc-500" colSpan={8}>
-                    {hasFilters ? 'No hay planillas para tus filtros.' : user?.role === 'CLIENT' ? 'No tienes planillas accesibles para tu rol.' : 'No hay planillas registradas.'}
+                    {hasFilters ? 'No hay planillas para tus filtros.' : isClient ? 'Aún no tienes planillas registradas.' : 'No hay planillas registradas.'}
                   </td>
                 </tr>
               )}

@@ -1,12 +1,13 @@
-const messages = {
+ï»¿const messages = {
   es: {
-    appTitle: 'Sistema de Pesaje de Ganado',
-    loginTitle: 'Iniciar sesión',
-    searchPlaceholder: 'Buscar por nombre, teléfono o número de planilla',
+    appTitle: 'BASCULA LA ESPERANZA',
+    loginTitle: 'Iniciar sesiÃ³n',
+    searchPlaceholder: 'Buscar por nombre, telÃ©fono o nÃºmero de planilla',
   },
 };
 
 export function t(key, locale = 'es') {
   return messages[locale]?.[key] || key;
 }
+
 
