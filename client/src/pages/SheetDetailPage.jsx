@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
-import { parseJwt } from '../utils/jwt';
+import { getSession } from '../utils/authSession';
 
 const TYPE_OPTIONS = ['VACA', 'TORO', 'BUFALO', 'NOVILLO', 'TERNERO'];
 const SEX_OPTIONS = ['MACHO', 'HEMBRA'];
@@ -19,11 +20,12 @@ function feedbackClass(type) {
   return 'text-zinc-400';
 }
 
-export default function SheetDetail({ sheetId, onBack }) {
-  const token = localStorage.getItem('token');
-  const payload = useMemo(() => (token ? parseJwt(token) : null), [token]);
-  const role = payload?.role;
-  const userId = payload?.userId;
+export default function SheetDetailPage() {
+  const { id } = useParams();
+  const sheetId = Number(id);
+  const { user } = getSession();
+  const role = user?.role;
+  const userId = user?.userId;
 
   const [sheet, setSheet] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -48,8 +50,8 @@ export default function SheetDetail({ sheetId, onBack }) {
   };
 
   useEffect(() => {
+    if (!Number.isFinite(sheetId)) return;
     loadDetail();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheetId]);
 
   const editable = sheet ? canEdit(role, sheet, userId) : false;
@@ -59,14 +61,15 @@ export default function SheetDetail({ sheetId, onBack }) {
       const res = await api.get(`/sheets/${sheetId}/rows/next-number`);
       setDraftRow((prev) => ({ ...prev, cattleNumber: res.data.cattleNumber }));
     } catch {
-      // no-op
+      // noop
     }
   };
 
   useEffect(() => {
     if (sheet) suggestNumber();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet?.id]);
+
+  const groupedStats = useMemo(() => sheet?.computed?.totalsByTypeSex || [], [sheet]);
 
   const addRow = async (event) => {
     event.preventDefault();
@@ -81,7 +84,9 @@ export default function SheetDetail({ sheetId, onBack }) {
         cattleNumber: draftRow.cattleNumber || '1',
         letters: draftRow.letters || null,
       });
-      setDraftRow({ type: 'TERNERO', sex: 'MACHO', weight: '', cattleNumber: '', letters: '' });
+      const nextType = draftRow.type;
+      const nextSex = draftRow.sex;
+      setDraftRow({ type: nextType, sex: nextSex, weight: '', cattleNumber: '', letters: '' });
       setActionFeedback({ type: 'success', message: 'Fila agregada correctamente.' });
       await loadDetail();
     } catch (error) {
@@ -173,12 +178,10 @@ export default function SheetDetail({ sheetId, onBack }) {
   if (loadError) return <div className="rounded-2xl border border-red-700/50 bg-red-950/30 p-6 text-red-200">{loadError}</div>;
   if (!sheet) return <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">Planilla no encontrada.</div>;
 
-  const groupedStats = sheet.computed?.totalsByTypeSex || [];
-
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <button onClick={onBack} className="rounded-xl border border-zinc-700 px-3 py-2 text-sm">Volver</button>
+        <Link to="/planillas" className="rounded-xl border border-zinc-700 px-3 py-2 text-sm">Volver a planillas</Link>
         <div className="text-right">
           <h2 className="text-xl font-semibold">Planilla {sheet.visibleNumber}</h2>
           <p className="text-sm text-zinc-400">{new Date(sheet.date).toLocaleString()}</p>
@@ -212,38 +215,14 @@ export default function SheetDetail({ sheetId, onBack }) {
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
         <h3 className="text-lg font-semibold">Resumen de pesos</h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <div className="text-xs text-zinc-500">Cabezas</div>
-            <div className="text-lg font-semibold">{sheet.headCount}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Peso total</div>
-            <div className="text-lg font-semibold">{sheet.totalWeight}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Promedio general</div>
-            <div className="text-lg font-semibold">{sheet.averageWeight}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Valor total</div>
-            <div className="text-lg font-semibold">{sheet.totalValue}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Total machos</div>
-            <div className="text-lg font-semibold">{sheet.totalMaleWeight}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Promedio machos</div>
-            <div className="text-lg font-semibold">{sheet.averageMaleWeight}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Total hembras</div>
-            <div className="text-lg font-semibold">{sheet.totalFemaleWeight}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Promedio hembras</div>
-            <div className="text-lg font-semibold">{sheet.averageFemaleWeight}</div>
-          </div>
+          <div><div className="text-xs text-zinc-500">Cabezas</div><div className="text-lg font-semibold">{sheet.headCount}</div></div>
+          <div><div className="text-xs text-zinc-500">Peso total</div><div className="text-lg font-semibold">{sheet.totalWeight}</div></div>
+          <div><div className="text-xs text-zinc-500">Promedio general</div><div className="text-lg font-semibold">{sheet.averageWeight}</div></div>
+          <div><div className="text-xs text-zinc-500">Valor total</div><div className="text-lg font-semibold">{sheet.totalValue}</div></div>
+          <div><div className="text-xs text-zinc-500">Total machos</div><div className="text-lg font-semibold">{sheet.totalMaleWeight}</div></div>
+          <div><div className="text-xs text-zinc-500">Promedio machos</div><div className="text-lg font-semibold">{sheet.averageMaleWeight}</div></div>
+          <div><div className="text-xs text-zinc-500">Total hembras</div><div className="text-lg font-semibold">{sheet.totalFemaleWeight}</div></div>
+          <div><div className="text-xs text-zinc-500">Promedio hembras</div><div className="text-lg font-semibold">{sheet.averageFemaleWeight}</div></div>
         </div>
       </div>
 
@@ -260,14 +239,10 @@ export default function SheetDetail({ sheetId, onBack }) {
               </tr>
             </thead>
             <tbody>
-              {groupedStats.length === 0 && (
-                <tr>
-                  <td className="px-2 py-3 text-zinc-500" colSpan={4}>Sin datos de desglose.</td>
-                </tr>
-              )}
+              {groupedStats.length === 0 && <tr><td className="px-2 py-3 text-zinc-500" colSpan={4}>Sin datos de desglose.</td></tr>}
               {groupedStats.map((group) => (
                 <tr key={`${group.type}-${group.sex}`} className="border-t border-zinc-800 text-zinc-200">
-                  <td className="px-2 py-2 capitalize">{group.specification}</td>
+                  <td className="px-2 py-2">{String(group.specification || '').toUpperCase()}</td>
                   <td className="px-2 py-2">{group.count}</td>
                   <td className="px-2 py-2">{group.totalWeight}</td>
                   <td className="px-2 py-2">{group.averageWeight}</td>
@@ -316,7 +291,7 @@ export default function SheetDetail({ sheetId, onBack }) {
                   className="border-t border-zinc-800 text-zinc-200"
                 >
                   <td className="px-2 py-2">{row.rowOrder}</td>
-                  <td className="px-2 py-2 lowercase">{row.type.toLowerCase()} {row.sex.toLowerCase()}</td>
+                  <td className="px-2 py-2">{`${row.type} ${row.sex}`}</td>
                   <td className="px-2 py-2">
                     {editable ? (
                       <input
@@ -324,10 +299,7 @@ export default function SheetDetail({ sheetId, onBack }) {
                         value={row.weight}
                         onChange={(e) => {
                           const value = Math.trunc(Number(e.target.value || 0));
-                          setSheet((prev) => ({
-                            ...prev,
-                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, weight: value } : item)),
-                          }));
+                          setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, weight: value } : item)) }));
                         }}
                         onBlur={() => updateRowField(row.id, { weight: row.weight })}
                       />
@@ -342,10 +314,7 @@ export default function SheetDetail({ sheetId, onBack }) {
                         value={row.cattleNumber}
                         onChange={(e) => {
                           const value = e.target.value;
-                          setSheet((prev) => ({
-                            ...prev,
-                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, cattleNumber: value } : item)),
-                          }));
+                          setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, cattleNumber: value } : item)) }));
                         }}
                         onBlur={() => updateRowField(row.id, { cattleNumber: row.cattleNumber })}
                       />
@@ -360,10 +329,7 @@ export default function SheetDetail({ sheetId, onBack }) {
                         value={row.letters || ''}
                         onChange={(e) => {
                           const value = e.target.value;
-                          setSheet((prev) => ({
-                            ...prev,
-                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, letters: value } : item)),
-                          }));
+                          setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, letters: value } : item)) }));
                         }}
                         onBlur={() => updateRowField(row.id, { letters: row.letters || null })}
                       />
@@ -389,22 +355,18 @@ export default function SheetDetail({ sheetId, onBack }) {
             <div>
               <label className="text-xs text-zinc-400">Tipo</label>
               <select className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.type} onChange={(e) => setDraftRow((prev) => ({ ...prev, type: e.target.value }))}>
-                {TYPE_OPTIONS.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
+                {TYPE_OPTIONS.map((type) => <option key={type} value={type}>{type}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs text-zinc-400">Sexo</label>
               <select className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.sex} onChange={(e) => setDraftRow((prev) => ({ ...prev, sex: e.target.value }))}>
-                {SEX_OPTIONS.map((sex) => (
-                  <option key={sex} value={sex}>{sex}</option>
-                ))}
+                {SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs text-zinc-400">Kilos</label>
-              <input className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.weight} onChange={(e) => setDraftRow((prev) => ({ ...prev, weight: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && addRow(e)} />
+              <input className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.weight} onChange={(e) => setDraftRow((prev) => ({ ...prev, weight: e.target.value }))} />
             </div>
             <div>
               <label className="text-xs text-zinc-400">Nº Res</label>
@@ -433,4 +395,3 @@ export default function SheetDetail({ sheetId, onBack }) {
     </div>
   );
 }
-

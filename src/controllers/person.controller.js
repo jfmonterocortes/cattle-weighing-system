@@ -1,4 +1,4 @@
-const { createPersonRecord, updatePersonRecord, searchPeople } = require('../services/person.service');
+﻿const { createPersonRecord, updatePersonRecord, searchPeople, listPeople } = require('../services/person.service');
 
 async function createPerson(req, res, next) {
   try {
@@ -11,8 +11,17 @@ async function createPerson(req, res, next) {
 
 async function updatePerson(req, res, next) {
   try {
-    const person = await updatePersonRecord(Number(req.params.personId), req.body);
+    const person = await updatePersonRecord(Number(req.params.personId), req.body, req.user);
     return res.json(person);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listPeopleController(req, res, next) {
+  try {
+    const result = await listPeople(req.query);
+    return res.json(result);
   } catch (error) {
     return next(error);
   }
@@ -30,5 +39,6 @@ async function searchPerson(req, res, next) {
 module.exports = {
   createPerson,
   updatePerson,
+  listPeopleController,
   searchPerson,
 };

@@ -1,4 +1,4 @@
-const ExcelJS = require('exceljs');
+ï»¿const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const prisma = require('../db/prisma');
 const { calculateSheetStats } = require('../utils/sheet-calculations');
@@ -91,9 +91,9 @@ async function exportSheetPdf(sheetId, user) {
   doc.text(`Estado de pago: ${sheet.isPaid ? 'Pagada' : 'Pendiente'}`);
   doc.moveDown(0.8);
 
-  doc.text('Nº  Especificación             Kilos   Nº Res   Letras', { underline: true });
+  doc.text('NÂº  EspecificaciÃ³n             Kilos   NÂº Res   Letras', { underline: true });
   sheet.rows.forEach((row) => {
-    const spec = `${row.type.toLowerCase()} ${row.sex.toLowerCase()}`;
+    const spec = `${row.type.toUpperCase()} ${row.sex.toUpperCase()}`;
     doc.text(
       `${String(row.rowOrder).padEnd(3)} ${spec.padEnd(26)} ${String(row.weight).padEnd(7)} ${String(
         row.cattleNumber

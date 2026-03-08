@@ -1,4 +1,4 @@
-const { z } = require('zod');
+﻿const { z } = require('zod');
 
 const listUsersQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),
@@ -14,7 +14,7 @@ const adminLinkUserToPersonSchema = z.object({
 const updateUserSchema = z
   .object({
     email: z.string().email().optional(),
-    role: z.enum(['ADMIN', 'LIQUIDADOR', 'CLIENT']).optional(),
+    role: z.enum(['LIQUIDADOR', 'CLIENT']).optional(),
     isActive: z.boolean().optional(),
     liquidadorAlias: z.string().trim().max(20).nullable().optional(),
   })
@@ -27,8 +27,13 @@ const updateUserSchema = z
     { message: 'At least one field is required' }
   );
 
+const manualPasswordChangeSchema = z.object({
+  newPassword: z.string().min(8).max(120),
+});
+
 module.exports = {
   listUsersQuerySchema,
   adminLinkUserToPersonSchema,
   updateUserSchema,
+  manualPasswordChangeSchema,
 };

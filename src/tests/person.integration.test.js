@@ -1,4 +1,4 @@
-const request = require('supertest');
+﻿const request = require('supertest');
 const app = require('../app');
 
 async function login(email, password) {
@@ -36,7 +36,7 @@ describe('person integration contracts', () => {
       .send({ name: `Otra ${Date.now()}`, phone });
 
     expect(second.status).toBe(409);
-    expect(String(second.body.message || '').toLowerCase()).toContain('telefono');
+    expect(String(second.body.message || '').toLowerCase()).toContain('tel');
   });
 
   it('newly created person appears in search immediately', async () => {

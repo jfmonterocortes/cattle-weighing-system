@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 
 const bcrypt = require('bcrypt');
 const prisma = require('../src/db/prisma');
@@ -66,7 +66,7 @@ async function main() {
     email: 'admin@bascula.com',
     password: 'Admin123!',
     role: ROLE.ADMIN,
-    personId: p1.id,
+    personId: null,
     alias: 'ADM',
   });
 

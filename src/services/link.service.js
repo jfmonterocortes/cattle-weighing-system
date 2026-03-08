@@ -1,6 +1,9 @@
-const prisma = require('../db/prisma');
+﻿const prisma = require('../db/prisma');
 const { LINK_REQUEST_STATUS, SHEET_AUDIT_ACTION } = require('../constants/domain');
 const { addSheetAudit } = require('./audit.service');
+
+const ONE_TIME_LINK_MESSAGE =
+  'Tu solicitud de vinculación ya fue utilizada. Si necesitas hacer una corrección, por favor comunícate con atención al cliente o con el administrador.';
 
 async function createLinkRequest({ userId, personId, notes }) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -12,6 +15,16 @@ async function createLinkRequest({ userId, personId, notes }) {
 
   if (user.personId) {
     const err = new Error('Your account is already linked to a person');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const previousRequest = await prisma.personAccountLinkRequest.findFirst({
+    where: { userId },
+    orderBy: { requestedAt: 'asc' },
+  });
+  if (previousRequest) {
+    const err = new Error(ONE_TIME_LINK_MESSAGE);
     err.statusCode = 409;
     throw err;
   }
@@ -63,6 +76,34 @@ async function listLinkRequests(status) {
     },
     orderBy: { requestedAt: 'desc' },
   });
+}
+
+async function getMyLinkStatus(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      personId: true,
+      person: { select: { id: true, name: true, phone: true, cedula: true } },
+    },
+  });
+
+  const latestRequest = await prisma.personAccountLinkRequest.findFirst({
+    where: { userId },
+    include: {
+      person: { select: { id: true, name: true, phone: true, cedula: true } },
+      reviewedBy: { select: { id: true, email: true } },
+    },
+    orderBy: { requestedAt: 'desc' },
+  });
+
+  return {
+    linkedPerson: user?.person || null,
+    canRequestLink: !latestRequest && !user?.personId,
+    used: Boolean(latestRequest),
+    blockedMessage: latestRequest ? ONE_TIME_LINK_MESSAGE : null,
+    latestRequest,
+  };
 }
 
 async function reviewLinkRequest({ requestId, reviewerUserId, status, notes }) {
@@ -175,5 +216,7 @@ async function reviewLinkRequest({ requestId, reviewerUserId, status, notes }) {
 module.exports = {
   createLinkRequest,
   listLinkRequests,
+  getMyLinkStatus,
   reviewLinkRequest,
+  ONE_TIME_LINK_MESSAGE,
 };

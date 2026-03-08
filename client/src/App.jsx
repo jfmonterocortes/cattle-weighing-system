@@ -1,72 +1,62 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import Login from './pages/Login';
-import MySheets from './pages/MySheets';
-import SheetDetail from './pages/SheetDetail';
+import DashboardPage from './pages/DashboardPage';
+import PlanillasPage from './pages/PlanillasPage';
+import NewSheetPage from './pages/NewSheetPage';
+import SheetDetailPage from './pages/SheetDetailPage';
+import PersonasPage from './pages/PersonasPage';
+import UsersPage from './pages/UsersPage';
+import SettingsPage from './pages/SettingsPage';
+import AppLayout from './components/AppLayout';
 import { parseJwt } from './utils/jwt';
-import { applyTheme, initTheme } from './utils/theme';
 
-export default function App() {
-  const [view, setView] = useState('list');
-  const [sheetId, setSheetId] = useState(null);
-  const [theme, setTheme] = useState('dark');
-
+function getAuth() {
   const token = localStorage.getItem('token');
-  const payload = useMemo(() => (token ? parseJwt(token) : null), [token]);
-
-  useEffect(() => {
-    setTheme(initTheme());
-  }, []);
-
-  if (!token) {
-    return <Login onLogin={() => setView('list')} />;
-  }
-
-  return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-7xl px-4 py-8">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">Sistema de Pesaje de Ganado</h1>
-            <p className="text-sm text-zinc-400">Operación de planillas, pagos, auditoría y exportes.</p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs">Rol: {payload?.role || '-'}</span>
-            <button
-              className="rounded-lg border border-zinc-700 px-3 py-1 text-sm"
-              onClick={() => {
-                const next = theme === 'dark' ? 'light' : 'dark';
-                applyTheme(next);
-                setTheme(next);
-              }}
-            >
-              {theme === 'dark' ? 'Claro' : 'Oscuro'}
-            </button>
-            <button
-              className="rounded-lg border border-zinc-700 px-3 py-1 text-sm"
-              onClick={() => {
-                localStorage.removeItem('token');
-                window.location.reload();
-              }}
-            >
-              Cerrar sesión
-            </button>
-          </div>
-        </div>
-
-        {view === 'detail' ? (
-          <SheetDetail sheetId={sheetId} onBack={() => setView('list')} />
-        ) : (
-          <MySheets
-            onOpen={(id) => {
-              setSheetId(id);
-              setView('detail');
-            }}
-          />
-        )}
-      </div>
-    </div>
-  );
+  const user = token ? parseJwt(token) : null;
+  return { token, user };
 }
 
+function RequireAuth() {
+  const { token } = getAuth();
+  if (!token) return <Navigate to="/login" replace />;
+  return <Outlet />;
+}
 
+function RequireRole({ roles }) {
+  const { user } = getAuth();
+  if (!user || !roles.includes(user.role)) return <Navigate to="/dashboard" replace />;
+  return <Outlet />;
+}
+
+function RootRedirect() {
+  const { token } = getAuth();
+  return <Navigate to={token ? '/dashboard' : '/login'} replace />;
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<RootRedirect />} />
+        <Route path="/login" element={<Login />} />
+
+        <Route element={<RequireAuth />}>
+          <Route element={<AppLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/planillas" element={<PlanillasPage />} />
+            <Route path="/planillas/new" element={<NewSheetPage />} />
+            <Route path="/planillas/:id" element={<SheetDetailPage />} />
+            <Route path="/personas" element={<PersonasPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+
+            <Route element={<RequireRole roles={['ADMIN']} />}>
+              <Route path="/usuarios" element={<UsersPage />} />
+            </Route>
+          </Route>
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}

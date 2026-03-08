@@ -1,4 +1,4 @@
-const { loginWithPassword, registerUser } = require('../services/auth.service');
+﻿const { loginWithPassword, registerUser, resetPasswordWithToken } = require('../services/auth.service');
 
 async function login(req, res, next) {
   try {
@@ -20,7 +20,20 @@ async function register(req, res, next) {
   }
 }
 
+async function resetPassword(req, res, next) {
+  try {
+    const result = await resetPasswordWithToken({
+      token: req.body.token,
+      newPassword: req.body.newPassword,
+    });
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   login,
   register,
+  resetPassword,
 };

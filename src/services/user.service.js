@@ -1,4 +1,6 @@
-const prisma = require('../db/prisma');
+﻿const prisma = require('../db/prisma');
+const bcrypt = require('bcrypt');
+const { ROLE } = require('../constants/domain');
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -48,6 +50,18 @@ async function updateUser(userId, input) {
     throw err;
   }
 
+  if (user.role === ROLE.ADMIN && input.role && input.role !== ROLE.ADMIN) {
+    const err = new Error('No se puede modificar el rol del administrador principal.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  if (input.role === ROLE.ADMIN) {
+    const err = new Error('No se permite asignar el rol ADMIN desde esta interfaz.');
+    err.statusCode = 403;
+    throw err;
+  }
+
   if (input.email && input.email !== user.email) {
     const existing = await prisma.user.findUnique({ where: { email: input.email } });
     if (existing) {
@@ -85,6 +99,12 @@ async function adminLinkUserToPerson({ userId, personId }) {
     throw err;
   }
 
+  if (user.role === ROLE.ADMIN) {
+    const err = new Error('El administrador no requiere vinculación a persona.');
+    err.statusCode = 400;
+    throw err;
+  }
+
   if (personId === null) {
     return prisma.user.update({ where: { id: userId }, data: { personId: null } });
   }
@@ -106,9 +126,23 @@ async function adminLinkUserToPerson({ userId, personId }) {
   return prisma.user.update({ where: { id: userId }, data: { personId } });
 }
 
+async function adminManualPasswordChange({ userId, newPassword }) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  return { success: true };
+}
+
 module.exports = {
   listUsers,
   updateUser,
   adminLinkUserToPerson,
+  adminManualPasswordChange,
   toSafeLimit,
 };

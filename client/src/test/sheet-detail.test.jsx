@@ -1,7 +1,8 @@
 ﻿import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import SheetDetail from '../pages/SheetDetail';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import SheetDetailPage from '../pages/SheetDetailPage';
 
 const mockGet = vi.fn();
 const mockPost = vi.fn();
@@ -22,7 +23,7 @@ function makeToken(payload) {
   return `a.${encoded}.b`;
 }
 
-describe('SheetDetail calculations and labels', () => {
+describe('SheetDetail page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.setItem('token', makeToken({ userId: 10, role: 'CLIENT', personId: 3 }));
@@ -54,7 +55,7 @@ describe('SheetDetail calculations and labels', () => {
             isPaid: false,
             computed: {
               totalsByTypeSex: [
-                { type: 'TERNERO', sex: 'MACHO', count: 1, totalWeight: 300, averageWeight: 300, specification: 'ternero macho' },
+                { type: 'TERNERO', sex: 'MACHO', count: 1, totalWeight: 300, averageWeight: 300, specification: 'TERNERO MACHO' },
               ],
             },
           },
@@ -68,8 +69,14 @@ describe('SheetDetail calculations and labels', () => {
     mockDelete.mockResolvedValue({ data: {} });
   });
 
-  it('renders male/female totals, grouped breakdown, and correct Spanish labels', async () => {
-    render(<SheetDetail sheetId={1} onBack={() => {}} />);
+  it('renders totals, grouped metrics and UTF-8 labels', async () => {
+    render(
+      <MemoryRouter initialEntries={['/planillas/1']}>
+        <Routes>
+          <Route path="/planillas/:id" element={<SheetDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
 
     await waitFor(() => expect(screen.getByText('Planilla 2026-001')).toBeInTheDocument());
 
@@ -77,8 +84,7 @@ describe('SheetDetail calculations and labels', () => {
     expect(screen.getByText('Promedio machos')).toBeInTheDocument();
     expect(screen.getByText('Total hembras')).toBeInTheDocument();
     expect(screen.getByText('Promedio hembras')).toBeInTheDocument();
-    expect(screen.getAllByText('ternero macho').length).toBeGreaterThan(0);
-
+    expect(screen.getAllByText('TERNERO MACHO').length).toBeGreaterThan(0);
     expect(screen.getByText('Nº')).toBeInTheDocument();
     expect(screen.getAllByText('Especificación').length).toBeGreaterThan(0);
     expect(screen.getByText('Nº Res')).toBeInTheDocument();

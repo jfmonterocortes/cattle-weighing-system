@@ -1,4 +1,4 @@
-const request = require('supertest');
+﻿const request = require('supertest');
 const app = require('../app');
 
 describe('critical flows integration', () => {
@@ -43,7 +43,7 @@ describe('critical flows integration', () => {
     const person = await request(app)
       .post('/people')
       .set('Authorization', `Bearer ${liqToken}`)
-      .send({ name: `Persona Test ${Date.now()}`, phone: '3001239988' });
+      .send({ name: `Persona Test ${Date.now()}`, phone: `390${Date.now().toString().slice(-7)}` });
     expect(person.status).toBe(201);
 
     const sheet = await request(app)

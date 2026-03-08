@@ -1,4 +1,4 @@
-const { createLinkRequest, listLinkRequests, reviewLinkRequest } = require('../services/link.service');
+﻿const { createLinkRequest, listLinkRequests, reviewLinkRequest, getMyLinkStatus } = require('../services/link.service');
 
 async function createLinkRequestController(req, res, next) {
   try {
@@ -16,6 +16,15 @@ async function createLinkRequestController(req, res, next) {
 async function listLinkRequestsController(req, res, next) {
   try {
     const result = await listLinkRequests(req.query.status);
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getMyLinkStatusController(req, res, next) {
+  try {
+    const result = await getMyLinkStatus(req.user.userId);
     return res.json(result);
   } catch (error) {
     return next(error);
@@ -40,5 +49,6 @@ async function reviewLinkRequestController(req, res, next) {
 module.exports = {
   createLinkRequestController,
   listLinkRequestsController,
+  getMyLinkStatusController,
   reviewLinkRequestController,
 };

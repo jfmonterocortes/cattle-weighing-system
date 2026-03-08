@@ -1,4 +1,4 @@
-const { CATTLE_TYPE, CATTLE_SEX } = require('../constants/domain');
+﻿const { CATTLE_TYPE, CATTLE_SEX } = require('../constants/domain');
 
 function resolveDefaultSex(type, currentSex) {
   if (type === CATTLE_TYPE.VACA) return CATTLE_SEX.HEMBRA;
@@ -8,7 +8,7 @@ function resolveDefaultSex(type, currentSex) {
 }
 
 function buildSpecification(type, sex) {
-  return `${String(type || '').toLowerCase()} ${String(sex || '').toLowerCase()}`.trim();
+  return `${String(type || '').toUpperCase()} ${String(sex || '').toUpperCase()}`.trim();
 }
 
 function calculateSheetStats(rows, pricePerHead) {

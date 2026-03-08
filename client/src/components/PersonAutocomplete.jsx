@@ -54,34 +54,37 @@ export default function PersonAutocomplete({
     });
   }, [open, results.length, query.length]);
 
-  useEffect(() => {
-    const q = query.trim();
-    if (q.length < 2) {
+  const loadPeople = async (text) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.get('/people', {
+        params: {
+          q: text || undefined,
+          page: 1,
+          pageSize: 100,
+        },
+      });
+      const items = Array.isArray(res.data?.items) ? res.data.items : [];
+      setResults(items);
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Error buscando personas';
       setResults([]);
-      setError('');
-      return;
+      setError(msg);
+      onError?.(msg);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
+    if (!open) return;
     clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await api.get('/people/search', { params: { q, limit: 8 } });
-        setResults(res.data || []);
-        setOpen(true);
-      } catch (err) {
-        const msg = err?.response?.data?.message || 'Error buscando personas';
-        setResults([]);
-        setError(msg);
-        onError?.(msg);
-      } finally {
-        setLoading(false);
-      }
-    }, 250);
-
+    timeoutRef.current = setTimeout(() => {
+      loadPeople(query.trim());
+    }, 200);
     return () => clearTimeout(timeoutRef.current);
-  }, [query, onError]);
+  }, [query, open]);
 
   const selectItem = (person) => {
     setQuery(person.name);
@@ -99,6 +102,7 @@ export default function PersonAutocomplete({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
           placeholder={placeholder}
           autoComplete="off"
         />
@@ -108,23 +112,13 @@ export default function PersonAutocomplete({
         createPortal(
           <div
             ref={dropdownRef}
-            style={{
-              position: 'fixed',
-              top: dropdownStyle.top,
-              left: dropdownStyle.left,
-              width: dropdownStyle.width,
-              zIndex: 10000,
-            }}
-            className="overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl"
+            style={{ position: 'fixed', top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width, zIndex: 10000 }}
+            className="max-h-72 overflow-auto rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl"
             onMouseDown={(e) => e.stopPropagation()}
           >
             {loading && <div className="px-3 py-2 text-sm text-zinc-400">Buscando...</div>}
-
             {!loading && error && <div className="px-3 py-2 text-sm text-red-300">{error}</div>}
-
-            {!loading && !error && results.length === 0 && query.trim().length >= 2 && (
-              <div className="px-3 py-2 text-sm text-zinc-400">Sin resultados.</div>
-            )}
+            {!loading && !error && results.length === 0 && <div className="px-3 py-2 text-sm text-zinc-400">Sin resultados.</div>}
 
             {!loading &&
               !error &&
@@ -133,8 +127,10 @@ export default function PersonAutocomplete({
                   key={person.id}
                   type="button"
                   className="w-full px-3 py-2 text-left hover:bg-zinc-800"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => selectItem(person)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    selectItem(person);
+                  }}
                 >
                   <div className="text-sm font-medium text-zinc-100">{person.name}</div>
                   <div className="text-xs text-zinc-400">
@@ -147,10 +143,15 @@ export default function PersonAutocomplete({
               <button
                 type="button"
                 className="w-full border-t border-zinc-700 px-3 py-2 text-left text-sm text-emerald-300 hover:bg-zinc-800"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  setOpen(false);
-                  onCreate(query.trim());
+                onMouseDown={async (e) => {
+                  e.preventDefault();
+                  try {
+                    const created = await onCreate(query.trim());
+                    if (created?.id) selectItem(created);
+                    else setOpen(false);
+                  } catch {
+                    // onCreate handles feedback
+                  }
                 }}
               >
                 Crear persona "{query.trim()}"
@@ -162,5 +163,3 @@ export default function PersonAutocomplete({
     </>
   );
 }
-
-

@@ -1,9 +1,9 @@
-const { getDefaultPricePerHead, setDefaultPricePerHead } = require('../services/settings.service');
+﻿const { getSettingsForUser, setDefaultPricePerHead } = require('../services/settings.service');
 
 async function getSettingsController(req, res, next) {
   try {
-    const defaultPricePerHead = await getDefaultPricePerHead();
-    return res.json({ defaultPricePerHead });
+    const settings = await getSettingsForUser(req.user);
+    return res.json(settings);
   } catch (error) {
     return next(error);
   }

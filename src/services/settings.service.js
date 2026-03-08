@@ -1,4 +1,4 @@
-const prisma = require('../db/prisma');
+﻿const prisma = require('../db/prisma');
 const { SYSTEM_SETTING_KEYS } = require('../constants/domain');
 
 async function getDefaultPricePerHead() {
@@ -18,7 +18,46 @@ async function setDefaultPricePerHead(value) {
   });
 }
 
+async function getSettingsForUser(user) {
+  const defaultPricePerHead = await getDefaultPricePerHead();
+
+  const account = await prisma.user.findUnique({
+    where: { id: user.userId },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      liquidadorAlias: true,
+      isActive: true,
+      personId: true,
+      person: { select: { id: true, name: true, phone: true, cedula: true } },
+    },
+  });
+
+  let linkRequest = null;
+  if (user.role === 'CLIENT') {
+    linkRequest = await prisma.personAccountLinkRequest.findFirst({
+      where: { userId: user.userId },
+      orderBy: { requestedAt: 'desc' },
+      include: {
+        person: { select: { id: true, name: true, phone: true, cedula: true } },
+      },
+    });
+  }
+
+  return {
+    defaultPricePerHead,
+    profile: account,
+    link: {
+      hasUsedRequest: Boolean(linkRequest),
+      latestRequest: linkRequest,
+      canRequest: user.role === 'CLIENT' ? !linkRequest && !account?.personId : false,
+    },
+  };
+}
+
 module.exports = {
   getDefaultPricePerHead,
   setDefaultPricePerHead,
+  getSettingsForUser,
 };
