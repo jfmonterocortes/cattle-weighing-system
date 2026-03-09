@@ -1,6 +1,6 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
-/* Tailwind v4: dark variant dependiente de clase .dark */
+/* Tailwind v4: class-based dark variant via .dark */
 @custom-variant dark (&:where(.dark, .dark *));
 
 html.dark {
@@ -16,8 +16,8 @@ body {
 }
 
 /*
-  Tema claro global para una app originalmente estilizada en oscuro.
-  Esto garantiza que el toggle sea visible y usable aunque el SO esté en dark.
+  Global light theme overrides for an app originally styled in dark mode.
+  This keeps the theme toggle visible and usable even when the OS prefers dark.
 */
 html:not(.dark) body {
   background-color: #f5f7fb;

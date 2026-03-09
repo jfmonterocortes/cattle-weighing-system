@@ -1,135 +1,56 @@
-﻿# BASCULA LA ESPERANZA
+# BASCULA LA ESPERANZA
 
-Sistema full-stack para digitalizar planillas de pesaje de ganado con separación `Person`/`User`, control por roles, pagos, auditoría y exportes.
+## Overview
+BASCULA LA ESPERANZA is a full-stack cattle weighing management platform for digitizing operational weighing sheets, payments, and account access control. It separates operational identities (`Person`) from authentication identities (`User`) to support real-world workflows where people may exist in transactions before they have an account. The system is designed for role-based operations with production-oriented validation, auditing, and export features.
 
-## Stack
-- Backend: Node.js, Express, PostgreSQL, Prisma, JWT, Zod
+## Problem It Solves
+Many livestock weighing operations still rely on paper sheets and manual reconciliation across sellers, buyers, liquidators, and payment records. This project centralizes those workflows into a role-secure web system that supports searchable historical records, controlled editing windows, account-to-person linking approval, and business-ready PDF/Excel outputs.
+
+## Architecture
+The application follows a standard web architecture with a clear frontend/backend boundary:
+
+- React client (Vite + React Router) for role-based UI flows and operational forms
+- Express API for authentication, authorization, validation, and business rules
+- PostgreSQL database accessed through Prisma ORM for relational domain persistence
+
+Core domain entities include `User`, `Person`, `WeighingSheet`, `CattleRow`, `PersonAccountLinkRequest`, `PaymentLog`, and `SystemSetting`.
+
+## Tech Stack
+- Backend: Node.js, Express, Prisma, PostgreSQL, JWT, Zod
 - Frontend: React, React Router, Vite, Tailwind CSS
-- Exportes: PDFKit, ExcelJS
-- Tests: Vitest (backend y frontend)
+- Exports: PDFKit, ExcelJS
+- Testing: Vitest, Supertest, Testing Library
 
-## Estructura de rutas frontend
-- `/dashboard`
-- `/planillas`
-- `/planillas/new`
-- `/planillas/:id`
-- `/personas`
-- `/usuarios` (solo ADMIN)
-- `/settings`
+## Key Features
+- Role model with `ADMIN`, `LIQUIDADOR`, and `CLIENT`
+- Strict `Person` vs `User` separation with admin-approved account linking
+- Route-based frontend structure:
+  - `/dashboard`
+  - `/planillas`
+  - `/planillas/new`
+  - `/planillas/:id`
+  - `/personas`
+  - `/usuarios` (admin only)
+  - `/settings`
+- Instant sheet filtering with backend-aligned query parameters
+- Operational planilla workflow with row editing, reordering, totals, and grouped metrics
+- Payment lifecycle with paid/unpaid state and payment logs
+- Export capabilities (PDF and Excel) with authorization checks
+- Admin user management for `CLIENT`/`LIQUIDADOR`, including manual linking and password reset flows
 
-Navegación con layout tipo dashboard:
-- sidebar fijo en desktop
-- menú hamburguesa en mobile
+## Project Structure
+- [`/src`](./src): Express server, routes, services, validators, middlewares, and integration/unit tests
+- [`/prisma`](./prisma): Prisma schema, migrations, and seed data
+- [`/client/src`](./client/src): React application pages, shared components, API client, and frontend tests
 
-## Roles y reglas de negocio
-### Roles
-- `ADMIN`
-- `LIQUIDADOR`
-- `CLIENT`
+## How to Run
+1. Install dependencies
+```bash
+npm install
+cd client && npm install
+```
 
-### Reglas clave
-- `Person` y `User` son entidades separadas.
-- Vendedor/comprador de planilla siempre son `Person`.
-- `ADMIN` no requiere vinculación a `Person`.
-- Solo existe un administrador operativo: la gestión de usuarios no permite crear/promover a `ADMIN`.
-- `CLIENT` solo lectura (excepto flujo de vinculación en Settings).
-
-## Módulos
-### Dashboard
-Resumen operativo por rol.
-
-### Planillas (`/planillas`)
-- búsqueda y filtros instantáneos (sin dependencia de botón Aplicar)
-- filtros backend-aligned: `q, seller, buyer, sellerPhone, buyerPhone, from, to, paymentStatus, page, pageSize`
-- estados `loading/error/empty/data`
-
-### Nueva Planilla (`/planillas/new`)
-- selector de vendedor/comprador con apertura inmediata
-- lista alfabética completa de personas (hasta 100 por request)
-- filtro en tiempo real
-- crear persona inline desde selector
-- guardado visible y funcional para `ADMIN`/`LIQUIDADOR`
-
-### Detalle de Planilla (`/planillas/:id`)
-- métricas completas: total/promedio general, machos, hembras
-- desglose por tipo+sexo (`computed.totalsByTypeSex`)
-- filas con edición/reordenamiento según permisos backend
-- export PDF
-- estado de pago + bitácora
-- `Especificación` en mayúsculas
-
-### Personas (`/personas`)
-- listado paginado + búsqueda
-- indicador vinculada/no vinculada
-- creación de persona
-- edición por rol:
-  - `ADMIN`: nombre/teléfono/cédula
-  - `LIQUIDADOR`: teléfono/cédula (nombre bloqueado)
-
-### Usuarios (`/usuarios`, ADMIN)
-- listado y búsqueda de usuarios
-- crear `CLIENT`/`LIQUIDADOR`
-- activar/desactivar y edición de datos
-- alias de liquidador
-- vinculación manual `User ? Person`
-- gestión de solicitudes de vinculación
-- reset de contraseña:
-  - generar link/token de reset
-  - cambio manual admin
-
-### Settings (`/settings`)
-- visible para todos
-- perfil de cuenta
-- `ADMIN`: precio global por cabeza
-- `CLIENT`: flujo de vinculación y estado de solicitud
-
-## Vinculación de cuenta (CLIENT)
-Flujo movido a Settings.
-
-Regla one-time de por vida:
-- solo se puede enviar una solicitud de vinculación por cuenta
-- al intentar una segunda solicitud se responde con:
-
-"Tu solicitud de vinculación ya fue utilizada. Si necesitas hacer una corrección, por favor comunícate con atención al cliente o con el administrador."
-
-## Reset de contraseña: decisión implementada
-Si no existe infraestructura real de correo configurada, no se simula envío.
-
-Se implementa:
-- generación real de token/link por admin (`POST /users/:userId/password-reset-link`)
-- consumo de token (`POST /auth/reset-password`)
-- cambio manual admin (`PATCH /users/:userId/password`)
-
-Tradeoff:
-- sin infraestructura de email, el link/token se entrega por canal administrativo interno.
-
-## Backend (rutas principales)
-- `POST /auth/login`
-- `POST /auth/register`
-- `POST /auth/register-managed` (ADMIN)
-- `POST /auth/reset-password`
-- `GET /people`
-- `GET /people/search`
-- `POST /people`
-- `PATCH /people/:personId`
-- `GET /sheets`
-- `POST /sheets`
-- `GET /sheets/:id`
-- `POST /sheets/:id/rows*`
-- `POST /sheets/:id/payment-status`
-- `GET /users` (ADMIN)
-- `PATCH /users/:userId` (ADMIN)
-- `PATCH /users/:userId/person-link` (ADMIN)
-- `POST /users/:userId/password-reset-link` (ADMIN)
-- `PATCH /users/:userId/password` (ADMIN)
-- `GET /settings`
-- `PATCH /settings` (ADMIN)
-- `GET /link-requests/me` (CLIENT)
-- `POST /link-requests` (CLIENT)
-- `GET /link-requests` (ADMIN)
-- `PATCH /link-requests/:requestId/review` (ADMIN)
-
-## Variables de entorno
+2. Configure environment variables in `.env`
 ```env
 PORT=3000
 JWT_SECRET=supersecretkey
@@ -139,56 +60,31 @@ CORS_ORIGIN="http://localhost:5173"
 FRONTEND_BASE_URL="http://localhost:5173"
 ```
 
-## Instalación y ejecución
-### 1) Dependencias
-```bash
-npm install
-cd client && npm install
-```
-
-### 2) Base de datos
+3. Generate Prisma client, run migrations, and seed demo data
 ```bash
 npm run prisma:generate
 npm run prisma:migrate
 npm run seed
 ```
 
-### 3) Backend
+4. Start backend
 ```bash
 npm run dev
 ```
 
-### 4) Frontend
+5. Start frontend
 ```bash
 cd client
 npm run dev
 ```
 
-## Seed/demo
-`prisma/seed.js` incluye:
-- admin/liquidador/cliente demo
-- personas demo
-- planillas demo + filas
-- estados de pago
-- solicitudes de vinculación
+## Why This Project Stands Out
+- It models a real operational domain with non-trivial identity rules (`Person` vs `User`) rather than a simplified CRUD-only approach.
+- It enforces business constraints in both API and UI layers, including role-specific editing permissions and linking approval workflows.
+- It includes practical production concerns: validation, rate limiting, audit logging, exports, and automated tests for critical flows.
+- The codebase is organized for maintainability, with separated modules for people, users, sheets, linking, settings, and exports.
 
-Credenciales demo:
+## Demo Seed Accounts
 - `admin@bascula.com / Admin123!`
 - `liquidador@bascula.com / Liquidador123!`
 - `cliente@bascula.com / Cliente123!`
-
-## Testing
-### Backend
-```bash
-npm test
-```
-
-### Frontend
-```bash
-cd client
-npm test
-```
-
-## Estado
-Versión reorganizada por producto con React Router, módulos separados, reglas de rol reforzadas y adaptación frontend?backend alineada.
-
