@@ -13,7 +13,22 @@ async function login(req, res, next) {
 
 async function register(req, res, next) {
   try {
-    const user = await registerUser(req.body);
+    const user = await registerUser(req.body, {
+      allowOperatorRole: false,
+      allowPersonLinking: false,
+    });
+    return res.status(201).json(user);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function registerManaged(req, res, next) {
+  try {
+    const user = await registerUser(req.body, {
+      allowOperatorRole: true,
+      allowPersonLinking: true,
+    });
     return res.status(201).json(user);
   } catch (error) {
     return next(error);
@@ -35,5 +50,6 @@ async function resetPassword(req, res, next) {
 module.exports = {
   login,
   register,
+  registerManaged,
   resetPassword,
 };

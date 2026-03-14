@@ -43,7 +43,7 @@ describe('UsersPage', () => {
         });
       }
       if (url === '/link-requests') return Promise.resolve({ data: [] });
-      if (url === '/people') return Promise.resolve({ data: { items: [] } });
+      if (url === '/people/search') return Promise.resolve({ data: [] });
       return Promise.resolve({ data: {} });
     });
 

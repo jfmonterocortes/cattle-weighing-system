@@ -1,16 +1,43 @@
-# React + Vite
+# Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Overview
+This frontend is the React/Vite application for BASCULA LA ESPERANZA. It provides the role-based UI for login, weighing sheet operations, people management, user administration, account-link requests, and exports.
 
-Currently, two official plugins are available:
+## Development
+Install dependencies:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+npm install
+```
 
-## React Compiler
+Start the dev server:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm run dev
+```
 
-## Expanding the ESLint configuration
+The client uses `VITE_API_BASE_URL` when provided. If it is not set, the API base URL defaults to `http://localhost:3000`.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Verification
+Run the frontend checks from this directory:
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+## Key UI Areas
+- `/login`: authentication and role-based redirect
+- `/dashboard`: summary metrics and operational snapshots
+- `/planillas`: sheet listing and filtering
+- `/planillas/new`: create weighing sheets
+- `/planillas/:id`: edit rows, reorder cattle, export PDF, and update payment status
+- `/personas`: operator-facing people directory
+- `/usuarios`: admin-managed user creation, linking, password reset, and link-request review
+- `/settings`: account settings, client linking workflow, and system defaults
+
+## Contract Notes
+- Client account linking uses `/people/search`, not the full `/people` directory.
+- Client-facing person search only depends on the minimal linking payload returned by the backend.
+- The frontend test suite includes coverage for login, person autocomplete, admin user management, and sheet detail behavior.

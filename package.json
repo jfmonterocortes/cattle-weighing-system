@@ -4,13 +4,16 @@
   "description": "Web-based system to digitize cattle weighing records, manage clients, and provide secure access to weighing history.",
   "main": "index.js",
   "scripts": {
+    "postinstall": "prisma generate",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "seed": "node prisma/seed.js",
-    "test": "vitest run"
+    "test": "node scripts/run-backend-tests.js",
+    "test:backend": "node scripts/run-backend-tests.js",
+    "test:backend:raw": "vitest run"
   },
   "repository": {
     "type": "git",

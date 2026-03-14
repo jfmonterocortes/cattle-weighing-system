@@ -7,7 +7,7 @@ const { requireRoles } = require('../middlewares/role.middleware');
 
 const router = express.Router();
 
-router.get('/', authMiddleware, validate(listPeopleQuerySchema, 'query'), listPeopleController);
+router.get('/', authMiddleware, requireRoles('ADMIN', 'LIQUIDADOR'), validate(listPeopleQuerySchema, 'query'), listPeopleController);
 router.get('/search', authMiddleware, validate(personSearchQuerySchema, 'query'), searchPerson);
 router.post('/', authMiddleware, requireRoles('ADMIN', 'LIQUIDADOR'), validate(personCreateSchema), createPerson);
 router.patch('/:personId', authMiddleware, requireRoles('ADMIN', 'LIQUIDADOR'), validate(personUpdateSchema), updatePerson);

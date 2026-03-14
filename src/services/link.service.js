@@ -1,6 +1,6 @@
-﻿const prisma = require('../db/prisma');
+const prisma = require('../db/prisma');
 const { LINK_REQUEST_STATUS, SHEET_AUDIT_ACTION } = require('../constants/domain');
-const { addSheetAudit } = require('./audit.service');
+const { addSheetAuditsBestEffort } = require('./audit.service');
 
 const ONE_TIME_LINK_MESSAGE =
   'Tu solicitud de vinculación ya fue utilizada. Si necesitas hacer una corrección, por favor comunícate con atención al cliente o con el administrador.';
@@ -199,15 +199,13 @@ async function reviewLinkRequest({ requestId, reviewerUserId, status, notes }) {
       ? SHEET_AUDIT_ACTION.LINK_REQUEST_APPROVED
       : SHEET_AUDIT_ACTION.LINK_REQUEST_REJECTED;
 
-  await Promise.all(
-    sheets.map((sheet) =>
-      addSheetAudit({
-        weighingSheetId: sheet.id,
-        action,
-        actorUserId: reviewerUserId,
-        metadata: { requestId, userId: request.userId, personId: request.personId },
-      })
-    )
+  await addSheetAuditsBestEffort(
+    sheets.map((sheet) => ({
+      weighingSheetId: sheet.id,
+      action,
+      actorUserId: reviewerUserId,
+      metadata: { requestId, userId: request.userId, personId: request.personId },
+    }))
   );
 
   return reviewed;

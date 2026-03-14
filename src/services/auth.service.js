@@ -2,13 +2,14 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { createToken } = require('../utils/auth');
+const { getEnv } = require('../config/env');
 const { findOrCreatePersonForAccount } = require('./person.service');
 const { ROLE } = require('../constants/domain');
 
 const RESET_TOKEN_TTL_SECONDS = 60 * 60;
 
 function getResetSecret() {
-  return process.env.PASSWORD_RESET_SECRET || process.env.JWT_SECRET;
+  return getEnv().PASSWORD_RESET_SECRET;
 }
 
 function buildPasswordVersion(passwordHash) {
@@ -34,7 +35,8 @@ async function loginWithPassword({ email, password }) {
   };
 }
 
-async function registerUser(data) {
+async function registerUser(data, options = {}) {
+  const { allowOperatorRole = false, allowPersonLinking = false } = options;
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing) {
     const err = new Error('Email already in use');
@@ -44,13 +46,24 @@ async function registerUser(data) {
 
   let personId = null;
   if (data.person) {
+    if (!allowPersonLinking) {
+      const err = new Error('Person linking is not allowed from this signup flow.');
+      err.statusCode = 403;
+      throw err;
+    }
     const person = await findOrCreatePersonForAccount(data.person);
     personId = person.id;
   }
 
-  const role = data.role || ROLE.CLIENT;
+  const role = allowOperatorRole ? data.role || ROLE.CLIENT : ROLE.CLIENT;
   if (role === ROLE.ADMIN) {
     const err = new Error('No se permite crear cuentas ADMIN desde este flujo.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  if (!allowOperatorRole && data.role && data.role !== ROLE.CLIENT) {
+    const err = new Error('No se permite crear ese rol desde este flujo.');
     err.statusCode = 403;
     throw err;
   }
@@ -93,7 +106,8 @@ async function generatePasswordResetLink(userId) {
     { expiresIn: RESET_TOKEN_TTL_SECONDS }
   );
 
-  const base = process.env.FRONTEND_BASE_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
+  const { FRONTEND_BASE_URL } = getEnv();
+  const base = FRONTEND_BASE_URL;
   const resetLink = `${base.replace(/\/$/, '')}/settings?resetToken=${encodeURIComponent(token)}`;
 
   return {

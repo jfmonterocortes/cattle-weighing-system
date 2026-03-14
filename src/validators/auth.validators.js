@@ -5,7 +5,15 @@ const loginSchema = z.object({
   password: z.string().min(8).max(120),
 });
 
-const registerSchema = z.object({
+const publicRegisterSchema = z
+  .object({
+    email: z.string().email().transform((v) => v.toLowerCase()),
+    password: z.string().min(8).max(120),
+    role: z.literal('CLIENT').optional(),
+  })
+  .strict();
+
+const managedRegisterSchema = z.object({
   email: z.string().email().transform((v) => v.toLowerCase()),
   password: z.string().min(8).max(120),
   role: z.enum(['CLIENT', 'LIQUIDADOR']).optional(),
@@ -26,6 +34,7 @@ const resetPasswordSchema = z.object({
 
 module.exports = {
   loginSchema,
-  registerSchema,
+  publicRegisterSchema,
+  managedRegisterSchema,
   resetPasswordSchema,
 };

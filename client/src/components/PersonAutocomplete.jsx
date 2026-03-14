@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../api';
 
@@ -54,18 +54,17 @@ export default function PersonAutocomplete({
     });
   }, [open, results.length, query.length]);
 
-  const loadPeople = async (text) => {
+  const loadPeople = useEffectEvent(async (text) => {
     setLoading(true);
     setError('');
     try {
-      const res = await api.get('/people', {
+      const res = await api.get('/people/search', {
         params: {
           q: text || undefined,
-          page: 1,
-          pageSize: 100,
+          limit: 25,
         },
       });
-      const items = Array.isArray(res.data?.items) ? res.data.items : [];
+      const items = Array.isArray(res.data) ? res.data : [];
       setResults(items);
     } catch (err) {
       const msg = err?.response?.data?.message || 'Error buscando personas';
@@ -75,10 +74,17 @@ export default function PersonAutocomplete({
     } finally {
       setLoading(false);
     }
-  };
+  });
 
   useEffect(() => {
     if (!open) return;
+    if (!query.trim()) {
+      clearTimeout(timeoutRef.current);
+      setResults([]);
+      setError('');
+      setLoading(false);
+      return;
+    }
     clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       loadPeople(query.trim());

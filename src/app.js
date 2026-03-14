@@ -1,8 +1,8 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const { getEnv } = require('./config/env');
 
 const authRoutes = require('./routes/auth.routes');
 const personRoutes = require('./routes/person.routes');
@@ -13,11 +13,12 @@ const exportRoutes = require('./routes/export.routes');
 const userRoutes = require('./routes/user.routes');
 const { notFoundHandler, errorHandler } = require('./middlewares/error.middleware');
 
+const { CORS_ORIGIN } = getEnv();
 const app = express();
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: CORS_ORIGIN,
   })
 );
 app.use(helmet());

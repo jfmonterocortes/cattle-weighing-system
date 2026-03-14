@@ -18,7 +18,7 @@ describe('PersonAutocomplete', () => {
 
   it('opens on click, shows results, and selects person correctly', async () => {
     const person = { id: 42, name: 'Maria Perez', phone: '300123', cedula: '1001' };
-    mockGet.mockResolvedValue({ data: { items: [person] } });
+    mockGet.mockResolvedValue({ data: [person] });
 
     const onSelect = vi.fn();
 
@@ -26,8 +26,13 @@ describe('PersonAutocomplete', () => {
 
     const input = screen.getByPlaceholderText('Buscar persona por nombre o teléfono');
     fireEvent.click(input);
+    fireEvent.change(input, { target: { value: 'Maria' } });
 
     await waitFor(() => expect(screen.getByText('Maria Perez')).toBeInTheDocument());
+
+    expect(mockGet).toHaveBeenCalledWith('/people/search', {
+      params: { q: 'Maria', limit: 25 },
+    });
 
     fireEvent.mouseDown(screen.getByText('Maria Perez'));
 

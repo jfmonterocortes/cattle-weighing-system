@@ -207,10 +207,29 @@ async function findOrCreatePersonForAccount(input) {
   });
 }
 
-async function searchPeople(q, limit = DEFAULT_SEARCH_LIMIT) {
+async function searchPeople({ user, q, limit = DEFAULT_SEARCH_LIMIT }) {
   const query = normalizeSpace(q);
   const phone = normalizePhone(q);
   const cedula = normalizeCedula(q);
+  const baseSelect = {
+    id: true,
+    name: true,
+    phone: true,
+    cedula: true,
+  };
+  const select =
+    user?.role === ROLE.CLIENT
+      ? baseSelect
+      : {
+          ...baseSelect,
+          user: {
+            select: {
+              id: true,
+              role: true,
+              email: true,
+            },
+          },
+        };
 
   return prisma.person.findMany({
     where: {
@@ -222,19 +241,7 @@ async function searchPeople(q, limit = DEFAULT_SEARCH_LIMIT) {
     },
     take: sanitizeSearchLimit(limit),
     orderBy: { name: 'asc' },
-    select: {
-      id: true,
-      name: true,
-      phone: true,
-      cedula: true,
-      user: {
-        select: {
-          id: true,
-          role: true,
-          email: true,
-        },
-      },
-    },
+    select,
   });
 }
 

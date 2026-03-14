@@ -1,90 +1,124 @@
 # BASCULA LA ESPERANZA
 
 ## Overview
-BASCULA LA ESPERANZA is a full-stack cattle weighing management platform for digitizing operational weighing sheets, payments, and account access control. It separates operational identities (`Person`) from authentication identities (`User`) to support real-world workflows where people may exist in transactions before they have an account. The system is designed for role-based operations with production-oriented validation, auditing, and export features.
+BASCULA LA ESPERANZA is a full-stack cattle weighing system for operational sheet capture, payment tracking, and role-based access control. The backend models real-world participants as `Person` records and authentication accounts as `User` records so weighing activity can exist before an account is created or linked.
 
-## Problem It Solves
-Many livestock weighing operations still rely on paper sheets and manual reconciliation across sellers, buyers, liquidators, and payment records. This project centralizes those workflows into a role-secure web system that supports searchable historical records, controlled editing windows, account-to-person linking approval, and business-ready PDF/Excel outputs.
+## Core Roles
+- `ADMIN`: manages users, reviews account-link requests, configures defaults, and can operate sheets.
+- `LIQUIDADOR`: creates and edits operational weighing sheets inside the allowed edit window.
+- `CLIENT`: can register publicly, view only their permitted sheet history, and request one-time account linking.
 
-## Architecture
-The application follows a standard web architecture with a clear frontend/backend boundary:
+## Security and Contract Notes
+- Public `POST /auth/register` creates `CLIENT` accounts only.
+- Operator account creation stays on the admin-managed flow: `POST /auth/register-managed`.
+- `GET /people` is operator-facing and not available to clients.
+- `GET /people/search` is role-aware:
+  - operators receive richer linked-account metadata for operational workflows
+  - clients receive only the minimum person payload required for account-linking
 
-- React client (Vite + React Router) for role-based UI flows and operational forms
-- Express API for authentication, authorization, validation, and business rules
-- PostgreSQL database accessed through Prisma ORM for relational domain persistence
+## Consistency Rules
+- Sheet create, update, and row mutations commit their primary business writes transactionally.
+- Payment status changes commit the sheet update and payment log in the same transaction.
+- Link review commits request review and user-link updates in the same transaction.
+- Sheet audit logging is best-effort and must not turn a committed business mutation into a 500.
 
-Core domain entities include `User`, `Person`, `WeighingSheet`, `CattleRow`, `PersonAccountLinkRequest`, `PaymentLog`, and `SystemSetting`.
+## Repository Layout
+- [`/src`](./src): Express app, services, routes, middleware, validators, and backend tests
+- [`/prisma`](./prisma): Prisma schema, migrations, and seed script
+- [`/scripts`](./scripts): automated backend bootstrap helpers
+- [`/client`](./client): React/Vite frontend, frontend tests, and build tooling
 
-## Tech Stack
-- Backend: Node.js, Express, Prisma, PostgreSQL, JWT, Zod
-- Frontend: React, React Router, Vite, Tailwind CSS
-- Exports: PDFKit, ExcelJS
-- Testing: Vitest, Supertest, Testing Library
+## Prerequisites
+- Node.js 20+
+- npm 11+
+- PostgreSQL 15+ accessible from `DATABASE_URL` and `TEST_DATABASE_URL`
 
-## Key Features
-- Role model with `ADMIN`, `LIQUIDADOR`, and `CLIENT`
-- Strict `Person` vs `User` separation with admin-approved account linking
-- Route-based frontend structure:
-  - `/dashboard`
-  - `/planillas`
-  - `/planillas/new`
-  - `/planillas/:id`
-  - `/personas`
-  - `/usuarios` (admin only)
-  - `/settings`
-- Instant sheet filtering with backend-aligned query parameters
-- Operational planilla workflow with row editing, reordering, totals, and grouped metrics
-- Payment lifecycle with paid/unpaid state and payment logs
-- Export capabilities (PDF and Excel) with authorization checks
-- Admin user management for `CLIENT`/`LIQUIDADOR`, including manual linking and password reset flows
+## Environment
+Copy [`/.env.example`](./.env.example) to `.env` and set the required values:
 
-## Project Structure
-- [`/src`](./src): Express server, routes, services, validators, middlewares, and integration/unit tests
-- [`/prisma`](./prisma): Prisma schema, migrations, and seed data
-- [`/client/src`](./client/src): React application pages, shared components, API client, and frontend tests
-
-## How to Run
-1. Install dependencies
-```bash
-npm install
-cd client && npm install
-```
-
-2. Configure environment variables in `.env`
 ```env
 PORT=3000
 JWT_SECRET=supersecretkey
 PASSWORD_RESET_SECRET=optional-reset-secret
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/cattle_weighing_db"
-CORS_ORIGIN="http://localhost:5173"
-FRONTEND_BASE_URL="http://localhost:5173"
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cattle_weighing_db
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cattle_weighing_test_db
+CORS_ORIGIN=http://localhost:5173
+FRONTEND_BASE_URL=http://localhost:5173
 ```
 
-3. Generate Prisma client, run migrations, and seed demo data
+The backend now validates required environment variables at startup and fails fast with a clear message if they are missing.
+
+## Clean Clone Setup
+1. Install backend dependencies:
 ```bash
-npm run prisma:generate
+npm install
+```
+
+2. Install frontend dependencies:
+```bash
+cd client
+npm install
+cd ..
+```
+
+3. Apply backend migrations to the development database:
+```bash
 npm run prisma:migrate
+```
+
+4. Seed development data:
+```bash
 npm run seed
 ```
 
-4. Start backend
+`npm install` runs Prisma client generation automatically through `postinstall`, so a clean clone does not need a separate manual `prisma generate` step unless you want to force one with `npm run prisma:generate`.
+
+## Running Locally
+Backend:
 ```bash
 npm run dev
 ```
 
-5. Start frontend
+Frontend:
 ```bash
 cd client
 npm run dev
 ```
 
-## Why This Project Stands Out
-- It models a real operational domain with non-trivial identity rules (`Person` vs `User`) rather than a simplified CRUD-only approach.
-- It enforces business constraints in both API and UI layers, including role-specific editing permissions and linking approval workflows.
-- It includes practical production concerns: validation, rate limiting, audit logging, exports, and automated tests for critical flows.
-- The codebase is organized for maintainability, with separated modules for people, users, sheets, linking, settings, and exports.
+The frontend defaults to `http://localhost:3000` for the API. To point it elsewhere, set `VITE_API_BASE_URL` in the frontend environment.
 
-## Demo Seed Accounts
+## Verification
+Backend:
+```bash
+npm test
+```
+
+The backend test flow is isolated from development data and automatically:
+- generates the Prisma client
+- creates the test database if it does not exist
+- resets the test database with migrations
+- runs the seed/bootstrap data
+- executes the backend Vitest suite
+
+To run a subset of backend tests with the same isolated flow:
+```bash
+npm test -- src/tests/mutation-consistency.integration.test.js
+```
+
+Frontend:
+```bash
+cd client
+npm test
+npm run lint
+npm run build
+```
+
+## Seed Behavior
+- `npm run seed` is intended for the development database after migrations are applied.
+- The seed is rerunnable: it upserts demo users, people, and sheets, then rebuilds the demo cattle rows and payment log state.
+- The automated backend test flow resets the test database before seeding so tests never depend on manually prepared local state.
+
+## Demo Accounts
 - `admin@bascula.com / Admin123!`
 - `liquidador@bascula.com / Liquidador123!`
 - `cliente@bascula.com / Cliente123!`

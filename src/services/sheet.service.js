@@ -1,8 +1,11 @@
-﻿const prisma = require('../db/prisma');
+const prisma = require('../db/prisma');
 const { calculateSheetStats, resolveDefaultSex } = require('../utils/sheet-calculations');
 const { ROLE, SHEET_AUDIT_ACTION } = require('../constants/domain');
 const { getDefaultPricePerHead } = require('./settings.service');
-const { addSheetAudit } = require('./audit.service');
+const {
+  addSheetAuditBestEffort,
+  addSheetAuditsBestEffort,
+} = require('./audit.service');
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
@@ -44,9 +47,9 @@ function assertCanViewSheet(user, sheet) {
   throw err;
 }
 
-async function nextSheetNumber(dateValue = new Date()) {
+async function nextSheetNumber(dateValue = new Date(), db = prisma) {
   const year = dateValue.getFullYear();
-  const last = await prisma.weighingSheet.findFirst({
+  const last = await db.weighingSheet.findFirst({
     where: { sheetYear: year },
     orderBy: { sheetSequence: 'desc' },
     select: { sheetSequence: true },
@@ -58,8 +61,8 @@ async function nextSheetNumber(dateValue = new Date()) {
   return { year, sequence, visibleNumber };
 }
 
-async function recalculateAndPersistSheet(sheetId) {
-  const sheet = await prisma.weighingSheet.findUnique({
+async function recalculateAndPersistSheet(sheetId, db = prisma) {
+  const sheet = await db.weighingSheet.findUnique({
     where: { id: sheetId },
     include: { rows: { orderBy: { rowOrder: 'asc' } } },
   });
@@ -71,7 +74,7 @@ async function recalculateAndPersistSheet(sheetId) {
 
   const stats = calculateSheetStats(sheet.rows, sheet.pricePerHead);
 
-  await prisma.weighingSheet.update({
+  await db.weighingSheet.update({
     where: { id: sheetId },
     data: {
       totalWeight: stats.totalWeight,
@@ -88,36 +91,40 @@ async function recalculateAndPersistSheet(sheetId) {
   return stats;
 }
 
+// Primary sheet mutations commit inside transactions; audit writes run separately
+// as best-effort side effects so they cannot turn a committed business write into a 500.
 async function createSheet({ user, data }) {
   const pricePerHead = data.pricePerHead || (await getDefaultPricePerHead());
   const date = data.date ? new Date(data.date) : new Date();
-  const numbering = await nextSheetNumber(date);
 
-  const createdBy = await prisma.user.findUnique({ where: { id: user.userId } });
-  const alias = data.liquidadorAlias || createdBy?.liquidadorAlias || 'LIQ';
+  const sheet = await prisma.$transaction(async (tx) => {
+    const numbering = await nextSheetNumber(date, tx);
+    const createdBy = await tx.user.findUnique({ where: { id: user.userId } });
+    const alias = data.liquidadorAlias || createdBy?.liquidadorAlias || 'LIQ';
 
-  const sheet = await prisma.weighingSheet.create({
-    data: {
-      visibleNumber: numbering.visibleNumber,
-      sheetYear: numbering.year,
-      sheetSequence: numbering.sequence,
-      date,
-      sellerId: data.sellerId,
-      buyerId: data.buyerId,
-      createdById: user.userId,
-      liquidadorAliasSnapshot: alias,
-      pricePerHead,
-      editableUntilByLiquidador: new Date(date.getTime() + 10 * 60 * 1000),
-    },
-    include: {
-      seller: true,
-      buyer: true,
-      createdBy: { select: { id: true, email: true, role: true, liquidadorAlias: true } },
-      rows: { orderBy: { rowOrder: 'asc' } },
-    },
+    return tx.weighingSheet.create({
+      data: {
+        visibleNumber: numbering.visibleNumber,
+        sheetYear: numbering.year,
+        sheetSequence: numbering.sequence,
+        date,
+        sellerId: data.sellerId,
+        buyerId: data.buyerId,
+        createdById: user.userId,
+        liquidadorAliasSnapshot: alias,
+        pricePerHead,
+        editableUntilByLiquidador: new Date(date.getTime() + 10 * 60 * 1000),
+      },
+      include: {
+        seller: true,
+        buyer: true,
+        createdBy: { select: { id: true, email: true, role: true, liquidadorAlias: true } },
+        rows: { orderBy: { rowOrder: 'asc' } },
+      },
+    });
   });
 
-  await addSheetAudit({
+  await addSheetAuditBestEffort({
     weighingSheetId: sheet.id,
     action: SHEET_AUDIT_ACTION.PLANILLA_CREATED,
     actorUserId: user.userId,
@@ -254,28 +261,32 @@ async function updateSheet({ user, sheetId, data }) {
     liquidadorAliasSnapshot: sheet.liquidadorAliasSnapshot,
   };
 
-  const updated = await prisma.weighingSheet.update({
-    where: { id: sheetId },
-    data: {
-      sellerId: data.sellerId,
-      buyerId: data.buyerId,
-      pricePerHead: data.pricePerHead,
-      liquidadorAliasSnapshot: data.liquidadorAliasSnapshot,
-      date: data.date ? new Date(data.date) : undefined,
+  await prisma.$transaction(async (tx) => {
+    await tx.weighingSheet.update({
+      where: { id: sheetId },
+      data: {
+        sellerId: data.sellerId,
+        buyerId: data.buyerId,
+        pricePerHead: data.pricePerHead,
+        liquidadorAliasSnapshot: data.liquidadorAliasSnapshot,
+        date: data.date ? new Date(data.date) : undefined,
+      },
+    });
+
+    await recalculateAndPersistSheet(sheetId, tx);
+  });
+
+  const auditEntries = [
+    {
+      weighingSheetId: sheetId,
+      action: SHEET_AUDIT_ACTION.PLANILLA_UPDATED,
+      actorUserId: user.userId,
+      metadata: { before, after: data },
     },
-  });
-
-  await recalculateAndPersistSheet(sheetId);
-
-  await addSheetAudit({
-    weighingSheetId: sheetId,
-    action: SHEET_AUDIT_ACTION.PLANILLA_UPDATED,
-    actorUserId: user.userId,
-    metadata: { before, after: data },
-  });
+  ];
 
   if (data.pricePerHead !== undefined && data.pricePerHead !== before.pricePerHead) {
-    await addSheetAudit({
+    auditEntries.push({
       weighingSheetId: sheetId,
       action: SHEET_AUDIT_ACTION.PRICE_CHANGED,
       actorUserId: user.userId,
@@ -284,7 +295,7 @@ async function updateSheet({ user, sheetId, data }) {
   }
 
   if (data.sellerId !== undefined && data.sellerId !== before.sellerId) {
-    await addSheetAudit({
+    auditEntries.push({
       weighingSheetId: sheetId,
       action: SHEET_AUDIT_ACTION.SELLER_CHANGED,
       actorUserId: user.userId,
@@ -293,7 +304,7 @@ async function updateSheet({ user, sheetId, data }) {
   }
 
   if (data.buyerId !== undefined && data.buyerId !== before.buyerId) {
-    await addSheetAudit({
+    auditEntries.push({
       weighingSheetId: sheetId,
       action: SHEET_AUDIT_ACTION.BUYER_CHANGED,
       actorUserId: user.userId,
@@ -305,7 +316,7 @@ async function updateSheet({ user, sheetId, data }) {
     data.liquidadorAliasSnapshot !== undefined &&
     data.liquidadorAliasSnapshot !== before.liquidadorAliasSnapshot
   ) {
-    await addSheetAudit({
+    auditEntries.push({
       weighingSheetId: sheetId,
       action: SHEET_AUDIT_ACTION.LIQUIDADOR_ALIAS_CHANGED,
       actorUserId: user.userId,
@@ -313,7 +324,9 @@ async function updateSheet({ user, sheetId, data }) {
     });
   }
 
-  return updated;
+  await addSheetAuditsBestEffort(auditEntries);
+
+  return prisma.weighingSheet.findUnique({ where: { id: sheetId } });
 }
 
 async function deleteSheet({ user, sheetId }) {
@@ -356,29 +369,32 @@ async function addRow({ user, sheetId, data }) {
   const sex = resolveDefaultSex(data.type, data.sex);
   const nextOrder = data.rowOrder || sheet.rows.length + 1;
 
-  if (data.rowOrder && data.rowOrder <= sheet.rows.length) {
-    await prisma.$executeRaw`
-      UPDATE "CattleRow"
-      SET "rowOrder" = "rowOrder" + 1
-      WHERE "weighingSheetId" = ${sheetId} AND "rowOrder" >= ${data.rowOrder}
-    `;
-  }
+  const row = await prisma.$transaction(async (tx) => {
+    if (data.rowOrder && data.rowOrder <= sheet.rows.length) {
+      await tx.$executeRaw`
+        UPDATE "CattleRow"
+        SET "rowOrder" = "rowOrder" + 1
+        WHERE "weighingSheetId" = ${sheetId} AND "rowOrder" >= ${data.rowOrder}
+      `;
+    }
 
-  const row = await prisma.cattleRow.create({
-    data: {
-      weighingSheetId: sheetId,
-      rowOrder: nextOrder,
-      type: data.type,
-      sex,
-      weight: Math.trunc(data.weight),
-      cattleNumber: data.cattleNumber,
-      letters: data.letters || null,
-    },
+    const createdRow = await tx.cattleRow.create({
+      data: {
+        weighingSheetId: sheetId,
+        rowOrder: nextOrder,
+        type: data.type,
+        sex,
+        weight: Math.trunc(data.weight),
+        cattleNumber: data.cattleNumber,
+        letters: data.letters || null,
+      },
+    });
+
+    await recalculateAndPersistSheet(sheetId, tx);
+    return createdRow;
   });
 
-  await recalculateAndPersistSheet(sheetId);
-
-  await addSheetAudit({
+  await addSheetAuditBestEffort({
     weighingSheetId: sheet.id,
     action: SHEET_AUDIT_ACTION.ROW_ADDED,
     actorUserId: user.userId,
@@ -407,20 +423,23 @@ async function updateRow({ user, sheetId, rowId, data }) {
   const type = data.type || row.type;
   const sex = resolveDefaultSex(type, data.sex || row.sex);
 
-  const updated = await prisma.cattleRow.update({
-    where: { id: rowId },
-    data: {
-      type,
-      sex,
-      weight: data.weight !== undefined ? Math.trunc(data.weight) : undefined,
-      cattleNumber: data.cattleNumber,
-      letters: data.letters,
-    },
+  const updated = await prisma.$transaction(async (tx) => {
+    const nextRow = await tx.cattleRow.update({
+      where: { id: rowId },
+      data: {
+        type,
+        sex,
+        weight: data.weight !== undefined ? Math.trunc(data.weight) : undefined,
+        cattleNumber: data.cattleNumber,
+        letters: data.letters,
+      },
+    });
+
+    await recalculateAndPersistSheet(sheetId, tx);
+    return nextRow;
   });
 
-  await recalculateAndPersistSheet(sheetId);
-
-  await addSheetAudit({
+  await addSheetAuditBestEffort({
     weighingSheetId: sheetId,
     action: SHEET_AUDIT_ACTION.ROW_UPDATED,
     actorUserId: user.userId,
@@ -454,11 +473,10 @@ async function deleteRow({ user, sheetId, rowId }) {
       SET "rowOrder" = "rowOrder" - 1
       WHERE "weighingSheetId" = ${sheetId} AND "rowOrder" > ${row.rowOrder}
     `;
+    await recalculateAndPersistSheet(sheetId, tx);
   });
 
-  await recalculateAndPersistSheet(sheetId);
-
-  await addSheetAudit({
+  await addSheetAuditBestEffort({
     weighingSheetId: sheetId,
     action: SHEET_AUDIT_ACTION.ROW_DELETED,
     actorUserId: user.userId,
@@ -481,7 +499,7 @@ async function reorderRows({ user, sheetId, orderedRowIds }) {
 
   assertCanEditSheet(user, sheet);
 
-  const sheetRowIds = sheet.rows.map((r) => r.id).sort((a, b) => a - b);
+  const sheetRowIds = sheet.rows.map((row) => row.id).sort((a, b) => a - b);
   const incoming = [...orderedRowIds].sort((a, b) => a - b);
   if (sheetRowIds.length !== incoming.length || sheetRowIds.some((id, index) => id !== incoming[index])) {
     const err = new Error('orderedRowIds must include all rows in the sheet');
@@ -505,7 +523,7 @@ async function reorderRows({ user, sheetId, orderedRowIds }) {
     }
   });
 
-  await addSheetAudit({
+  await addSheetAuditBestEffort({
     weighingSheetId: sheetId,
     action: SHEET_AUDIT_ACTION.ROW_REORDERED,
     actorUserId: user.userId,
@@ -535,27 +553,31 @@ async function updatePaymentStatus({ user, sheetId, isPaid, notes }) {
 
   const now = new Date();
 
-  const updated = await prisma.weighingSheet.update({
-    where: { id: sheetId },
-    data: {
-      isPaid,
-      paidAt: isPaid ? now : null,
-      paidById: isPaid ? user.userId : null,
-    },
+  const updated = await prisma.$transaction(async (tx) => {
+    const nextSheet = await tx.weighingSheet.update({
+      where: { id: sheetId },
+      data: {
+        isPaid,
+        paidAt: isPaid ? now : null,
+        paidById: isPaid ? user.userId : null,
+      },
+    });
+
+    await tx.paymentLog.create({
+      data: {
+        weighingSheetId: sheetId,
+        previousStatus: sheet.isPaid,
+        newStatus: isPaid,
+        changedById: user.userId,
+        amount: nextSheet.totalValue,
+        notes: notes || null,
+      },
+    });
+
+    return nextSheet;
   });
 
-  await prisma.paymentLog.create({
-    data: {
-      weighingSheetId: sheetId,
-      previousStatus: sheet.isPaid,
-      newStatus: isPaid,
-      changedById: user.userId,
-      amount: updated.totalValue,
-      notes: notes || null,
-    },
-  });
-
-  await addSheetAudit({
+  await addSheetAuditBestEffort({
     weighingSheetId: sheetId,
     action: SHEET_AUDIT_ACTION.PAYMENT_STATUS_CHANGED,
     actorUserId: user.userId,
@@ -573,8 +595,8 @@ async function suggestNextCattleNumber(sheetId) {
   });
 
   const numeric = rows
-    .map((r) => Number.parseInt(String(r.cattleNumber), 10))
-    .filter((n) => Number.isFinite(n));
+    .map((row) => Number.parseInt(String(row.cattleNumber), 10))
+    .filter((value) => Number.isFinite(value));
 
   if (!numeric.length) return '1';
   return String(Math.max(...numeric) + 1);

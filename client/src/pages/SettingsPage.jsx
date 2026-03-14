@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import PersonAutocomplete from '../components/PersonAutocomplete';
@@ -21,46 +21,71 @@ export default function SettingsPage() {
   const [clientProfileForm, setClientProfileForm] = useState({ phone: '', cedula: '' });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [feedback, setFeedback] = useState({ type: '', message: '' });
+  const [loadError, setLoadError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   const isAdmin = user?.role === 'ADMIN';
   const isClient = user?.role === 'CLIENT';
 
-  const load = async () => {
-    setFeedback({ type: '', message: '' });
-    try {
-      const res = await api.get('/settings');
-      setSettings(res.data);
-      setPriceInput(String(res.data?.defaultPricePerHead || 5000));
-      setClientProfileForm({
-        phone: res.data?.profile?.person?.phone || '',
-        cedula: res.data?.profile?.person?.cedula || '',
-      });
-    } catch (error) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo cargar configuración.' });
-    }
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoadError('');
 
-    if (isClient) {
+      try {
+        const res = await api.get('/settings');
+        if (cancelled) return;
+
+        setSettings(res.data);
+        setPriceInput(String(res.data?.defaultPricePerHead || 5000));
+        setClientProfileForm({
+          phone: res.data?.profile?.person?.phone || '',
+          cedula: res.data?.profile?.person?.cedula || '',
+        });
+      } catch (error) {
+        if (cancelled) return;
+
+        setSettings(null);
+        setClientLink(null);
+        setLoadError(error.response?.data?.message || 'No se pudo cargar configuración.');
+        return;
+      }
+
+      if (!isClient) {
+        if (!cancelled) {
+          setClientLink(null);
+        }
+        return;
+      }
+
       try {
         const linkRes = await api.get('/link-requests/me');
+        if (cancelled) return;
         setClientLink(linkRes.data);
       } catch (error) {
+        if (cancelled) return;
         setClientLink(null);
-        setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo cargar estado de vinculación.' });
+        setLoadError(error.response?.data?.message || 'No se pudo cargar estado de vinculación.');
       }
-    }
-  };
+    }, 0);
 
-  useEffect(() => {
-    load();
-  }, []);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isClient, reloadKey]);
+
+  const reloadSettings = () => {
+    setReloadKey((value) => value + 1);
+  };
 
   const updateGlobalPrice = async () => {
     try {
       await api.patch('/settings', { defaultPricePerHead: Number(priceInput) });
       setFeedback({ type: 'success', message: 'Precio global actualizado.' });
-      await load();
+      reloadSettings();
     } catch (error) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar precio global.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar el precio global.' });
     }
   };
 
@@ -71,10 +96,10 @@ export default function SettingsPage() {
     }
 
     try {
-      await api.post('/link-requests', { personId: selectedPerson.id, notes: 'Solicitud enviada desde Settings' });
+      await api.post('/link-requests', { personId: selectedPerson.id, notes: 'Solicitud enviada desde Configuración' });
       setFeedback({ type: 'success', message: 'Solicitud de vinculación enviada.' });
       setSelectedPerson(null);
-      await load();
+      reloadSettings();
     } catch (error) {
       setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo enviar la solicitud.' });
     }
@@ -82,7 +107,7 @@ export default function SettingsPage() {
 
   const submitResetByToken = async () => {
     if (!resetToken || !tokenResetPassword) {
-      setFeedback({ type: 'error', message: 'Completa token y nueva contraseña.' });
+      setFeedback({ type: 'error', message: 'Completa el token y la nueva contraseña.' });
       return;
     }
 
@@ -102,9 +127,9 @@ export default function SettingsPage() {
         cedula: clientProfileForm.cedula,
       });
       setFeedback({ type: 'success', message: 'Teléfono y cédula actualizados.' });
-      await load();
+      reloadSettings();
     } catch (error) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar perfil.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar el perfil.' });
     }
   };
 
@@ -117,7 +142,7 @@ export default function SettingsPage() {
       setPasswordForm({ currentPassword: '', newPassword: '' });
       setFeedback({ type: 'success', message: 'Contraseña actualizada correctamente.' });
     } catch (error) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar contraseña.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar la contraseña.' });
     }
   };
 
@@ -130,16 +155,25 @@ export default function SettingsPage() {
         <p className="text-sm text-zinc-400">Perfil y ajustes de cuenta.</p>
       </div>
 
+      <FeedbackBanner message={loadError} type="error" />
       <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
 
       {settings?.profile && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
           <h3 className="text-lg font-semibold">Perfil</h3>
           <div className="mt-2 grid gap-2 text-sm md:grid-cols-2">
-            <div><span className="text-zinc-500">Email:</span> {settings.profile.email}</div>
-            <div><span className="text-zinc-500">Rol:</span> {settings.profile.role}</div>
-            <div><span className="text-zinc-500">Estado:</span> {settings.profile.isActive ? 'Activo' : 'Inactivo'}</div>
-            <div><span className="text-zinc-500">Persona vinculada:</span> {settings.profile.person ? settings.profile.person.name : 'Sin vínculo'}</div>
+            <div>
+              <span className="text-zinc-500">Email:</span> {settings.profile.email}
+            </div>
+            <div>
+              <span className="text-zinc-500">Rol:</span> {settings.profile.role}
+            </div>
+            <div>
+              <span className="text-zinc-500">Estado:</span> {settings.profile.isActive ? 'Activo' : 'Inactivo'}
+            </div>
+            <div>
+              <span className="text-zinc-500">Persona vinculada:</span> {settings.profile.person ? settings.profile.person.name : 'Sin vínculo'}
+            </div>
           </div>
         </div>
       )}
@@ -149,8 +183,10 @@ export default function SettingsPage() {
           <h3 className="text-lg font-semibold">Configuración del sistema</h3>
           <p className="text-sm text-zinc-400">Precio global por cabeza.</p>
           <div className="mt-3 flex gap-2">
-            <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} />
-            <button className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black" onClick={updateGlobalPrice}>Guardar</button>
+            <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" value={priceInput} onChange={(event) => setPriceInput(event.target.value)} />
+            <button type="button" className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black" onClick={updateGlobalPrice}>
+              Guardar
+            </button>
           </div>
         </div>
       )}
@@ -172,17 +208,18 @@ export default function SettingsPage() {
                 placeholder="Teléfono"
                 value={clientProfileForm.phone}
                 disabled={!clientLinked}
-                onChange={(e) => setClientProfileForm((prev) => ({ ...prev, phone: e.target.value }))}
+                onChange={(event) => setClientProfileForm((prev) => ({ ...prev, phone: event.target.value }))}
               />
               <input
                 className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm disabled:opacity-60"
                 placeholder="Cédula"
                 value={clientProfileForm.cedula}
                 disabled={!clientLinked}
-                onChange={(e) => setClientProfileForm((prev) => ({ ...prev, cedula: e.target.value }))}
+                onChange={(event) => setClientProfileForm((prev) => ({ ...prev, cedula: event.target.value }))}
               />
             </div>
             <button
+              type="button"
               className="mt-3 rounded-xl border border-zinc-700 px-4 py-2 text-sm disabled:opacity-60"
               onClick={submitClientProfile}
               disabled={!clientLinked}
@@ -199,17 +236,19 @@ export default function SettingsPage() {
                 type="password"
                 placeholder="Contraseña actual"
                 value={passwordForm.currentPassword}
-                onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
+                onChange={(event) => setPasswordForm((prev) => ({ ...prev, currentPassword: event.target.value }))}
               />
               <input
                 className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
                 type="password"
                 placeholder="Nueva contraseña"
                 value={passwordForm.newPassword}
-                onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
+                onChange={(event) => setPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))}
               />
             </div>
-            <button className="mt-3 rounded-xl border border-zinc-700 px-4 py-2 text-sm" onClick={submitOwnPassword}>Actualizar contraseña</button>
+            <button type="button" className="mt-3 rounded-xl border border-zinc-700 px-4 py-2 text-sm" onClick={submitOwnPassword}>
+              Actualizar contraseña
+            </button>
           </div>
 
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
@@ -224,7 +263,9 @@ export default function SettingsPage() {
               <div className="space-y-3">
                 <PersonAutocomplete label="Buscar persona existente" value={selectedPerson} onSelect={setSelectedPerson} />
                 {selectedPerson?.id && <div className="text-xs text-zinc-400">Seleccionada: {selectedPerson.name} (ID {selectedPerson.id})</div>}
-                <button className="rounded-xl border border-zinc-700 px-4 py-2 text-sm" onClick={submitLinkRequest}>Enviar solicitud</button>
+                <button type="button" className="rounded-xl border border-zinc-700 px-4 py-2 text-sm" onClick={submitLinkRequest}>
+                  Enviar solicitud
+                </button>
               </div>
             )}
 
@@ -240,10 +281,18 @@ export default function SettingsPage() {
       {resetToken && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
           <h3 className="text-lg font-semibold">Restablecer contraseña</h3>
-          <p className="text-sm text-zinc-400">Token detectado en URL. Ingresa tu nueva contraseña.</p>
+          <p className="text-sm text-zinc-400">Token detectado en la URL. Ingresa tu nueva contraseña.</p>
           <div className="mt-3 flex gap-2">
-            <input className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" type="password" placeholder="Nueva contraseña" value={tokenResetPassword} onChange={(e) => setTokenResetPassword(e.target.value)} />
-            <button className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black" onClick={submitResetByToken}>Actualizar</button>
+            <input
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+              type="password"
+              placeholder="Nueva contraseña"
+              value={tokenResetPassword}
+              onChange={(event) => setTokenResetPassword(event.target.value)}
+            />
+            <button type="button" className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black" onClick={submitResetByToken}>
+              Actualizar
+            </button>
           </div>
         </div>
       )}

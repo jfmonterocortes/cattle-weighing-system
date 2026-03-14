@@ -29,7 +29,11 @@ async function listPeopleController(req, res, next) {
 
 async function searchPerson(req, res, next) {
   try {
-    const result = await searchPeople(req.query.q, req.query.limit);
+    const result = await searchPeople({
+      user: req.user,
+      q: req.query.q,
+      limit: req.query.limit,
+    });
     return res.json(result);
   } catch (error) {
     return next(error);
