@@ -83,7 +83,9 @@ function Sidebar({ role, onNavigate, mobile = false }) {
       <nav className="space-y-5">
         {sections.map((section) => (
           <div key={section.section}>
-            <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">{section.section}</div>
+            <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-500">
+              {section.section}
+            </div>
             <div className="space-y-1">
               {section.items.map((item) => (
                 <NavLink
@@ -92,7 +94,9 @@ function Sidebar({ role, onNavigate, mobile = false }) {
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     `block rounded-xl px-3 py-2 text-sm ${
-                      isActive ? 'bg-zinc-200 text-zinc-900' : 'text-zinc-300 hover:bg-zinc-800'
+                      isActive
+                        ? 'bg-zinc-900 text-white shadow-sm dark:bg-white dark:text-zinc-900'
+                        : 'text-zinc-700 hover:bg-stone-200/70 dark:text-zinc-300 dark:hover:bg-zinc-800'
                     }`
                   }
                 >
@@ -156,29 +160,32 @@ export default function AppLayout() {
   }, [user?.role]);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="sticky top-0 z-30 bg-zinc-950/95 backdrop-blur">
+    <div className="min-h-screen bg-gradient-to-br from-stone-100 via-amber-50 to-emerald-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-stone-100/92 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-3">
-            <button className="rounded-md border border-zinc-700 p-2 lg:hidden" onClick={() => setMobileOpen((value) => !value)}>
+            <button
+              className="rounded-md border border-stone-300 bg-white/80 p-2 text-zinc-700 shadow-sm lg:hidden dark:border-zinc-700 dark:bg-zinc-950/70 dark:text-zinc-100"
+              onClick={() => setMobileOpen((value) => !value)}
+            >
               {mobileOpen ? <X size={16} /> : <Menu size={16} />}
             </button>
           </div>
 
           <div className="min-w-0 flex-1 px-2">
-            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-500">
               {currentItem?.label || 'Panel operativo'}
             </div>
-            <div className="mt-1 truncate text-sm text-zinc-300">{profile?.email || user?.email || 'Cuenta activa'}</div>
-            {headerContext && <div className="truncate text-xs text-zinc-500">{headerContext}</div>}
+            <div className="mt-1 truncate text-sm text-zinc-700 dark:text-zinc-300">{profile?.email || user?.email || 'Cuenta activa'}</div>
+            {headerContext && <div className="truncate text-xs text-zinc-500 dark:text-zinc-500">{headerContext}</div>}
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs">
+            <span className="rounded-full border border-stone-300 bg-white/80 px-3 py-1 text-xs text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
               Rol: {profile?.role || user?.role || '-'}
             </span>
             <button
-              className="rounded-lg border border-zinc-700 px-3 py-1 text-sm"
+              className="rounded-lg border border-stone-300 bg-white/80 px-3 py-1 text-sm text-zinc-700 shadow-sm transition hover:border-stone-400 hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
               onClick={() => {
                 const next = theme === 'dark' ? 'light' : 'dark';
                 applyTheme(next);
@@ -188,7 +195,7 @@ export default function AppLayout() {
               {theme === 'dark' ? 'Claro' : 'Oscuro'}
             </button>
             <button
-              className="rounded-lg border border-zinc-700 px-3 py-1 text-sm"
+              className="rounded-lg border border-stone-300 bg-white/80 px-3 py-1 text-sm text-zinc-700 shadow-sm transition hover:border-stone-400 hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
               onClick={() => {
                 localStorage.removeItem('token');
                 navigate('/login', { replace: true });
@@ -201,12 +208,12 @@ export default function AppLayout() {
       </header>
 
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-4 px-4 py-4 lg:grid-cols-[280px_1fr]">
-        <aside className="hidden rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 lg:block">
+        <aside className="hidden rounded-[1.5rem] border border-stone-200/80 bg-white/78 p-4 shadow-[0_18px_45px_rgba(120,113,108,0.12)] backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-[0_22px_55px_rgba(0,0,0,0.34)] lg:block">
           <Sidebar role={user?.role} />
         </aside>
 
         {mobileOpen && (
-          <aside className="rounded-xl border border-zinc-800 bg-zinc-900/95 p-3 lg:hidden">
+          <aside className="rounded-[1.5rem] border border-stone-200/80 bg-white/92 p-3 shadow-[0_18px_45px_rgba(120,113,108,0.16)] backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95 dark:shadow-[0_22px_55px_rgba(0,0,0,0.38)] lg:hidden">
             <Sidebar role={user?.role} onNavigate={() => setMobileOpen(false)} mobile />
           </aside>
         )}

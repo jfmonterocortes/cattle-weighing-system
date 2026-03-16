@@ -49,7 +49,11 @@ export default function NewSheetPage() {
   const isOperator = user?.role === 'ADMIN' || user?.role === 'LIQUIDADOR';
 
   if (!isOperator) {
-    return <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 text-sm text-zinc-300">Tu rol no puede crear planillas.</div>;
+    return (
+      <div className="rounded-[1.5rem] border border-zinc-200/80 bg-white/90 p-5 text-sm text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-300">
+        Tu rol no puede crear planillas.
+      </div>
+    );
   }
 
   const createPersonInline = async (name, kind) => {

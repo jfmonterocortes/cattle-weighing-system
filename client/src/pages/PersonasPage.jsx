@@ -98,7 +98,11 @@ export default function PersonasPage() {
   const linkedCount = useMemo(() => state.items.filter((person) => Boolean(person.user)).length, [state.items]);
 
   if (!canAccess) {
-    return <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 text-sm text-zinc-300">Tu rol no tiene acceso al directorio de personas.</div>;
+    return (
+      <div className="rounded-[1.5rem] border border-zinc-200/80 bg-white/90 p-5 text-sm text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-300">
+        Tu rol no tiene acceso al directorio de personas.
+      </div>
+    );
   }
 
   return (

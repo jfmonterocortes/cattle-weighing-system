@@ -300,9 +300,27 @@ export default function SheetDetailPage() {
     }
   };
 
-  if (loading) return <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">Cargando...</div>;
-  if (loadError) return <div className="rounded-2xl border border-red-700/50 bg-red-950/30 p-6 text-red-200">{loadError}</div>;
-  if (!sheet) return <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">Planilla no encontrada.</div>;
+  if (loading) {
+    return (
+      <div className="rounded-[1.5rem] border border-zinc-200/80 bg-white/90 p-6 text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-300">
+        Cargando...
+      </div>
+    );
+  }
+  if (loadError) {
+    return (
+      <div className="rounded-[1.5rem] border border-red-200 bg-red-50/90 p-6 text-red-700 shadow-sm dark:border-red-700/50 dark:bg-red-950/30 dark:text-red-200">
+        {loadError}
+      </div>
+    );
+  }
+  if (!sheet) {
+    return (
+      <div className="rounded-[1.5rem] border border-zinc-200/80 bg-white/90 p-6 text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-300">
+        Planilla no encontrada.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
