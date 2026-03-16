@@ -1,3 +1,4 @@
+import { Search } from 'lucide-react';
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../api';
@@ -57,7 +58,7 @@ export default function PersonAutocomplete({
     if (!open || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     setDropdownStyle({
-      top: rect.bottom + 8,
+      top: rect.bottom + 10,
       left: rect.left,
       width: rect.width,
     });
@@ -111,16 +112,19 @@ export default function PersonAutocomplete({
   return (
     <>
       <div ref={containerRef}>
-        <label className="text-sm text-zinc-300">{label}</label>
-        <input
-          className="mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-500"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setOpen(true)}
-          onClick={() => setOpen(true)}
-          placeholder={placeholder}
-          autoComplete="off"
-        />
+        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-200">{label}</label>
+        <div className="relative mt-2">
+          <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+          <input
+            className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 pl-11 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onFocus={() => setOpen(true)}
+            onClick={() => setOpen(true)}
+            placeholder={placeholder}
+            autoComplete="off"
+          />
+        </div>
       </div>
 
       {open &&
@@ -128,16 +132,16 @@ export default function PersonAutocomplete({
           <div
             ref={dropdownRef}
             style={{ position: 'fixed', top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width, zIndex: 10000 }}
-            className="max-h-72 overflow-auto rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl"
-            onMouseDown={(e) => e.stopPropagation()}
+            className="max-h-80 overflow-auto rounded-[1.4rem] border border-zinc-200 bg-white/95 shadow-[0_20px_45px_rgba(15,23,42,0.12)] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-[0_20px_45px_rgba(0,0,0,0.45)]"
+            onMouseDown={(event) => event.stopPropagation()}
           >
-            {loading && <div className="px-3 py-2 text-sm text-zinc-400">Buscando...</div>}
+            {loading && <div className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">Buscando...</div>}
             {!loading && !error && belowMinimum && (
-              <div className="px-3 py-2 text-sm text-zinc-400">Escribe al menos {minQueryLength} caracteres para buscar.</div>
+              <div className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">Escribe al menos {minQueryLength} caracteres para buscar.</div>
             )}
-            {!loading && error && <div className="px-3 py-2 text-sm text-red-300">{error}</div>}
+            {!loading && error && <div className="px-4 py-3 text-sm text-red-600 dark:text-red-300">{error}</div>}
             {!loading && !error && !belowMinimum && trimmedQuery && results.length === 0 && (
-              <div className="px-3 py-2 text-sm text-zinc-400">Sin resultados.</div>
+              <div className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">Sin resultados.</div>
             )}
 
             {!loading &&
@@ -146,14 +150,14 @@ export default function PersonAutocomplete({
                 <button
                   key={person.id}
                   type="button"
-                  className="w-full px-3 py-2 text-left hover:bg-zinc-800"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
+                  className="w-full border-b border-zinc-200/70 px-4 py-3 text-left transition last:border-b-0 hover:bg-zinc-50 dark:border-zinc-800/80 dark:hover:bg-zinc-900/80"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
                     selectItem(person);
                   }}
                 >
-                  <div className="text-sm font-medium text-zinc-100">{person.name}</div>
-                  <div className="text-xs text-zinc-400">
+                  <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{person.name}</div>
+                  <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                     {person.phone || 'Sin telefono'} {person.cedula ? `- CI ${person.cedula}` : ''}
                   </div>
                 </button>
@@ -162,9 +166,9 @@ export default function PersonAutocomplete({
             {showCreate && (
               <button
                 type="button"
-                className="w-full border-t border-zinc-700 px-3 py-2 text-left text-sm text-emerald-300 hover:bg-zinc-800"
-                onMouseDown={async (e) => {
-                  e.preventDefault();
+                className="w-full border-t border-zinc-200 px-4 py-3 text-left text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 dark:border-zinc-800 dark:text-emerald-300 dark:hover:bg-emerald-500/10"
+                onMouseDown={async (event) => {
+                  event.preventDefault();
                   try {
                     const created = await onCreate(trimmedQuery);
                     if (created?.id) selectItem(created);

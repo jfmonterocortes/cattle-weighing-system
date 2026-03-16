@@ -42,7 +42,19 @@ describe('UsersPage', () => {
           ],
         });
       }
-      if (url === '/link-requests') return Promise.resolve({ data: [] });
+      if (url === '/link-requests') {
+        return Promise.resolve({
+          data: [
+            {
+              id: 55,
+              status: 'PENDING',
+              user: { email: 'pending@example.com' },
+              person: { name: 'Rosa Martinez' },
+              notes: 'Esperando revision',
+            },
+          ],
+        });
+      }
       if (url === '/people/search') return Promise.resolve({ data: [] });
       return Promise.resolve({ data: {} });
     });
@@ -51,15 +63,20 @@ describe('UsersPage', () => {
     mockPost.mockResolvedValue({ data: {} });
   });
 
-  it('renders admin user management listing with linked person data', async () => {
+  it('renders queue-first admin supervision with linked person data', async () => {
     render(
       <MemoryRouter>
         <UsersPage />
       </MemoryRouter>
     );
 
-    await waitFor(() => expect(screen.getAllByText('client@example.com').length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getByText('Cuentas y vinculaciones')).toBeInTheDocument());
+    expect(screen.getByText('Solicitudes de vinculacion pendientes')).toBeInTheDocument();
+    expect(screen.getByText(/pending@example.com/i)).toBeInTheDocument();
+    expect(screen.getByText(/Rosa Martinez/i)).toBeInTheDocument();
+    expect(screen.getByText('Gestion de cuentas')).toBeInTheDocument();
+    expect(screen.getAllByText('client@example.com').length).toBeGreaterThan(0);
     expect(screen.getByText('Carlos Gomez')).toBeInTheDocument();
-    expect(screen.getByText('9001')).toBeInTheDocument();
+    expect(screen.getByText('311111')).toBeInTheDocument();
   });
 });

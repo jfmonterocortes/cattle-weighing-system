@@ -23,6 +23,19 @@ describe('Planillas page', () => {
     localStorage.setItem('token', makeToken({ userId: 20, role: 'CLIENT', personId: 3 }));
 
     mockGet.mockImplementation((url) => {
+      if (url === '/settings') {
+        return Promise.resolve({
+          data: {
+            profile: {
+              personId: 3,
+              person: { id: 3, name: 'Carlos Propietario' },
+            },
+            link: {
+              latestRequest: null,
+            },
+          },
+        });
+      }
       if (url === '/sheets') {
         return Promise.resolve({
           data: {
@@ -35,6 +48,8 @@ describe('Planillas page', () => {
                 buyer: { name: 'Ana' },
                 liquidadorAliasSnapshot: 'ANV',
                 isPaid: false,
+                headCount: 3,
+                totalWeight: 980,
                 totalValue: 15000,
               },
             ],
@@ -49,15 +64,25 @@ describe('Planillas page', () => {
     });
   });
 
-  it('renders list data and payment badge', async () => {
+  it('renders queue-style list data, operational summary, and primary action', async () => {
     render(
       <MemoryRouter>
         <PlanillasPage />
       </MemoryRouter>
     );
 
-    await waitFor(() => expect(screen.getByText('2026-001')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Planilla 2026-001')).toBeInTheDocument());
     expect(screen.getByText('Pendiente')).toBeInTheDocument();
+    expect(screen.getByText(/Cuenta vinculada a Carlos Propietario/i)).toBeInTheDocument();
+    expect(screen.getByText('Carlos')).toBeInTheDocument();
+    expect(screen.getByText('Ana')).toBeInTheDocument();
+    expect(screen.getByText('Cabezas')).toBeInTheDocument();
+    expect(screen.getByText('Peso total')).toBeInTheDocument();
+    expect(screen.getAllByText('Valor total').length).toBeGreaterThan(0);
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('980')).toBeInTheDocument();
+    expect(screen.getAllByText('15000').length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: /Ver detalle/i })).toBeInTheDocument();
   });
 
   it('updates query filters instantly and calls backend with aligned params', async () => {

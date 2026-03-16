@@ -1,15 +1,30 @@
+import { Phone, Search, UserRound, Users2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api';
+import FeedbackBanner from '../components/FeedbackBanner';
 import { getSession } from '../utils/authSession';
 
-function linkedBadge(person) {
-  return person.user ? 'Vinculada' : 'Sin vínculo';
+function SectionShell({ eyebrow, title, description, children }) {
+  return (
+    <section className="rounded-[1.9rem] border border-zinc-200/80 bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.42)]">
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">{eyebrow}</div>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
+        {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">{description}</p>}
+      </div>
+      <div className="mt-5">{children}</div>
+    </section>
+  );
 }
+
+const inputClass =
+  'w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800';
 
 export default function PersonasPage() {
   const { user } = getSession();
   const isAdmin = user?.role === 'ADMIN';
   const isLiquidador = user?.role === 'LIQUIDADOR';
+  const canAccess = isAdmin || isLiquidador;
 
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
@@ -20,52 +35,35 @@ export default function PersonasPage() {
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState({ name: '', phone: '', cedula: '' });
 
-  const canAccess = isAdmin || isLiquidador;
-
   useEffect(() => {
     if (!canAccess) return;
-
     let cancelled = false;
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
       setState((prev) => ({ ...prev, loading: true, error: '' }));
-      try {
-        const res = await api.get('/people', {
-          params: { q: q.trim() || undefined, page, pageSize: 20 },
+      api
+        .get('/people', { params: { q: q.trim() || undefined, page, pageSize: 20 } })
+        .then((res) => {
+          if (cancelled) return;
+          setState({
+            loading: false,
+            error: '',
+            items: res.data.items || [],
+            total: res.data.total || 0,
+            totalPages: res.data.totalPages || 1,
+          });
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          setState({ loading: false, error: error.response?.data?.message || 'No se pudieron cargar personas.', items: [], total: 0, totalPages: 1 });
         });
-        if (cancelled) return;
-
-        setState({
-          loading: false,
-          error: '',
-          items: res.data.items || [],
-          total: res.data.total || 0,
-          totalPages: res.data.totalPages || 1,
-        });
-
-        const nextPage = res.data.page || 1;
-        setPage((currentPage) => (currentPage === nextPage ? currentPage : nextPage));
-      } catch (error) {
-        if (cancelled) return;
-
-        setState({
-          loading: false,
-          error: error.response?.data?.message || 'No se pudieron cargar personas.',
-          items: [],
-          total: 0,
-          totalPages: 1,
-        });
-      }
-    }, 250);
-
+    }, 0);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
   }, [canAccess, page, q, reloadKey]);
 
-  const reloadPeoplePage = () => {
-    setReloadKey((value) => value + 1);
-  };
+  const reloadPeoplePage = () => setReloadKey((value) => value + 1);
 
   const startEdit = (person) => {
     setEditingId(person.id);
@@ -73,12 +71,11 @@ export default function PersonasPage() {
   };
 
   const saveEdit = async (personId) => {
-    setFeedback({ type: '', message: '' });
     const payload = isAdmin ? draft : { phone: draft.phone, cedula: draft.cedula };
     try {
       await api.patch(`/people/${personId}`, payload);
-      setFeedback({ type: 'success', message: 'Persona actualizada.' });
       setEditingId(null);
+      setFeedback({ type: 'success', message: 'Persona actualizada.' });
       reloadPeoplePage();
     } catch (error) {
       setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar la persona.' });
@@ -87,157 +84,128 @@ export default function PersonasPage() {
 
   const createPerson = async (event) => {
     event.preventDefault();
-    setFeedback({ type: '', message: '' });
     try {
       await api.post('/people', createForm);
       setCreateForm({ name: '', phone: '', cedula: '' });
       setFeedback({ type: 'success', message: 'Persona creada correctamente.' });
-      if (page !== 1) {
-        setPage(1);
-      } else {
-        reloadPeoplePage();
-      }
+      if (page !== 1) setPage(1);
+      else reloadPeoplePage();
     } catch (error) {
       setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo crear la persona.' });
     }
   };
 
-  const feedbackClass = useMemo(
-    () =>
-      feedback.type === 'error'
-        ? 'text-red-300'
-        : feedback.type === 'success'
-          ? 'text-emerald-300'
-          : 'text-zinc-500',
-    [feedback.type]
-  );
+  const linkedCount = useMemo(() => state.items.filter((person) => Boolean(person.user)).length, [state.items]);
 
   if (!canAccess) {
-    return <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 text-sm text-zinc-300">Tu rol no tiene acceso al módulo de Personas.</div>;
+    return <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 text-sm text-zinc-300">Tu rol no tiene acceso al directorio de personas.</div>;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <h2 className="text-xl font-semibold">Personas</h2>
-        <p className="text-sm text-zinc-400">Listado operativo de vendedor/comprador y estado de vinculación con usuario.</p>
-        <div className="mt-3 flex gap-2">
-          <input
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-            value={q}
-            onChange={(event) => {
-              setQ(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Buscar por nombre, teléfono o cédula"
-          />
-          <button
-            type="button"
-            className="rounded-xl border border-zinc-700 px-3 py-2 text-sm"
-            onClick={() => {
-              setQ('');
-              setPage(1);
-            }}
-          >
-            Limpiar
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-6 shadow-[0_22px_65px_rgba(16,185,129,0.08)] dark:border-zinc-800 dark:from-[#0d1812] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
+              <Users2 size={14} />
+              Directorio operativo
+            </div>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Gestiona el directorio de vendedores y compradores con la vinculacion a la vista.</h1>
+            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+              Las personas son la base de las planillas y de la visibilidad para clientes. Mantener este directorio claro evita errores de captura y problemas de enlace.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:w-[430px]">
+            <div className="rounded-[1.45rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
+              <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Personas en pagina</div>
+              <div className="mt-2 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{state.items.length}</div>
+            </div>
+            <div className="rounded-[1.45rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
+              <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Con cuenta vinculada</div>
+              <div className="mt-2 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{linkedCount}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
+      <FeedbackBanner message={state.error} type="error" />
+
+      <SectionShell eyebrow="Busqueda y permisos" title="Busca rapido y edita segun tu rol" description={isAdmin ? 'Como ADMIN puedes crear personas y editar nombre, telefono y cedula.' : 'Como LIQUIDADOR puedes usar el directorio y corregir contacto o cedula sin cambiar el nombre base.'}>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
+          <div className="flex gap-3">
+            <div className="relative w-full">
+              <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+              <input className={`${inputClass} pl-11`} value={q} onChange={(event) => { setQ(event.target.value); setPage(1); }} placeholder="Buscar por nombre, telefono o cedula" />
+            </div>
+          </div>
+          <button type="button" className="rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" onClick={() => { setQ(''); setPage(1); }}>
+            Limpiar busqueda
           </button>
         </div>
-      </div>
+      </SectionShell>
 
-      <form onSubmit={createPerson} className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 md:grid-cols-4">
-        <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" placeholder="Nombre" value={createForm.name} onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))} />
-        <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" placeholder="Teléfono" value={createForm.phone} onChange={(event) => setCreateForm((prev) => ({ ...prev, phone: event.target.value }))} />
-        <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" placeholder="Cédula" value={createForm.cedula} onChange={(event) => setCreateForm((prev) => ({ ...prev, cedula: event.target.value }))} />
-        <button className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black">Crear persona</button>
-      </form>
+      <SectionShell eyebrow="Alta de persona" title="Agregar un nuevo actor al directorio" description="Crea rapidamente la persona cuando no exista todavia en el flujo operativo.">
+        <form onSubmit={createPerson} className="grid gap-4 md:grid-cols-4">
+          <input className={inputClass} placeholder="Nombre" value={createForm.name} onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))} />
+          <input className={inputClass} placeholder="Telefono" value={createForm.phone} onChange={(event) => setCreateForm((prev) => ({ ...prev, phone: event.target.value }))} />
+          <input className={inputClass} placeholder="Cedula" value={createForm.cedula} onChange={(event) => setCreateForm((prev) => ({ ...prev, cedula: event.target.value }))} />
+          <button className="rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Crear persona</button>
+        </form>
+      </SectionShell>
 
-      {feedback.message && <div className={`text-sm ${feedbackClass}`}>{feedback.message}</div>}
-      {state.error && <div className="rounded-lg border border-red-700/50 bg-red-950/30 px-3 py-2 text-sm text-red-200">{state.error}</div>}
-
-      <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/60">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-zinc-800 text-left text-zinc-400">
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Nombre</th>
-              <th className="px-3 py-2">Teléfono</th>
-              <th className="px-3 py-2">Cédula</th>
-              <th className="px-3 py-2">Vinculación</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {state.loading && (
+      <SectionShell eyebrow="Listado" title="Personas del directorio" description="Consulta vinculos, contacto y datos base sin perder la vista de las personas mas importantes para las planillas.">
+        <div className="overflow-x-auto rounded-[1.5rem] border border-zinc-200/80 dark:border-zinc-800">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-50/90 text-left text-zinc-500 dark:bg-zinc-950/40 dark:text-zinc-400">
               <tr>
-                <td className="px-3 py-3 text-zinc-500" colSpan={6}>
-                  Cargando...
-                </td>
+                <th className="px-3 py-3 font-medium">Nombre</th>
+                <th className="px-3 py-3 font-medium">Telefono</th>
+                <th className="px-3 py-3 font-medium">Cedula</th>
+                <th className="px-3 py-3 font-medium">Vinculacion</th>
+                <th className="px-3 py-3" />
               </tr>
-            )}
-            {!state.loading &&
-              state.items.map((person) => {
+            </thead>
+            <tbody>
+              {state.loading && <tr><td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={5}>Cargando...</td></tr>}
+              {!state.loading && state.items.map((person) => {
                 const editing = editingId === person.id;
                 return (
-                  <tr key={person.id} className="border-b border-zinc-800/70 text-zinc-200">
-                    <td className="px-3 py-2">{person.id}</td>
-                    <td className="px-3 py-2">
-                      {editing ? (
-                        <input className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1" value={draft.name} disabled={!isAdmin} onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))} />
-                      ) : (
-                        person.name
-                      )}
+                  <tr key={person.id} className="border-t border-zinc-200/80 text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
+                    <td className="px-3 py-3">{editing ? <input className={inputClass} value={draft.name} disabled={!isAdmin} onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))} /> : person.name}</td>
+                    <td className="px-3 py-3">{editing ? <input className={inputClass} value={draft.phone} onChange={(event) => setDraft((prev) => ({ ...prev, phone: event.target.value }))} /> : person.phone || '-'}</td>
+                    <td className="px-3 py-3">{editing ? <input className={inputClass} value={draft.cedula} onChange={(event) => setDraft((prev) => ({ ...prev, cedula: event.target.value }))} /> : person.cedula || '-'}</td>
+                    <td className="px-3 py-3">
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${person.user ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-100' : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'}`}>
+                        {person.user ? 'Vinculada' : 'Sin vinculo'}
+                      </span>
                     </td>
-                    <td className="px-3 py-2">
-                      {editing ? (
-                        <input className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1" value={draft.phone} onChange={(event) => setDraft((prev) => ({ ...prev, phone: event.target.value }))} />
-                      ) : (
-                        person.phone || '-'
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {editing ? (
-                        <input className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1" value={draft.cedula} onChange={(event) => setDraft((prev) => ({ ...prev, cedula: event.target.value }))} />
-                      ) : (
-                        person.cedula || '-'
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className={`rounded-full px-2 py-1 text-xs ${person.user ? 'bg-emerald-900/30 text-emerald-300' : 'bg-zinc-800 text-zinc-300'}`}>{linkedBadge(person)}</span>
-                    </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-3 text-right">
                       {editing ? (
                         <div className="flex justify-end gap-2">
-                          <button className="rounded border border-zinc-700 px-2 py-1 text-xs" onClick={() => setEditingId(null)} type="button">
-                            Cancelar
-                          </button>
-                          <button className="rounded bg-white px-2 py-1 text-xs font-semibold text-black" onClick={() => saveEdit(person.id)} type="button">
-                            Guardar
-                          </button>
+                          <button className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" onClick={() => setEditingId(null)} type="button">Cancelar</button>
+                          <button className="rounded-2xl bg-zinc-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200" onClick={() => saveEdit(person.id)} type="button">Guardar</button>
                         </div>
                       ) : (
-                        <button className="rounded border border-zinc-700 px-2 py-1 text-xs" onClick={() => startEdit(person)} type="button">
-                          Editar
-                        </button>
+                        <button className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" onClick={() => startEdit(person)} type="button">Editar</button>
                       )}
                     </td>
                   </tr>
                 );
               })}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex items-center justify-between text-xs text-zinc-400">
-        <div>{state.total} personas</div>
-        <div className="flex gap-2">
-          <button type="button" className="rounded border border-zinc-700 px-2 py-1 disabled:opacity-50" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>
-            Anterior
-          </button>
-          <button type="button" className="rounded border border-zinc-700 px-2 py-1 disabled:opacity-50" disabled={page >= state.totalPages} onClick={() => setPage((value) => value + 1)}>
-            Siguiente
-          </button>
+            </tbody>
+          </table>
         </div>
-      </div>
+
+        <div className="mt-4 flex items-center justify-between text-sm text-zinc-500 dark:text-zinc-400">
+          <div>{state.total} personas totales</div>
+          <div className="flex gap-2">
+            <button type="button" className="rounded-2xl border border-zinc-300 px-3 py-2 disabled:opacity-50 dark:border-zinc-700" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>Anterior</button>
+            <button type="button" className="rounded-2xl border border-zinc-300 px-3 py-2 disabled:opacity-50 dark:border-zinc-700" disabled={page >= state.totalPages} onClick={() => setPage((value) => value + 1)}>Siguiente</button>
+          </div>
+        </div>
+      </SectionShell>
     </div>
   );
 }

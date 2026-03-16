@@ -1,24 +1,25 @@
-import { useEffect, useState } from 'react';
+import { ArrowLeft, Download, GripVertical, History, PencilLine, Save, UserRound, Wallet, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import FeedbackBanner from '../components/FeedbackBanner';
 import { api } from '../api';
+import FeedbackBanner from '../components/FeedbackBanner';
+import PersonAutocomplete from '../components/PersonAutocomplete';
 import { getSession } from '../utils/authSession';
 
 const TYPE_OPTIONS = ['VACA', 'TORO', 'BUFALO', 'NOVILLO', 'TERNERO'];
 const SEX_OPTIONS = ['MACHO', 'HEMBRA'];
+const inputClass =
+  'w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800';
 
 function canEdit(role, sheet, userId) {
   if (role === 'ADMIN') return true;
-  if (role === 'LIQUIDADOR' && sheet.createdById === userId) {
-    return new Date() <= new Date(sheet.editableUntilByLiquidador);
-  }
+  if (role === 'LIQUIDADOR' && sheet.createdById === userId) return new Date() <= new Date(sheet.editableUntilByLiquidador);
   return false;
 }
 
 function getSexDefaultByType(type, currentSex = 'MACHO') {
   if (type === 'VACA') return 'HEMBRA';
-  if (type === 'TORO') return 'MACHO';
-  if (type === 'NOVILLO') return 'MACHO';
+  if (type === 'TORO' || type === 'NOVILLO') return 'MACHO';
   return currentSex;
 }
 
@@ -27,9 +28,89 @@ function toNumericOrNull(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function toDateTimeInputValue(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function toIsoDateTime(value) {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  return parsed.toISOString();
+}
+
+function formatAuditAction(action) {
+  const labels = {
+    PLANILLA_CREATED: 'Planilla creada',
+    PLANILLA_UPDATED: 'Encabezado actualizado',
+    ROW_CREATED: 'Fila agregada',
+    ROW_UPDATED: 'Fila actualizada',
+    ROW_DELETED: 'Fila eliminada',
+    ROWS_REORDERED: 'Filas reordenadas',
+    PAYMENT_STATUS_CHANGED: 'Estado de pago actualizado',
+  };
+  return labels[action] || action || 'Movimiento registrado';
+}
+
 async function fetchNextCattleNumber(sheetId) {
   const res = await api.get(`/sheets/${sheetId}/rows/next-number`);
   return res.data.cattleNumber;
+}
+
+function Shell({ eyebrow, title, description, actions, className = '', children }) {
+  return (
+    <section className={`rounded-[1.9rem] border border-zinc-200/80 bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.42)] ${className}`}>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">{eyebrow}</div>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
+          {description && <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">{description}</p>}
+        </div>
+        {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      </div>
+      <div className="mt-5">{children}</div>
+    </section>
+  );
+}
+
+function Stat({ label, value, caption }) {
+  return (
+    <div className="rounded-[1.4rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
+      <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
+      <div className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">{value}</div>
+      {caption && <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{caption}</div>}
+    </div>
+  );
+}
+
+function PartyCard({ icon, label, name, detail }) {
+  const IconComponent = icon;
+  return (
+    <div className="rounded-[1.4rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
+      <div className="flex items-start gap-3">
+        <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+          <IconComponent size={18} />
+        </div>
+        <div>
+          <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
+          <div className="mt-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">{name}</div>
+          <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{detail}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PaymentChip({ isPaid }) {
+  return (
+    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${isPaid ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-100' : 'bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-100'}`}>
+      {isPaid ? 'Pagada' : 'Pendiente'}
+    </span>
+  );
 }
 
 export default function SheetDetailPage() {
@@ -38,207 +119,173 @@ export default function SheetDetailPage() {
   const { user } = getSession();
   const role = user?.role;
   const userId = user?.userId;
+  const isClient = role === 'CLIENT';
 
   const [sheet, setSheet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const [actionFeedback, setActionFeedback] = useState({ type: '', message: '' });
+  const [feedback, setFeedback] = useState({ type: '', message: '' });
+  const [reloadKey, setReloadKey] = useState(0);
+  const [savingRow, setSavingRow] = useState(false);
+  const [editingHeader, setEditingHeader] = useState(false);
+  const [savingHeader, setSavingHeader] = useState(false);
   const [draftRow, setDraftRow] = useState({ type: 'TERNERO', sex: 'MACHO', weight: '', cattleNumber: '', letters: '' });
   const [sessionDefaults, setSessionDefaults] = useState({ type: 'TERNERO', sex: 'MACHO', lastNumericCattleNumber: null });
-  const [saving, setSaving] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
+  const [headerDraft, setHeaderDraft] = useState({ seller: null, buyer: null, date: '', pricePerHead: '', liquidadorAliasSnapshot: '' });
 
   useEffect(() => {
     if (!Number.isFinite(sheetId)) return;
-
     let cancelled = false;
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      setLoadError('');
-
-      try {
-        const res = await api.get(`/sheets/${sheetId}`);
+    api
+      .get(`/sheets/${sheetId}`)
+      .then((res) => {
         if (cancelled) return;
-
         setSheet(res.data);
-
-        const numericRows = (res.data.rows || [])
-          .map((row) => toNumericOrNull(row.cattleNumber))
-          .filter((value) => Number.isFinite(value));
-        const maxNumeric = numericRows.length ? Math.max(...numericRows) : null;
-        setSessionDefaults((prev) => ({ ...prev, lastNumericCattleNumber: maxNumeric }));
-      } catch (error) {
-        if (cancelled) return;
-        setSheet(null);
-        setLoadError(error.response?.data?.message || 'No se pudo cargar la planilla.');
-      } finally {
+        setHeaderDraft({
+          seller: res.data.seller,
+          buyer: res.data.buyer,
+          date: toDateTimeInputValue(res.data.date),
+          pricePerHead: String(res.data.pricePerHead ?? ''),
+          liquidadorAliasSnapshot: res.data.liquidadorAliasSnapshot || '',
+        });
+        const numericRows = (res.data.rows || []).map((row) => toNumericOrNull(row.cattleNumber)).filter((value) => Number.isFinite(value));
+        setSessionDefaults((prev) => ({ ...prev, lastNumericCattleNumber: numericRows.length ? Math.max(...numericRows) : null }));
+        setLoadError('');
+      })
+      .catch((error) => {
         if (!cancelled) {
-          setLoading(false);
+          setSheet(null);
+          setLoadError(error.response?.data?.message || 'No se pudo cargar la planilla.');
         }
-      }
-    }, 0);
-
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
   }, [reloadKey, sheetId]);
 
   useEffect(() => {
     if (!sheet?.id) return;
-
-    let cancelled = false;
+    const localNext = Number.isFinite(sessionDefaults.lastNumericCattleNumber) ? String(sessionDefaults.lastNumericCattleNumber + 1) : '';
     setDraftRow((prev) => ({
       ...prev,
       type: sessionDefaults.type,
       sex: getSexDefaultByType(sessionDefaults.type, sessionDefaults.sex),
+      cattleNumber: localNext || prev.cattleNumber,
     }));
-
-    const localNext = Number.isFinite(sessionDefaults.lastNumericCattleNumber)
-      ? String(sessionDefaults.lastNumericCattleNumber + 1)
-      : '';
-
-    if (localNext) {
-      setDraftRow((prev) => ({ ...prev, cattleNumber: localNext }));
-      return undefined;
-    }
-
-    const timer = setTimeout(async () => {
-      try {
-        const cattleNumber = await fetchNextCattleNumber(sheetId);
-        if (cancelled) return;
-        setDraftRow((prev) => ({ ...prev, cattleNumber }));
-      } catch {
-        // noop
-      }
-    }, 0);
-
+    if (localNext) return;
+    let cancelled = false;
+    fetchNextCattleNumber(sheetId).then((cattleNumber) => {
+      if (!cancelled) setDraftRow((prev) => ({ ...prev, cattleNumber }));
+    }).catch(() => {});
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
   }, [sessionDefaults.lastNumericCattleNumber, sessionDefaults.sex, sessionDefaults.type, sheet?.id, sheetId]);
 
-  const reloadDetail = () => {
-    setReloadKey((value) => value + 1);
-  };
-
+  const reloadDetail = () => setReloadKey((value) => value + 1);
   const editable = sheet ? canEdit(role, sheet, userId) : false;
+  const groupedStats = useMemo(() => sheet?.computed?.totalsByTypeSex || [], [sheet]);
+  const paymentLogs = sheet?.paymentLogs || [];
+  const auditLogs = sheet?.auditLogs || [];
+
+  const headerStateLabel = role === 'ADMIN' ? 'Control admin' : editable && sheet?.editableUntilByLiquidador ? `Edicion abierta hasta ${new Date(sheet.editableUntilByLiquidador).toLocaleTimeString()}` : role === 'CLIENT' ? '' : 'Solo lectura';
 
   const addRow = async (event) => {
     event.preventDefault();
-    setSaving(true);
-    setActionFeedback({ type: '', message: '' });
-
-    const rowPayload = {
-      type: draftRow.type,
-      sex: draftRow.sex,
-      weight: Math.trunc(Number(draftRow.weight || 0)),
-      cattleNumber: draftRow.cattleNumber || '1',
-      letters: draftRow.letters || null,
-    };
-
+    setSavingRow(true);
+    setFeedback({ type: '', message: '' });
+    const rowPayload = { type: draftRow.type, sex: draftRow.sex, weight: Math.trunc(Number(draftRow.weight || 0)), cattleNumber: draftRow.cattleNumber || '1', letters: draftRow.letters || null };
     try {
       await api.post(`/sheets/${sheetId}/rows`, rowPayload);
-
       const numeric = toNumericOrNull(rowPayload.cattleNumber);
-      setSessionDefaults((prev) => ({
-        ...prev,
-        type: rowPayload.type,
-        sex: rowPayload.sex,
-        lastNumericCattleNumber: Number.isFinite(numeric) ? numeric : prev.lastNumericCattleNumber,
-      }));
-
-      setDraftRow({
-        type: rowPayload.type,
-        sex: rowPayload.sex,
-        weight: '',
-        cattleNumber: Number.isFinite(numeric) ? String(numeric + 1) : '',
-        letters: '',
-      });
-
-      if (!Number.isFinite(numeric)) {
-        try {
-          const cattleNumber = await fetchNextCattleNumber(sheetId);
-          setDraftRow((prev) => ({ ...prev, cattleNumber }));
-        } catch {
-          // noop
-        }
-      }
-
-      setActionFeedback({ type: 'success', message: 'Fila agregada correctamente.' });
+      setSessionDefaults((prev) => ({ ...prev, type: rowPayload.type, sex: rowPayload.sex, lastNumericCattleNumber: Number.isFinite(numeric) ? numeric : prev.lastNumericCattleNumber }));
+      setDraftRow({ type: rowPayload.type, sex: rowPayload.sex, weight: '', cattleNumber: Number.isFinite(numeric) ? String(numeric + 1) : '', letters: '' });
+      setFeedback({ type: 'success', message: 'Fila agregada correctamente.' });
       reloadDetail();
     } catch (error) {
-      setActionFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo agregar la fila.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo agregar la fila.' });
     } finally {
-      setSaving(false);
+      setSavingRow(false);
     }
   };
 
   const updateRowField = async (rowId, patch) => {
-    setActionFeedback({ type: '', message: '' });
     try {
       await api.patch(`/sheets/${sheetId}/rows/${rowId}`, patch);
       reloadDetail();
     } catch (error) {
-      setActionFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar la fila.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar la fila.' });
     }
   };
 
   const deleteRow = async (rowId) => {
-    setActionFeedback({ type: '', message: '' });
     try {
       await api.delete(`/sheets/${sheetId}/rows/${rowId}`);
-      setActionFeedback({ type: 'success', message: 'Fila eliminada.' });
+      setFeedback({ type: 'success', message: 'Fila eliminada.' });
       reloadDetail();
     } catch (error) {
-      setActionFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo eliminar la fila.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo eliminar la fila.' });
     }
-  };
-
-  const onDragStart = (event, rowId) => {
-    event.dataTransfer.setData('text/plain', String(rowId));
   };
 
   const onDropRow = async (event, targetRowId) => {
     event.preventDefault();
     const sourceId = Number(event.dataTransfer.getData('text/plain'));
     if (!sourceId || sourceId === targetRowId) return;
-
     const ids = sheet.rows.map((row) => row.id);
     const sourceIndex = ids.indexOf(sourceId);
     const targetIndex = ids.indexOf(targetRowId);
     if (sourceIndex === -1 || targetIndex === -1) return;
-
     ids.splice(sourceIndex, 1);
     ids.splice(targetIndex, 0, sourceId);
-
-    setActionFeedback({ type: '', message: '' });
     try {
       await api.post(`/sheets/${sheetId}/rows/reorder`, { orderedRowIds: ids });
-      setActionFeedback({ type: 'success', message: 'Filas reordenadas.' });
+      setFeedback({ type: 'success', message: 'Filas reordenadas.' });
       reloadDetail();
     } catch (error) {
-      setActionFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudieron reordenar las filas.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudieron reordenar las filas.' });
+    }
+  };
+
+  const saveHeader = async () => {
+    if (!headerDraft.seller?.id || !headerDraft.buyer?.id) {
+      setFeedback({ type: 'error', message: 'Debes seleccionar vendedor y comprador para guardar el encabezado.' });
+      return;
+    }
+    setSavingHeader(true);
+    try {
+      const payload = {
+        sellerId: headerDraft.seller.id,
+        buyerId: headerDraft.buyer.id,
+        pricePerHead: Number(headerDraft.pricePerHead || 0),
+        date: toIsoDateTime(headerDraft.date),
+      };
+      if (headerDraft.liquidadorAliasSnapshot.trim()) payload.liquidadorAliasSnapshot = headerDraft.liquidadorAliasSnapshot.trim();
+      await api.patch(`/sheets/${sheetId}`, payload);
+      setEditingHeader(false);
+      setFeedback({ type: 'success', message: 'Encabezado actualizado.' });
+      reloadDetail();
+    } catch (error) {
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar el encabezado.' });
+    } finally {
+      setSavingHeader(false);
     }
   };
 
   const togglePayment = async () => {
-    setActionFeedback({ type: '', message: '' });
     try {
-      await api.post(`/sheets/${sheetId}/payment-status`, {
-        isPaid: !sheet.isPaid,
-        notes: sheet.isPaid ? 'Marcada pendiente' : 'Marcada pagada',
-      });
-      setActionFeedback({ type: 'success', message: `Estado actualizado: ${sheet.isPaid ? 'Pendiente' : 'Pagada'}.` });
+      await api.post(`/sheets/${sheetId}/payment-status`, { isPaid: !sheet.isPaid, notes: sheet.isPaid ? 'Marcada pendiente' : 'Marcada pagada' });
+      setFeedback({ type: 'success', message: `Estado actualizado: ${sheet.isPaid ? 'Pendiente' : 'Pagada'}.` });
       reloadDetail();
     } catch (error) {
-      setActionFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar el pago.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar el pago.' });
     }
   };
 
   const exportPdf = async () => {
-    setActionFeedback({ type: '', message: '' });
     try {
       const res = await api.get(`/exports/sheet/${sheetId}/pdf`, { responseType: 'blob' });
       const url = URL.createObjectURL(new Blob([res.data]));
@@ -247,9 +294,9 @@ export default function SheetDetailPage() {
       link.download = `planilla-${sheet.visibleNumber}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
-      setActionFeedback({ type: 'success', message: 'PDF generado correctamente.' });
+      setFeedback({ type: 'success', message: 'PDF generado correctamente.' });
     } catch (error) {
-      setActionFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo exportar el PDF.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo exportar el PDF.' });
     }
   };
 
@@ -257,339 +304,228 @@ export default function SheetDetailPage() {
   if (loadError) return <div className="rounded-2xl border border-red-700/50 bg-red-950/30 p-6 text-red-200">{loadError}</div>;
   if (!sheet) return <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">Planilla no encontrada.</div>;
 
-  const groupedStats = sheet?.computed?.totalsByTypeSex || [];
-
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link to="/planillas" className="rounded-xl border border-zinc-700 px-3 py-2 text-sm">
-          Volver a planillas
-        </Link>
-        <div className="text-right">
-          <h2 className="text-xl font-semibold">Planilla {sheet.visibleNumber}</h2>
-          <p className="text-sm text-zinc-400">{new Date(sheet.date).toLocaleString()}</p>
-        </div>
-      </div>
-
-      <FeedbackBanner message={actionFeedback.message} type={actionFeedback.type || 'info'} />
-
-      <div className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 md:grid-cols-3">
-        <div>
-          <div className="text-xs text-zinc-500">Vendedor</div>
-          <div className="font-medium">{sheet.seller.name}</div>
-          <div className="text-xs text-zinc-500">{sheet.seller.phone || 'Sin teléfono'}</div>
-        </div>
-        <div>
-          <div className="text-xs text-zinc-500">Comprador</div>
-          <div className="font-medium">{sheet.buyer.name}</div>
-          <div className="text-xs text-zinc-500">{sheet.buyer.phone || 'Sin teléfono'}</div>
-        </div>
-        <div>
-          <div className="text-xs text-zinc-500">Liquidador</div>
-          <div className="font-medium">{sheet.liquidadorAliasSnapshot}</div>
-          <div className="text-xs text-zinc-500">Precio/cabeza: {sheet.pricePerHead}</div>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <h3 className="text-lg font-semibold">Resumen de pesos</h3>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <div className="text-xs text-zinc-500">Cabezas</div>
-            <div className="text-lg font-semibold">{sheet.headCount}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Peso total</div>
-            <div className="text-lg font-semibold">{sheet.totalWeight}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Promedio general</div>
-            <div className="text-lg font-semibold">{sheet.averageWeight}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Valor total</div>
-            <div className="text-lg font-semibold">{sheet.totalValue}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Total machos</div>
-            <div className="text-lg font-semibold">{sheet.totalMaleWeight}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Promedio machos</div>
-            <div className="text-lg font-semibold">{sheet.averageMaleWeight}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Total hembras</div>
-            <div className="text-lg font-semibold">{sheet.totalFemaleWeight}</div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500">Promedio hembras</div>
-            <div className="text-lg font-semibold">{sheet.averageFemaleWeight}</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <h3 className="text-lg font-semibold">Desglose por tipo y sexo</h3>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-zinc-400">
-              <tr>
-                <th className="px-2 py-2">Especificación</th>
-                <th className="px-2 py-2">Cantidad</th>
-                <th className="px-2 py-2">Peso total</th>
-                <th className="px-2 py-2">Promedio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groupedStats.length === 0 && (
-                <tr>
-                  <td className="px-2 py-3 text-zinc-500" colSpan={4}>
-                    Sin datos de desglose.
-                  </td>
-                </tr>
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-amber-50 via-white to-sky-50 p-6 shadow-[0_22px_65px_rgba(120,53,15,0.08)] dark:border-zinc-800 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0c1620] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
+              <History size={14} />
+              Planilla operativa
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Link to="/planillas" className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70">
+                <ArrowLeft size={16} />
+                Volver a planillas
+              </Link>
+              <PaymentChip isPaid={sheet.isPaid} />
+              {!isClient && (
+                <span className="inline-flex rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                  {headerStateLabel}
+                </span>
               )}
-              {groupedStats.map((group) => (
-                <tr key={`${group.type}-${group.sex}`} className="border-t border-zinc-800 text-zinc-200">
-                  <td className="px-2 py-2">{String(group.specification || '').toUpperCase()}</td>
-                  <td className="px-2 py-2">{group.count}</td>
-                  <td className="px-2 py-2">{group.totalWeight}</td>
-                  <td className="px-2 py-2">{group.averageWeight}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </div>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Planilla {sheet.visibleNumber}</h1>
+            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">{new Date(sheet.date).toLocaleString()} · Revisa encabezado, resumen, reses y pago en el orden operativo del trabajo diario.</p>
+          </div>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-lg font-semibold">Reses</h3>
-          <div className="flex gap-2">
-            <button type="button" onClick={exportPdf} className="rounded-xl border border-zinc-700 px-3 py-2 text-xs">
-              Exportar PDF
-            </button>
-            {(role === 'ADMIN' || role === 'LIQUIDADOR') && (
-              <button type="button" onClick={togglePayment} className="rounded-xl border border-zinc-700 px-3 py-2 text-xs">
-                {sheet.isPaid ? 'Marcar pendiente' : 'Marcar pagada'}
-              </button>
-            )}
+          <div className="grid gap-3 sm:grid-cols-2 xl:w-[480px]">
+            <Stat label="Cabezas" value={sheet.headCount} caption="Total de reses registradas." />
+            <Stat label="Valor total" value={sheet.totalValue} caption="Lectura rapida del cierre economico." />
+            <Stat label="Precio/cabeza" value={sheet.pricePerHead} caption="Referencia activa para esta planilla." />
+            <Stat label="Liquidador" value={sheet.liquidadorAliasSnapshot || 'Sin alias'} caption="Alias guardado en el encabezado." />
           </div>
         </div>
+      </section>
 
-        <p className="mt-1 text-xs text-zinc-400">Estado de pago: {sheet.isPaid ? 'Pagada' : 'Pendiente'}</p>
+      <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-zinc-400">
+      <Shell
+        eyebrow="Encabezado de planilla"
+        title="Contrapartes y parametros operativos"
+        description={editable ? 'Valida vendedor, comprador, fecha, alias y precio antes de seguir con las reses.' : 'Este bloque resume el encabezado principal con el que se construyo la planilla.'}
+        actions={
+          editable && (
+            <button type="button" onClick={() => setEditingHeader((value) => !value)} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70">
+              <PencilLine size={16} />
+              {editingHeader ? 'Cerrar edicion' : 'Editar encabezado'}
+            </button>
+          )
+        }
+      >
+        <div className="grid gap-4 lg:grid-cols-3">
+          <PartyCard icon={UserRound} label="Vendedor" name={sheet.seller.name} detail={sheet.seller.phone || 'Sin telefono'} />
+          <PartyCard icon={UserRound} label="Comprador" name={sheet.buyer.name} detail={sheet.buyer.phone || 'Sin telefono'} />
+          <PartyCard icon={Wallet} label="Pago" name={sheet.isPaid ? 'Pagada' : 'Pendiente'} detail={`Creada por: ${sheet.createdBy?.email || 'Sin dato'}`} />
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <Stat label="Fecha operativa" value={new Date(sheet.date).toLocaleString()} />
+          <Stat label="Precio por cabeza" value={sheet.pricePerHead} />
+          <Stat label="Alias de liquidador" value={sheet.liquidadorAliasSnapshot || 'Sin alias'} />
+        </div>
+
+        {editingHeader && (
+          <div className="mt-5 rounded-[1.5rem] border border-zinc-200/80 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+            <div className="mb-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">Edicion segura</div>
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Ajusta solo los datos principales del encabezado. Las reses y el pago se administran en sus secciones respectivas.</p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <PersonAutocomplete label="Vendedor" value={headerDraft.seller} onSelect={(person) => setHeaderDraft((prev) => ({ ...prev, seller: person }))} />
+              <PersonAutocomplete label="Comprador" value={headerDraft.buyer} onSelect={(person) => setHeaderDraft((prev) => ({ ...prev, buyer: person }))} />
+              <label>
+                <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Fecha y hora</div>
+                <input type="datetime-local" className={inputClass} value={headerDraft.date} onChange={(event) => setHeaderDraft((prev) => ({ ...prev, date: event.target.value }))} />
+              </label>
+              <label>
+                <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Precio por cabeza</div>
+                <input className={inputClass} value={headerDraft.pricePerHead} onChange={(event) => setHeaderDraft((prev) => ({ ...prev, pricePerHead: event.target.value }))} />
+              </label>
+              <label className="lg:col-span-2">
+                <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Alias de liquidador</div>
+                <input className={inputClass} value={headerDraft.liquidadorAliasSnapshot} onChange={(event) => setHeaderDraft((prev) => ({ ...prev, liquidadorAliasSnapshot: event.target.value }))} />
+              </label>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" onClick={saveHeader} disabled={savingHeader} className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
+                <Save size={16} />
+                {savingHeader ? 'Guardando...' : 'Guardar encabezado'}
+              </button>
+              <button type="button" onClick={() => setEditingHeader(false)} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70">
+                <X size={16} />
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </Shell>
+
+      <Shell eyebrow="Resumen" title="Lectura rapida de volumen y mezcla" description="Primero valida las metricas generales. Debajo queda el desglose tecnico por especificacion para confirmar promedios y distribucion.">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Stat label="Cabezas" value={sheet.headCount} />
+          <Stat label="Peso total" value={sheet.totalWeight} />
+          <Stat label="Promedio general" value={sheet.averageWeight} />
+          <Stat label="Valor total" value={sheet.totalValue} />
+          <Stat label="Total machos" value={sheet.totalMaleWeight} />
+          <Stat label="Promedio machos" value={sheet.averageMaleWeight} />
+          <Stat label="Total hembras" value={sheet.totalFemaleWeight} />
+          <Stat label="Promedio hembras" value={sheet.averageFemaleWeight} />
+        </div>
+        <div className="mt-5 overflow-x-auto rounded-[1.5rem] border border-zinc-200/80 dark:border-zinc-800">
+          <table className="w-full min-w-[540px] text-sm">
+            <thead className="bg-zinc-50/90 text-left text-zinc-500 dark:bg-zinc-950/40 dark:text-zinc-400">
               <tr>
-                <th className="px-2 py-2">Nº</th>
-                <th className="px-2 py-2">Especificación</th>
-                <th className="px-2 py-2">Tipo</th>
-                <th className="px-2 py-2">Sexo</th>
-                <th className="px-2 py-2">Kilos</th>
-                <th className="px-2 py-2">Nº Res</th>
-                <th className="px-2 py-2">Letras</th>
-                {editable && <th className="px-2 py-2" />}
+                <th className="px-3 py-3 font-medium">Especificacion</th>
+                <th className="px-3 py-3 font-medium">Cantidad</th>
+                <th className="px-3 py-3 font-medium">Peso total</th>
+                <th className="px-3 py-3 font-medium">Promedio</th>
               </tr>
             </thead>
             <tbody>
-              {sheet.rows.map((row) => (
-                <tr
-                  key={row.id}
-                  draggable={editable}
-                  onDragStart={(event) => onDragStart(event, row.id)}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={(event) => onDropRow(event, row.id)}
-                  className="border-t border-zinc-800 text-zinc-200"
-                >
-                  <td className="px-2 py-2">{row.rowOrder}</td>
-                  <td className="px-2 py-2">{`${row.type} ${row.sex}`}</td>
-                  <td className="px-2 py-2">
-                    {editable ? (
-                      <select
-                        className="w-28 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
-                        value={row.type}
-                        onChange={(event) => {
-                          const nextType = event.target.value;
-                          const nextSex = getSexDefaultByType(nextType, row.sex);
-                          setSheet((prev) => ({
-                            ...prev,
-                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type: nextType, sex: nextSex } : item)),
-                          }));
-                        }}
-                        onBlur={() => updateRowField(row.id, { type: row.type, sex: row.sex })}
-                      >
-                        {TYPE_OPTIONS.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      row.type
-                    )}
-                  </td>
-                  <td className="px-2 py-2">
-                    {editable ? (
-                      <select
-                        className="w-24 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
-                        value={row.sex}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setSheet((prev) => ({
-                            ...prev,
-                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, sex: value } : item)),
-                          }));
-                        }}
-                        onBlur={() => updateRowField(row.id, { sex: row.sex, type: row.type })}
-                      >
-                        {SEX_OPTIONS.map((sex) => (
-                          <option key={sex} value={sex}>
-                            {sex}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      row.sex
-                    )}
-                  </td>
-                  <td className="px-2 py-2">
-                    {editable ? (
-                      <input
-                        className="w-20 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
-                        value={row.weight}
-                        onChange={(event) => {
-                          const value = Math.trunc(Number(event.target.value || 0));
-                          setSheet((prev) => ({
-                            ...prev,
-                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, weight: value } : item)),
-                          }));
-                        }}
-                        onBlur={() => updateRowField(row.id, { weight: row.weight })}
-                      />
-                    ) : (
-                      row.weight
-                    )}
-                  </td>
-                  <td className="px-2 py-2">
-                    {editable ? (
-                      <input
-                        className="w-24 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
-                        value={row.cattleNumber}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setSheet((prev) => ({
-                            ...prev,
-                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, cattleNumber: value } : item)),
-                          }));
-                        }}
-                        onBlur={() => updateRowField(row.id, { cattleNumber: row.cattleNumber })}
-                      />
-                    ) : (
-                      row.cattleNumber
-                    )}
-                  </td>
-                  <td className="px-2 py-2">
-                    {editable ? (
-                      <input
-                        className="w-24 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
-                        value={row.letters || ''}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setSheet((prev) => ({
-                            ...prev,
-                            rows: prev.rows.map((item) => (item.id === row.id ? { ...item, letters: value } : item)),
-                          }));
-                        }}
-                        onBlur={() => updateRowField(row.id, { letters: row.letters || null })}
-                      />
-                    ) : (
-                      row.letters || '-'
-                    )}
-                  </td>
-                  {editable && (
-                    <td className="px-2 py-2 text-right">
-                      <button type="button" className="rounded-md border border-red-800 px-2 py-1 text-xs text-red-300" onClick={() => deleteRow(row.id)}>
-                        Eliminar
-                      </button>
-                    </td>
-                  )}
+              {groupedStats.length === 0 && <tr><td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={4}>Sin datos de desglose.</td></tr>}
+              {groupedStats.map((group) => (
+                <tr key={`${group.type}-${group.sex}`} className="border-t border-zinc-200/80 text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
+                  <td className="px-3 py-3 font-medium text-zinc-900 dark:text-zinc-100">{String(group.specification || '').toUpperCase()}</td>
+                  <td className="px-3 py-3">{group.count}</td>
+                  <td className="px-3 py-3">{group.totalWeight}</td>
+                  <td className="px-3 py-3">{group.averageWeight}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      </Shell>
 
+      <Shell eyebrow="Reses" title="Filas, orden y captura" description={editable ? 'Mientras la edicion siga abierta puedes corregir filas, reordenarlas y continuar la captura.' : 'Esta vista queda en lectura para consultar las reses registradas y exportar la planilla final.'} actions={<button type="button" onClick={exportPdf} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"><Download size={16} />Exportar PDF</button>}>
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[1.4rem] border border-zinc-200/80 bg-zinc-50/80 px-4 py-3 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
+          <span>{sheet.rows.length} filas registradas</span>
+          {editable && <span className="inline-flex items-center gap-1"><GripVertical size={14} />Arrastra una fila sobre otra para reordenar.</span>}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] text-sm">
+            <thead className="bg-zinc-50/90 text-left text-zinc-500 dark:bg-zinc-950/40 dark:text-zinc-400">
+              <tr>
+                <th className="px-3 py-3 font-medium">No.</th>
+                <th className="px-3 py-3 font-medium">Especificacion</th>
+                <th className="px-3 py-3 font-medium">Tipo</th>
+                <th className="px-3 py-3 font-medium">Sexo</th>
+                <th className="px-3 py-3 font-medium">Kilos</th>
+                <th className="px-3 py-3 font-medium">No. Res</th>
+                <th className="px-3 py-3 font-medium">Letras</th>
+                {editable && <th className="px-3 py-3" />}
+              </tr>
+            </thead>
+            <tbody>
+              {sheet.rows.length === 0 && <tr><td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={editable ? 8 : 7}>No hay reses registradas todavia.</td></tr>}
+              {sheet.rows.map((row) => (
+                <tr key={row.id} draggable={editable} onDragStart={(event) => event.dataTransfer.setData('text/plain', String(row.id))} onDragOver={(event) => event.preventDefault()} onDrop={(event) => onDropRow(event, row.id)} className="border-t border-zinc-200/80 text-zinc-700 transition hover:bg-zinc-50/80 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-950/30">
+                  <td className="px-3 py-3 font-medium text-zinc-900 dark:text-zinc-100">{row.rowOrder}</td>
+                  <td className="px-3 py-3">{`${row.type} ${row.sex}`}</td>
+                  <td className="px-3 py-3">{editable ? <select className={inputClass} value={row.type} onChange={(event) => { const nextType = event.target.value; const nextSex = getSexDefaultByType(nextType, row.sex); setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type: nextType, sex: nextSex } : item)) })); }} onBlur={() => updateRowField(row.id, { type: row.type, sex: row.sex })}>{TYPE_OPTIONS.map((type) => <option key={type} value={type}>{type}</option>)}</select> : row.type}</td>
+                  <td className="px-3 py-3">{editable ? <select className={inputClass} value={row.sex} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, sex: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { sex: row.sex, type: row.type })}>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}</select> : row.sex}</td>
+                  <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.weight} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, weight: Math.trunc(Number(event.target.value || 0)) } : item)) }))} onBlur={() => updateRowField(row.id, { weight: row.weight })} /> : row.weight}</td>
+                  <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.cattleNumber} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, cattleNumber: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { cattleNumber: row.cattleNumber })} /> : row.cattleNumber}</td>
+                  <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.letters || ''} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, letters: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { letters: row.letters || null })} /> : row.letters || '-'}</td>
+                  {editable && <td className="px-3 py-3 text-right"><button type="button" className="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50 dark:border-red-500/30 dark:text-red-200 dark:hover:bg-red-500/10" onClick={() => deleteRow(row.id)}>Eliminar</button></td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {editable && (
-          <form onSubmit={addRow} className="mt-4 grid items-end gap-2 md:grid-cols-6">
-            <div>
-              <label className="text-xs text-zinc-400">Tipo</label>
-              <select
-                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
-                value={draftRow.type}
-                onChange={(event) => {
-                  const nextType = event.target.value;
-                  const nextSex = getSexDefaultByType(nextType, draftRow.sex);
-                  setDraftRow((prev) => ({ ...prev, type: nextType, sex: nextSex }));
-                  setSessionDefaults((prev) => ({ ...prev, type: nextType, sex: nextSex }));
-                }}
-              >
-                {TYPE_OPTIONS.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
+          <form onSubmit={addRow} className="mt-5 rounded-[1.5rem] border border-zinc-200/80 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+            <div className="mb-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">Nueva fila</div>
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Agrega una res y conserva los ultimos valores utiles para acelerar la captura.</p>
             </div>
-            <div>
-              <label className="text-xs text-zinc-400">Sexo</label>
-              <select
-                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1"
-                value={draftRow.sex}
-                onChange={(event) => {
-                  const nextSex = event.target.value;
-                  setDraftRow((prev) => ({ ...prev, sex: nextSex }));
-                  setSessionDefaults((prev) => ({ ...prev, sex: nextSex }));
-                }}
-              >
-                {SEX_OPTIONS.map((sex) => (
-                  <option key={sex} value={sex}>
-                    {sex}
-                  </option>
-                ))}
-              </select>
+            <div className="grid items-end gap-3 md:grid-cols-6">
+              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Tipo</div><select className={inputClass} value={draftRow.type} onChange={(event) => { const nextType = event.target.value; const nextSex = getSexDefaultByType(nextType, draftRow.sex); setDraftRow((prev) => ({ ...prev, type: nextType, sex: nextSex })); setSessionDefaults((prev) => ({ ...prev, type: nextType, sex: nextSex })); }}>{TYPE_OPTIONS.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
+              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Sexo</div><select className={inputClass} value={draftRow.sex} onChange={(event) => { setDraftRow((prev) => ({ ...prev, sex: event.target.value })); setSessionDefaults((prev) => ({ ...prev, sex: event.target.value })); }}>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}</select></label>
+              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Kilos</div><input className={inputClass} value={draftRow.weight} onChange={(event) => setDraftRow((prev) => ({ ...prev, weight: event.target.value }))} /></label>
+              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">No. Res</div><input className={inputClass} value={draftRow.cattleNumber} onChange={(event) => setDraftRow((prev) => ({ ...prev, cattleNumber: event.target.value }))} /></label>
+              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Letras</div><input className={inputClass} value={draftRow.letters} onChange={(event) => setDraftRow((prev) => ({ ...prev, letters: event.target.value }))} /></label>
+              <button disabled={savingRow} className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">{savingRow ? 'Guardando...' : 'Agregar'}</button>
             </div>
-            <div>
-              <label className="text-xs text-zinc-400">Kilos</label>
-              <input className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.weight} onChange={(event) => setDraftRow((prev) => ({ ...prev, weight: event.target.value }))} />
-            </div>
-            <div>
-              <label className="text-xs text-zinc-400">Nº Res</label>
-              <input className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.cattleNumber} onChange={(event) => setDraftRow((prev) => ({ ...prev, cattleNumber: event.target.value }))} />
-            </div>
-            <div>
-              <label className="text-xs text-zinc-400">Letras</label>
-              <input className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1" value={draftRow.letters} onChange={(event) => setDraftRow((prev) => ({ ...prev, letters: event.target.value }))} />
-            </div>
-            <button disabled={saving} className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-black disabled:opacity-60">
-              {saving ? 'Guardando...' : 'Agregar'}
-            </button>
           </form>
         )}
-      </div>
+      </Shell>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <h3 className="text-lg font-semibold">Bitácora de pagos</h3>
-        <div className="mt-3 space-y-2 text-sm">
-          {sheet.paymentLogs.length === 0 && <div className="text-zinc-500">Sin eventos de pago.</div>}
-          {sheet.paymentLogs.map((log) => (
-            <div key={log.id} className="rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2">
-              {new Date(log.changedAt).toLocaleString()} - {log.newStatus ? 'Pagada' : 'Pendiente'} por {log.changedBy.email}
+      <Shell eyebrow="Pago" title={isClient ? 'Estado de pago' : 'Seguimiento de pago'} description={isClient ? 'Consulta el estado actual y el historial basico de cambios de pago sin exponer datos internos de operacion.' : 'Marca la planilla como pagada o pendiente y revisa quien hizo los cambios de estado.'} actions={!isClient && <button type="button" onClick={togglePayment} className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"><Wallet size={16} />{sheet.isPaid ? 'Marcar pendiente' : 'Marcar pagada'}</button>}>
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[1.4rem] border border-zinc-200/80 bg-zinc-50/80 px-4 py-3 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
+          <PaymentChip isPaid={sheet.isPaid} />
+          {sheet.paidBy && !isClient && <span>Ultimo cambio por {sheet.paidBy.email}</span>}
+        </div>
+        <div className="space-y-3 text-sm">
+          {paymentLogs.length === 0 && <div className="rounded-[1.3rem] border border-dashed border-zinc-300/90 bg-zinc-50/80 px-4 py-5 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">Sin eventos de pago.</div>}
+          {paymentLogs.map((log) => (
+            <div key={log.id} className="rounded-[1.35rem] border border-zinc-200/80 bg-white/80 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950/60">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="font-medium text-zinc-900 dark:text-zinc-100">{log.newStatus ? 'Pagada' : 'Pendiente'}{!isClient && log.changedBy?.email ? ` por ${log.changedBy.email}` : ''}</div>
+                <div className="text-xs uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-500">{new Date(log.changedAt).toLocaleString()}</div>
+              </div>
             </div>
           ))}
         </div>
-      </div>
+      </Shell>
+
+      {!isClient && (
+        <Shell eyebrow="Trazabilidad" title="Historial operativo" description="Mantiene una lectura secundaria del rastro administrativo sin quitarle protagonismo al trabajo principal de la planilla." className="border-dashed bg-zinc-50/70 dark:bg-zinc-950/35">
+          <div className="space-y-3">
+            {auditLogs.length === 0 && <div className="rounded-[1.3rem] border border-dashed border-zinc-300/90 bg-white/80 px-4 py-5 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">Sin movimientos de trazabilidad registrados.</div>}
+            {auditLogs.map((log) => (
+              <div key={log.id} className="rounded-[1.35rem] border border-zinc-200/80 bg-white/80 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950/50">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{formatAuditAction(log.action)}</div>
+                    <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{log.actor?.email || 'Sistema'}</div>
+                  </div>
+                  <div className="text-xs uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-500">{new Date(log.changedAt).toLocaleString()}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Shell>
+      )}
     </div>
   );
 }

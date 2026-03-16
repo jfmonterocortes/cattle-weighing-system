@@ -1,8 +1,9 @@
+import { ArrowLeft, ArrowRight, CalendarDays, Download, FileStack, Filter, Search, Wallet } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
-import { getSession } from '../utils/authSession';
 import FeedbackBanner from '../components/FeedbackBanner';
+import { getSession } from '../utils/authSession';
 
 function parseFilters(input) {
   return {
@@ -19,10 +20,98 @@ function parseFilters(input) {
   };
 }
 
+function SummaryCard({ icon, label, value, caption }) {
+  const CardIcon = icon;
+
+  return (
+    <div className="rounded-[1.5rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
+          <div className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
+          <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{caption}</div>
+        </div>
+        <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+          <CardIcon size={18} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="block">
+      <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
+      {children}
+    </label>
+  );
+}
+
+function PaymentBadge({ isPaid }) {
+  return (
+    <span
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+        isPaid
+          ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-100'
+          : 'bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-100'
+      }`}
+    >
+      {isPaid ? 'Pagada' : 'Pendiente'}
+    </span>
+  );
+}
+
+function ActionStateBadge({ role, userId, sheet }) {
+  if (role === 'CLIENT') return null;
+
+  if (role === 'ADMIN') {
+    return (
+      <span className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-900 dark:bg-sky-500/15 dark:text-sky-100">
+        Gestion admin
+      </span>
+    );
+  }
+
+  const editableUntil = sheet.editableUntilByLiquidador ? new Date(sheet.editableUntilByLiquidador) : null;
+  const isOwnEditableSheet =
+    role === 'LIQUIDADOR' &&
+    sheet.createdById === userId &&
+    editableUntil instanceof Date &&
+    !Number.isNaN(editableUntil.getTime()) &&
+    new Date() <= editableUntil;
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+        isOwnEditableSheet
+          ? 'bg-violet-100 text-violet-900 dark:bg-violet-500/15 dark:text-violet-100'
+          : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
+      }`}
+    >
+      {isOwnEditableSheet ? 'Edicion abierta' : 'Solo lectura'}
+    </span>
+  );
+}
+
+function QueueSummaryItem({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-zinc-200/80 bg-white/80 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950/50">
+      <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
+      <div className="mt-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">{value ?? '-'}</div>
+    </div>
+  );
+}
+
+const inputClass =
+  'w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800';
+
 export default function PlanillasPage() {
   const { user } = getSession();
   const isAdmin = user?.role === 'ADMIN';
   const isClient = user?.role === 'CLIENT';
+  const isLiquidador = user?.role === 'LIQUIDADOR';
+  const [clientHomeState, setClientHomeState] = useState({ loading: isClient, error: '', data: null });
 
   const [filters, setFilters] = useState({
     q: '',
@@ -61,9 +150,11 @@ export default function PlanillasPage() {
     let active = true;
     const timer = setTimeout(async () => {
       setState((prev) => ({ ...prev, loading: true, error: '' }));
+
       try {
         const res = await api.get('/sheets', { params: parseFilters(filters) });
         if (!active) return;
+
         setState({
           loading: false,
           error: '',
@@ -74,7 +165,15 @@ export default function PlanillasPage() {
         });
       } catch (error) {
         if (!active) return;
-        setState({ loading: false, error: error.response?.data?.message || 'No se pudieron cargar las planillas.', items: [], total: 0, totalPages: 1, page: 1 });
+
+        setState({
+          loading: false,
+          error: error.response?.data?.message || 'No se pudieron cargar las planillas.',
+          items: [],
+          total: 0,
+          totalPages: 1,
+          page: 1,
+        });
       }
     }, 250);
 
@@ -83,6 +182,32 @@ export default function PlanillasPage() {
       clearTimeout(timer);
     };
   }, [filters]);
+
+  useEffect(() => {
+    if (!isClient) return undefined;
+
+    let active = true;
+    setClientHomeState({ loading: true, error: '', data: null });
+
+    api
+      .get('/settings')
+      .then((res) => {
+        if (!active) return;
+        setClientHomeState({ loading: false, error: '', data: res.data });
+      })
+      .catch((error) => {
+        if (!active) return;
+        setClientHomeState({
+          loading: false,
+          error: error.response?.data?.message || 'No se pudo cargar el estado de tu cuenta.',
+          data: null,
+        });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isClient]);
 
   const clearFilters = () => {
     setFilters({
@@ -103,135 +228,322 @@ export default function PlanillasPage() {
     try {
       const res = await api.get('/exports/excel', { responseType: 'blob' });
       const url = URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'planillas.xlsx';
-      a.click();
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'planillas.xlsx';
+      anchor.click();
       URL.revokeObjectURL(url);
     } catch (error) {
       setState((prev) => ({ ...prev, error: error.response?.data?.message || 'No se pudo exportar Excel.' }));
     }
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <h2 className="text-xl font-semibold">{isClient ? 'Mis planillas' : 'Planillas'}</h2>
-        <p className="text-sm text-zinc-400">
-          {isClient
-            ? 'Consulta tu historial, estado de pago y movimientos recientes.'
-            : 'Búsqueda instantánea por nombre, teléfono, fecha y estado de pago.'}
-        </p>
+  const clientProfile = clientHomeState.data?.profile;
+  const clientLink = clientHomeState.data?.link;
+  const clientLinked = Boolean(clientProfile?.personId);
+  const clientPendingLink = clientLink?.latestRequest?.status === 'PENDING';
+  const emptyStateMessage = hasFilters
+    ? 'No hay planillas para tus filtros.'
+    : isClient
+      ? clientLinked
+        ? 'Aun no tienes planillas registradas.'
+        : clientPendingLink
+          ? 'Tu solicitud de vinculacion sigue en revision. Veras tus planillas aqui cuando quede aprobada.'
+          : 'Tu cuenta todavia no esta vinculada a una persona. Ve a Mi cuenta para solicitar la vinculacion.'
+      : 'No hay planillas registradas.';
 
-        {isClient && (
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
-              <div className="text-xs text-zinc-500">Historial</div>
-              <div className="text-xl font-semibold">{state.total}</div>
+  return (
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-6 shadow-[0_22px_65px_rgba(120,53,15,0.08)] dark:border-zinc-800 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0d1812] dark:shadow-[0_28px_75px_rgba(0,0,0,0.4)]">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
+              <FileStack size={14} />
+              Centro de planillas
             </div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
-              <div className="text-xs text-zinc-500">Pagadas</div>
-              <div className="text-xl font-semibold">{paidCount}</div>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {isClient ? 'Mis planillas con lectura mas clara.' : 'Planillas listas para filtrar, revisar y exportar.'}
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+              {isClient
+                ? 'Consulta tu historial, revisa pagos pendientes y entra rapido al detalle de cada movimiento.'
+                : 'Cruza vendedor, comprador, telefono, fechas y estado de pago desde una sola vista con contexto inmediato.'}
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:w-[480px]">
+            <SummaryCard
+              icon={FileStack}
+              label={isClient ? 'Historial' : 'Totales'}
+              value={state.total}
+              caption={isClient ? 'Planillas registradas para tu cuenta.' : 'Resultados disponibles con los filtros actuales.'}
+            />
+            <SummaryCard
+              icon={Wallet}
+              label="En pagina"
+              value={state.items.length}
+              caption={`Pagina ${state.page} de ${state.totalPages}`}
+            />
+            <SummaryCard icon={CalendarDays} label="Pagadas" value={paidCount} caption="Registros marcados como pagados en esta pagina." />
+            <SummaryCard icon={Search} label="Pendientes" value={unpaidCount} caption="Registros que aun requieren seguimiento de pago." />
+          </div>
+        </div>
+      </section>
+
+      {isClient && (
+        <section className="rounded-[1.9rem] border border-zinc-200/80 bg-white/90 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">Estado de cuenta</div>
+              <h3 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                {clientLinked
+                  ? `Cuenta vinculada a ${clientProfile?.person?.name || 'tu persona'}`
+                  : clientPendingLink
+                    ? 'Tu vinculacion esta en revision'
+                    : 'Tu cuenta aun necesita vinculacion'}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+                {clientLinked
+                  ? 'Tu historial y el estado de pago de tus planillas aparecen aqui. Usa Mi cuenta solo cuando necesites actualizar datos o seguridad.'
+                  : clientPendingLink
+                    ? 'La solicitud ya fue enviada. Cuando el administrador la apruebe, tus planillas apareceran automaticamente en esta vista.'
+                    : 'Todavia no podemos mostrarte planillas porque la cuenta no esta asociada a la persona correcta dentro del directorio operativo.'}
+              </p>
             </div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
-              <div className="text-xs text-zinc-500">Pendientes</div>
-              <div className="text-xl font-semibold">{unpaidCount}</div>
+
+            <div className="flex flex-wrap gap-2">
+              <span
+                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                  clientLinked
+                    ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-100'
+                    : clientPendingLink
+                      ? 'bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-100'
+                      : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
+                }`}
+              >
+                {clientLinked ? 'Cuenta vinculada' : clientPendingLink ? 'Solicitud pendiente' : 'Sin vinculacion'}
+              </span>
+
+              <Link
+                to="/settings"
+                className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"
+              >
+                Ir a Mi cuenta
+                <ArrowRight size={16} />
+              </Link>
             </div>
           </div>
-        )}
 
-        <div className="mt-3 grid gap-3 md:grid-cols-4">
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" placeholder="Buscar general" value={filters.q} onChange={(e) => setFilters((p) => ({ ...p, q: e.target.value, page: 1 }))} />
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" placeholder="Vendedor" value={filters.seller} onChange={(e) => setFilters((p) => ({ ...p, seller: e.target.value, page: 1 }))} />
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" placeholder="Comprador" value={filters.buyer} onChange={(e) => setFilters((p) => ({ ...p, buyer: e.target.value, page: 1 }))} />
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" placeholder="Teléfono vendedor" value={filters.sellerPhone} onChange={(e) => setFilters((p) => ({ ...p, sellerPhone: e.target.value, page: 1 }))} />
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" placeholder="Teléfono comprador" value={filters.buyerPhone} onChange={(e) => setFilters((p) => ({ ...p, buyerPhone: e.target.value, page: 1 }))} />
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" type="date" value={filters.from} onChange={(e) => setFilters((p) => ({ ...p, from: e.target.value, page: 1 }))} />
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" type="date" value={filters.to} onChange={(e) => setFilters((p) => ({ ...p, to: e.target.value, page: 1 }))} />
-          <select className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" value={filters.paymentStatus} onChange={(e) => setFilters((p) => ({ ...p, paymentStatus: e.target.value, page: 1 }))}>
-            <option value="">Todos los estados de pago</option>
-            <option value="paid">Pagadas</option>
-            <option value="unpaid">Pendientes</option>
-            <option value="paid_today">Pagadas hoy</option>
-            <option value="paid_yesterday">Pagadas ayer</option>
-          </select>
+          <FeedbackBanner message={clientHomeState.error} type="error" className="mt-4" />
+        </section>
+      )}
+
+      <section className="rounded-[1.9rem] border border-zinc-200/80 bg-white/90 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-300">
+              <Filter size={14} />
+              Filtros y busqueda
+            </div>
+            <h3 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Encuentra la planilla correcta sin perder tiempo.</h3>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+              Ajusta los criterios que necesites y limpia la vista en un clic cuando quieras volver al panorama general.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"
+            >
+              Limpiar filtros
+            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={exportExcel}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+              >
+                <Download size={16} />
+                Exportar Excel
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button onClick={clearFilters} className="rounded-xl border border-zinc-700 px-4 py-2 text-sm">Limpiar filtros</button>
-          {isAdmin && <button onClick={exportExcel} className="rounded-xl border border-zinc-700 px-4 py-2 text-sm">Exportar Excel</button>}
-        </div>
-      </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Field label="Busqueda general">
+            <input
+              className={inputClass}
+              placeholder="Buscar general"
+              value={filters.q}
+              onChange={(event) => setFilters((prev) => ({ ...prev, q: event.target.value, page: 1 }))}
+            />
+          </Field>
 
-      <FeedbackBanner message={state.error} type='error' />
+          <Field label="Vendedor">
+            <input
+              className={inputClass}
+              placeholder="Vendedor"
+              value={filters.seller}
+              onChange={(event) => setFilters((prev) => ({ ...prev, seller: event.target.value, page: 1 }))}
+            />
+          </Field>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
-        <div className="border-b border-zinc-800 px-5 py-3 text-sm text-zinc-400">{state.loading ? 'Cargando...' : `${state.items.length} planillas en página / ${state.total} totales`}</div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-zinc-400">
-                <th className="px-4 py-2">Planilla</th>
-                <th className="px-4 py-2">Fecha</th>
-                <th className="px-4 py-2">Vendedor</th>
-                <th className="px-4 py-2">Comprador</th>
-                <th className="px-4 py-2">Liquidador</th>
-                <th className="px-4 py-2">Estado de pago</th>
-                <th className="px-4 py-2">Valor</th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {!state.loading && state.items.length === 0 && (
-                <tr>
-                  <td className="px-4 py-6 text-sm text-zinc-500" colSpan={8}>
-                    {hasFilters ? 'No hay planillas para tus filtros.' : isClient ? 'Aún no tienes planillas registradas.' : 'No hay planillas registradas.'}
-                  </td>
-                </tr>
-              )}
-              {state.items.map((sheet) => (
-                <tr key={sheet.id} className="border-t border-zinc-800 text-zinc-200">
-                  <td className="px-4 py-3 font-medium">{sheet.visibleNumber}</td>
-                  <td className="px-4 py-3">{new Date(sheet.date).toLocaleString()}</td>
-                  <td className="px-4 py-3">{sheet.seller?.name}</td>
-                  <td className="px-4 py-3">{sheet.buyer?.name}</td>
-                  <td className="px-4 py-3">{sheet.liquidadorAliasSnapshot}</td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-1 text-xs ${sheet.isPaid ? 'bg-emerald-900/30 text-emerald-300' : 'bg-amber-900/30 text-amber-300'}`}>
-                      {sheet.isPaid ? 'Pagada' : 'Pendiente'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">{sheet.totalValue}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Link to={`/planillas/${sheet.id}`} className="rounded-lg border border-zinc-700 px-3 py-1 text-xs">Ver detalle</Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Field label="Comprador">
+            <input
+              className={inputClass}
+              placeholder="Comprador"
+              value={filters.buyer}
+              onChange={(event) => setFilters((prev) => ({ ...prev, buyer: event.target.value, page: 1 }))}
+            />
+          </Field>
+
+          <Field label="Telefono vendedor">
+            <input
+              className={inputClass}
+              placeholder="Telefono vendedor"
+              value={filters.sellerPhone}
+              onChange={(event) => setFilters((prev) => ({ ...prev, sellerPhone: event.target.value, page: 1 }))}
+            />
+          </Field>
+
+          <Field label="Telefono comprador">
+            <input
+              className={inputClass}
+              placeholder="Telefono comprador"
+              value={filters.buyerPhone}
+              onChange={(event) => setFilters((prev) => ({ ...prev, buyerPhone: event.target.value, page: 1 }))}
+            />
+          </Field>
+
+          <Field label="Desde">
+            <input
+              className={inputClass}
+              type="date"
+              value={filters.from}
+              onChange={(event) => setFilters((prev) => ({ ...prev, from: event.target.value, page: 1 }))}
+            />
+          </Field>
+
+          <Field label="Hasta">
+            <input
+              className={inputClass}
+              type="date"
+              value={filters.to}
+              onChange={(event) => setFilters((prev) => ({ ...prev, to: event.target.value, page: 1 }))}
+            />
+          </Field>
+
+          <Field label="Estado de pago">
+            <select
+              className={inputClass}
+              value={filters.paymentStatus}
+              onChange={(event) => setFilters((prev) => ({ ...prev, paymentStatus: event.target.value, page: 1 }))}
+            >
+              <option value="">Todos los estados de pago</option>
+              <option value="paid">Pagadas</option>
+              <option value="unpaid">Pendientes</option>
+              <option value="paid_today">Pagadas hoy</option>
+              <option value="paid_yesterday">Pagadas ayer</option>
+            </select>
+          </Field>
         </div>
-        <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-3 text-xs text-zinc-400">
-          <div>Página {state.page} de {state.totalPages}</div>
+      </section>
+
+      <FeedbackBanner message={state.error} type="error" />
+
+      <section className="overflow-hidden rounded-[1.9rem] border border-zinc-200/80 bg-white/90 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
+        <div className="flex flex-col gap-3 border-b border-zinc-200/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
+          <div>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{state.loading ? 'Cargando planillas...' : 'Resultados listos para revisar.'}</h3>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              {state.loading ? 'Actualizando la tabla con tus filtros.' : `${state.items.length} planillas en pagina / ${state.total} totales`}
+            </p>
+          </div>
+          <div className="text-sm text-zinc-500 dark:text-zinc-400">Navega entre paginas y entra al detalle de cada registro.</div>
+        </div>
+
+        <div className="space-y-3 p-4">
+          {!state.loading && state.items.length === 0 && (
+            <div className="rounded-[1.4rem] border border-dashed border-zinc-300/90 bg-zinc-50/80 px-4 py-6 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">
+              {emptyStateMessage}
+            </div>
+          )}
+
+          {state.items.map((sheet) => (
+            <article
+              key={sheet.id}
+              className="rounded-[1.55rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50/80 dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:border-zinc-700 dark:hover:bg-zinc-950/70"
+            >
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="min-w-0 flex-1 space-y-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Planilla {sheet.visibleNumber}</h4>
+                    <PaymentBadge isPaid={sheet.isPaid} />
+                    <ActionStateBadge role={user?.role} userId={user?.userId} sheet={sheet} />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                    <span className="font-medium text-zinc-900 dark:text-zinc-100">{sheet.seller?.name || 'Sin vendedor'}</span>
+                    <span className="text-zinc-400 dark:text-zinc-500">→</span>
+                    <span className="font-medium text-zinc-900 dark:text-zinc-100">{sheet.buyer?.name || 'Sin comprador'}</span>
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <QueueSummaryItem label="Cabezas" value={sheet.headCount} />
+                    <QueueSummaryItem label="Peso total" value={sheet.totalWeight} />
+                    <QueueSummaryItem label="Valor total" value={sheet.totalValue} />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 dark:text-zinc-500">
+                    <span>{new Date(sheet.date).toLocaleString()}</span>
+                    {!isClient && sheet.liquidadorAliasSnapshot && <span>Liquidador: {sheet.liquidadorAliasSnapshot}</span>}
+                    {isLiquidador && sheet.editableUntilByLiquidador && (
+                      <span>Ventana: hasta {new Date(sheet.editableUntilByLiquidador).toLocaleTimeString()}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 xl:justify-end">
+                  <Link
+                    to={`/planillas/${sheet.id}`}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"
+                  >
+                    Ver detalle
+                    <ArrowRight size={16} />
+                  </Link>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-zinc-200/80 px-4 py-4 text-sm text-zinc-500 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:text-zinc-400">
+          <div>Pagina {state.page} de {state.totalPages}</div>
           <div className="flex gap-2">
             <button
               type="button"
-              className="rounded border border-zinc-700 px-2 py-1 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
               disabled={state.page <= 1 || state.loading}
-              onClick={() => setFilters((p) => ({ ...p, page: p.page - 1 }))}
+              onClick={() => setFilters((prev) => ({ ...prev, page: prev.page - 1 }))}
             >
+              <ArrowLeft size={14} />
               Anterior
             </button>
             <button
               type="button"
-              className="rounded border border-zinc-700 px-2 py-1 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
               disabled={state.page >= state.totalPages || state.loading}
-              onClick={() => setFilters((p) => ({ ...p, page: p.page + 1 }))}
+              onClick={() => setFilters((prev) => ({ ...prev, page: prev.page + 1 }))}
             >
               Siguiente
+              <ArrowRight size={14} />
             </button>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

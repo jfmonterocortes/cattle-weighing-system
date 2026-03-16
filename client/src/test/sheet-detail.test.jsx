@@ -85,8 +85,28 @@ describe('SheetDetail page', () => {
     expect(screen.getByText('Total hembras')).toBeInTheDocument();
     expect(screen.getByText('Promedio hembras')).toBeInTheDocument();
     expect(screen.getAllByText('TERNERO MACHO').length).toBeGreaterThan(0);
-    expect(screen.getByText('Nº')).toBeInTheDocument();
-    expect(screen.getAllByText('Especificación').length).toBeGreaterThan(0);
-    expect(screen.getByText('Nº Res')).toBeInTheDocument();
+    expect(screen.getByText('No.')).toBeInTheDocument();
+    expect(screen.getAllByText('Especificacion').length).toBeGreaterThan(0);
+    expect(screen.getByText('No. Res')).toBeInTheDocument();
+    expect(screen.getByText('Encabezado de planilla')).toBeInTheDocument();
+    expect(screen.queryByText('Trazabilidad')).not.toBeInTheDocument();
+    expect(screen.queryByText('Editar encabezado')).not.toBeInTheDocument();
+  });
+
+  it('shows staff editing and traceability sections for admin users', async () => {
+    localStorage.setItem('token', makeToken({ userId: 1, role: 'ADMIN' }));
+
+    render(
+      <MemoryRouter initialEntries={['/planillas/1']}>
+        <Routes>
+          <Route path="/planillas/:id" element={<SheetDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByText('Planilla 2026-001')).toBeInTheDocument());
+    expect(screen.getByText('Editar encabezado')).toBeInTheDocument();
+    expect(screen.getByText('Trazabilidad')).toBeInTheDocument();
+    expect(screen.getByText('Seguimiento de pago')).toBeInTheDocument();
   });
 });

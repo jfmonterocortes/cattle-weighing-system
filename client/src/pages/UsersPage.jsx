@@ -1,12 +1,45 @@
-import { useEffect, useState } from 'react';
+import { KeyRound, Link2, PlusCircle, ShieldCheck, Users2, UserRound } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api';
+import FeedbackBanner from '../components/FeedbackBanner';
 import PersonAutocomplete from '../components/PersonAutocomplete';
 
-function feedbackClass(type) {
-  if (type === 'error') return 'text-red-300';
-  if (type === 'success') return 'text-emerald-300';
-  return 'text-zinc-500';
+function SectionShell({ eyebrow, title, description, children, actions }) {
+  return (
+    <section className="rounded-[1.9rem] border border-zinc-200/80 bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.42)]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">{eyebrow}</div>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
+          {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">{description}</p>}
+        </div>
+        {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      </div>
+      <div className="mt-5">{children}</div>
+    </section>
+  );
 }
+
+function StatCard({ icon, label, value, caption }) {
+  const CardIcon = icon;
+  return (
+    <div className="rounded-[1.45rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
+          <div className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
+          <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{caption}</div>
+        </div>
+        <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+          <CardIcon size={18} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const inputClass =
+  'w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800';
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -21,75 +54,51 @@ export default function UsersPage() {
 
   const [editingUserId, setEditingUserId] = useState(null);
   const [editingUserDraft, setEditingUserDraft] = useState({ email: '', role: 'CLIENT', isActive: true, liquidadorAlias: '' });
-
   const [createForm, setCreateForm] = useState({ email: '', password: '', role: 'CLIENT', liquidadorAlias: '', person: null });
   const [createLoading, setCreateLoading] = useState(false);
-
   const [manualPassword, setManualPassword] = useState({ userId: '', newPassword: '' });
-
   const [linking, setLinking] = useState({ userId: '', person: null });
-
   const [linkRequests, setLinkRequests] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await api.get('/users', {
-          params: {
-            limit: 100,
-            q: appliedSearch.trim() || undefined,
-            role: appliedRole || undefined,
-          },
-        });
-        if (cancelled) return;
-        setUsers(res.data || []);
-      } catch (error) {
-        if (cancelled) return;
-        setUsers([]);
-        setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudieron cargar los usuarios.' });
-      } finally {
+    setLoading(true);
+    api
+      .get('/users', { params: { limit: 100, q: appliedSearch.trim() || undefined, role: appliedRole || undefined } })
+      .then((res) => {
+        if (!cancelled) setUsers(res.data || []);
+      })
+      .catch((error) => {
         if (!cancelled) {
-          setLoading(false);
+          setUsers([]);
+          setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudieron cargar las cuentas.' });
         }
-      }
-    }, 0);
-
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
   }, [appliedRole, appliedSearch, usersReloadKey]);
 
   useEffect(() => {
     let cancelled = false;
-    const timer = setTimeout(async () => {
-      try {
-        const res = await api.get('/link-requests');
-        if (cancelled) return;
-        setLinkRequests(res.data || []);
-      } catch {
-        if (!cancelled) {
-          setLinkRequests([]);
-        }
-      }
-    }, 0);
-
+    api
+      .get('/link-requests')
+      .then((res) => {
+        if (!cancelled) setLinkRequests(res.data || []);
+      })
+      .catch(() => {
+        if (!cancelled) setLinkRequests([]);
+      });
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
   }, [linkRequestsReloadKey]);
 
-  const reloadUsers = () => {
-    setUsersReloadKey((value) => value + 1);
-  };
-
-  const reloadLinkRequests = () => {
-    setLinkRequestsReloadKey((value) => value + 1);
-  };
-
+  const reloadUsers = () => setUsersReloadKey((value) => value + 1);
+  const reloadLinkRequests = () => setLinkRequestsReloadKey((value) => value + 1);
   const applyFilters = () => {
     setAppliedSearch(searchInput);
     setAppliedRole(roleInput);
@@ -98,32 +107,24 @@ export default function UsersPage() {
 
   const createUser = async (event) => {
     event.preventDefault();
-    setFeedback({ type: '', message: '' });
     if (!createForm.email || !createForm.password) {
-      setFeedback({ type: 'error', message: 'Correo y contraseña son obligatorios.' });
+      setFeedback({ type: 'error', message: 'Correo y contrasena son obligatorios.' });
       return;
     }
-
     setCreateLoading(true);
     try {
-      const createPayload = {
+      const res = await api.post('/auth/register-managed', {
         email: createForm.email,
         password: createForm.password,
         role: createForm.role,
         liquidadorAlias: createForm.role === 'LIQUIDADOR' ? createForm.liquidadorAlias || undefined : undefined,
-      };
-
-      const res = await api.post('/auth/register-managed', createPayload);
-
-      if (createForm.person?.id) {
-        await api.patch(`/users/${res.data.id}/person-link`, { personId: createForm.person.id });
-      }
-
-      setFeedback({ type: 'success', message: 'Usuario creado correctamente.' });
+      });
+      if (createForm.person?.id) await api.patch(`/users/${res.data.id}/person-link`, { personId: createForm.person.id });
       setCreateForm({ email: '', password: '', role: 'CLIENT', liquidadorAlias: '', person: null });
+      setFeedback({ type: 'success', message: 'Cuenta creada correctamente.' });
       reloadUsers();
     } catch (error) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo crear el usuario.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo crear la cuenta.' });
     } finally {
       setCreateLoading(false);
     }
@@ -131,16 +132,10 @@ export default function UsersPage() {
 
   const startEdit = (user) => {
     setEditingUserId(user.id);
-    setEditingUserDraft({
-      email: user.email || '',
-      role: user.role === 'ADMIN' ? 'CLIENT' : user.role,
-      isActive: Boolean(user.isActive),
-      liquidadorAlias: user.liquidadorAlias || '',
-    });
+    setEditingUserDraft({ email: user.email || '', role: user.role === 'ADMIN' ? 'CLIENT' : user.role, isActive: Boolean(user.isActive), liquidadorAlias: user.liquidadorAlias || '' });
   };
 
   const saveEdit = async (userId) => {
-    setFeedback({ type: '', message: '' });
     try {
       await api.patch(`/users/${userId}`, {
         email: editingUserDraft.email,
@@ -148,27 +143,26 @@ export default function UsersPage() {
         isActive: editingUserDraft.isActive,
         liquidadorAlias: editingUserDraft.role === 'LIQUIDADOR' ? editingUserDraft.liquidadorAlias || null : null,
       });
-      setFeedback({ type: 'success', message: 'Usuario actualizado.' });
       setEditingUserId(null);
+      setFeedback({ type: 'success', message: 'Cuenta actualizada.' });
       reloadUsers();
     } catch (error) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar el usuario.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar la cuenta.' });
     }
   };
 
   const linkUser = async () => {
     if (!linking.userId || !linking.person?.id) {
-      setFeedback({ type: 'error', message: 'Selecciona un usuario y una persona.' });
+      setFeedback({ type: 'error', message: 'Selecciona una cuenta y una persona.' });
       return;
     }
-
     try {
       await api.patch(`/users/${linking.userId}/person-link`, { personId: linking.person.id });
-      setFeedback({ type: 'success', message: 'Usuario vinculado correctamente.' });
       setLinking({ userId: '', person: null });
+      setFeedback({ type: 'success', message: 'Cuenta vinculada correctamente.' });
       reloadUsers();
     } catch (error) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo vincular el usuario.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo vincular la cuenta.' });
     }
   };
 
@@ -183,15 +177,15 @@ export default function UsersPage() {
 
   const submitManualPassword = async () => {
     if (!manualPassword.userId || !manualPassword.newPassword) {
-      setFeedback({ type: 'error', message: 'Selecciona un usuario y una nueva contraseña.' });
+      setFeedback({ type: 'error', message: 'Selecciona una cuenta y una nueva contrasena.' });
       return;
     }
     try {
       await api.patch(`/users/${manualPassword.userId}/password`, { newPassword: manualPassword.newPassword });
-      setFeedback({ type: 'success', message: 'Contraseña actualizada manualmente.' });
       setManualPassword({ userId: '', newPassword: '' });
+      setFeedback({ type: 'success', message: 'Contrasena actualizada manualmente.' });
     } catch (error) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo cambiar la contraseña.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo cambiar la contrasena.' });
     }
   };
 
@@ -206,196 +200,175 @@ export default function UsersPage() {
     }
   };
 
+  const pendingRequests = useMemo(() => linkRequests.filter((item) => item.status === 'PENDING'), [linkRequests]);
+  const clientCount = users.filter((user) => user.role === 'CLIENT').length;
+  const operatorCount = users.filter((user) => user.role === 'LIQUIDADOR').length;
+
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <h2 className="text-xl font-semibold">Usuarios (ADMIN)</h2>
-        <p className="text-sm text-zinc-400">Crear y administrar CLIENT/LIQUIDADOR. No se permite crear ni asignar ADMIN.</p>
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-sky-50 via-white to-amber-50 p-6 shadow-[0_22px_65px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:from-[#0c1620] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
+              <Users2 size={14} />
+              Cuentas y vinculaciones
+            </div>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Atiende primero la cola de vinculaciones y despues el mantenimiento de cuentas.</h1>
+            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+              Esta pantalla agrupa la supervision de cuentas, la aprobacion de solicitudes y las herramientas de soporte sin darle el mismo peso a todo.
+            </p>
+          </div>
 
-        <div className="mt-3 grid gap-2 md:grid-cols-4">
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" placeholder="Buscar email o nombre" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
-          <select className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" value={roleInput} onChange={(event) => setRoleInput(event.target.value)}>
-            <option value="">Todos los roles</option>
-            <option value="LIQUIDADOR">LIQUIDADOR</option>
-            <option value="CLIENT">CLIENT</option>
-          </select>
-          <button type="button" onClick={applyFilters} className="rounded-xl border border-zinc-700 px-4 py-2 text-sm">
-            Buscar
-          </button>
-          <div className="self-center text-xs text-zinc-500">{loading ? 'Cargando...' : `${users.length} usuarios`}</div>
-        </div>
-      </div>
-
-      <form onSubmit={createUser} className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 md:grid-cols-2">
-        <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" placeholder="Email" value={createForm.email} onChange={(event) => setCreateForm((prev) => ({ ...prev, email: event.target.value }))} />
-        <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" type="password" placeholder="Contraseña" value={createForm.password} onChange={(event) => setCreateForm((prev) => ({ ...prev, password: event.target.value }))} />
-        <select className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" value={createForm.role} onChange={(event) => setCreateForm((prev) => ({ ...prev, role: event.target.value }))}>
-          <option value="CLIENT">CLIENT</option>
-          <option value="LIQUIDADOR">LIQUIDADOR</option>
-        </select>
-        {createForm.role === 'LIQUIDADOR' && (
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" placeholder="Alias liquidador" value={createForm.liquidadorAlias} onChange={(event) => setCreateForm((prev) => ({ ...prev, liquidadorAlias: event.target.value }))} />
-        )}
-
-        <div className="md:col-span-2">
-          <PersonAutocomplete label="Vincular persona (opcional)" value={createForm.person} onSelect={(person) => setCreateForm((prev) => ({ ...prev, person }))} />
-        </div>
-
-        <button className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black disabled:opacity-60 md:col-span-2" disabled={createLoading}>
-          {createLoading ? 'Creando...' : 'Crear usuario'}
-        </button>
-      </form>
-
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <h3 className="text-lg font-semibold">Vincular usuario con persona</h3>
-        <div className="mt-3 grid gap-2 md:grid-cols-3">
-          <select className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" value={linking.userId} onChange={(event) => setLinking((prev) => ({ ...prev, userId: event.target.value }))}>
-            <option value="">Seleccionar usuario</option>
-            {users
-              .filter((currentUser) => currentUser.role !== 'ADMIN')
-              .map((currentUser) => (
-                <option key={currentUser.id} value={currentUser.id}>
-                  {currentUser.email} ({currentUser.role})
-                </option>
-              ))}
-          </select>
-          <div className="md:col-span-2">
-            <PersonAutocomplete label="Persona" value={linking.person} onSelect={(person) => setLinking((prev) => ({ ...prev, person }))} />
+          <div className="grid gap-3 sm:grid-cols-2 xl:w-[500px]">
+            <StatCard icon={ShieldCheck} label="Pendientes" value={pendingRequests.length} caption="Solicitudes esperando revision." />
+            <StatCard icon={Users2} label="Cuentas" value={users.length} caption={loading ? 'Actualizando listado...' : 'Cuentas visibles con los filtros actuales.'} />
+            <StatCard icon={UserRound} label="Clientes" value={clientCount} caption="Cuentas CLIENT disponibles." />
+            <StatCard icon={Link2} label="Liquidadores" value={operatorCount} caption="Cuentas LIQUIDADOR activas." />
           </div>
         </div>
-        <button className="mt-3 rounded-xl border border-zinc-700 px-4 py-2 text-sm" type="button" onClick={linkUser}>
-          Vincular
-        </button>
-      </div>
+      </section>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <h3 className="text-lg font-semibold">Reset de contraseña</h3>
-        <div className="mt-3 grid gap-2 md:grid-cols-3">
-          <select className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" value={manualPassword.userId} onChange={(event) => setManualPassword((prev) => ({ ...prev, userId: event.target.value }))}>
-            <option value="">Seleccionar usuario</option>
-            {users.map((currentUser) => (
-              <option key={currentUser.id} value={currentUser.id}>
-                {currentUser.email}
-              </option>
-            ))}
-          </select>
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" type="password" placeholder="Nueva contraseña manual" value={manualPassword.newPassword} onChange={(event) => setManualPassword((prev) => ({ ...prev, newPassword: event.target.value }))} />
-          <button className="rounded-xl border border-zinc-700 px-4 py-2 text-sm" type="button" onClick={submitManualPassword}>
-            Cambiar manualmente
-          </button>
-        </div>
+      <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {users.map((currentUser) => (
-            <button key={currentUser.id} className="rounded-lg border border-zinc-700 px-2 py-1 text-xs" type="button" onClick={() => requestResetLink(currentUser.id)}>
-              Generar link reset: {currentUser.email}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-zinc-800 text-left text-zinc-400">
-              <th className="px-2 py-2">ID</th>
-              <th className="px-2 py-2">Email</th>
-              <th className="px-2 py-2">Rol</th>
-              <th className="px-2 py-2">Activo</th>
-              <th className="px-2 py-2">Person ID</th>
-              <th className="px-2 py-2">Persona</th>
-              <th className="px-2 py-2">Teléfono</th>
-              <th className="px-2 py-2">Cédula</th>
-              <th className="px-2 py-2">Alias</th>
-              <th className="px-2 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((currentUser) => {
-              const editing = editingUserId === currentUser.id;
-              return (
-                <tr key={currentUser.id} className="border-b border-zinc-800/70 text-zinc-200">
-                  <td className="px-2 py-2">{currentUser.id}</td>
-                  <td className="px-2 py-2">
-                    {editing ? <input className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1" value={editingUserDraft.email} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, email: event.target.value }))} /> : currentUser.email}
-                  </td>
-                  <td className="px-2 py-2">
-                    {currentUser.role === 'ADMIN' ? (
-                      'ADMIN'
-                    ) : editing ? (
-                      <select className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1" value={editingUserDraft.role} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, role: event.target.value }))}>
-                        <option value="CLIENT">CLIENT</option>
-                        <option value="LIQUIDADOR">LIQUIDADOR</option>
-                      </select>
-                    ) : (
-                      currentUser.role
-                    )}
-                  </td>
-                  <td className="px-2 py-2">
-                    {editing ? <input type="checkbox" checked={editingUserDraft.isActive} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, isActive: event.target.checked }))} /> : currentUser.isActive ? 'Sí' : 'No'}
-                  </td>
-                  <td className="px-2 py-2">{currentUser.personId || '-'}</td>
-                  <td className="px-2 py-2">{currentUser.person?.name || '-'}</td>
-                  <td className="px-2 py-2">{currentUser.person?.phone || '-'}</td>
-                  <td className="px-2 py-2">{currentUser.person?.cedula || '-'}</td>
-                  <td className="px-2 py-2">
-                    {editing ? (
-                      <input className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1" disabled={editingUserDraft.role !== 'LIQUIDADOR'} value={editingUserDraft.liquidadorAlias} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, liquidadorAlias: event.target.value }))} />
-                    ) : (
-                      currentUser.liquidadorAlias || '-'
-                    )}
-                  </td>
-                  <td className="px-2 py-2 text-right">
-                    {currentUser.role === 'ADMIN' ? (
-                      <span className="text-xs text-zinc-500">Protegido</span>
-                    ) : editing ? (
-                      <div className="flex justify-end gap-2">
-                        <button className="rounded border border-zinc-700 px-2 py-1 text-xs" onClick={() => setEditingUserId(null)} type="button">
-                          Cancelar
-                        </button>
-                        <button className="rounded bg-white px-2 py-1 text-xs font-semibold text-black" onClick={() => saveEdit(currentUser.id)} type="button">
-                          Guardar
-                        </button>
-                      </div>
-                    ) : (
-                      <button className="rounded border border-zinc-700 px-2 py-1 text-xs" onClick={() => startEdit(currentUser)} type="button">
-                        Editar
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-        <h3 className="text-lg font-semibold">Solicitudes de vinculación</h3>
-        <div className="mt-3 space-y-2">
-          {linkRequests.length === 0 && <div className="text-sm text-zinc-500">Sin solicitudes.</div>}
-          {linkRequests.map((item) => (
-            <div key={item.id} className="rounded-xl border border-zinc-700 bg-zinc-950/60 p-3">
-              <div className="text-sm text-zinc-200">
-                {item.user.email} → {item.person.name} ({item.status})
-              </div>
-              <div className="text-xs text-zinc-500">{item.notes || 'Sin notas'}</div>
-              {item.status === 'PENDING' && (
-                <div className="mt-2 flex gap-2">
-                  <button type="button" onClick={() => reviewRequest(item.id, 'APPROVED')} className="rounded-lg bg-emerald-300 px-3 py-1 text-xs font-semibold text-black">
-                    Aprobar
-                  </button>
-                  <button type="button" onClick={() => reviewRequest(item.id, 'REJECTED')} className="rounded-lg bg-red-300 px-3 py-1 text-xs font-semibold text-black">
-                    Rechazar
-                  </button>
+      <SectionShell eyebrow="Cola principal" title="Solicitudes de vinculacion pendientes" description="Resuelve primero esta cola porque desbloquea la experiencia del cliente y reduce consultas de soporte.">
+        <div className="space-y-3">
+          {pendingRequests.length === 0 && <div className="rounded-[1.35rem] border border-dashed border-zinc-300/90 bg-zinc-50/80 px-4 py-5 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">No hay solicitudes pendientes en este momento.</div>}
+          {pendingRequests.map((item) => (
+            <div key={item.id} className="rounded-[1.35rem] border border-zinc-200/80 bg-white/80 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950/50">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{item.user?.email || 'Cuenta'} {'->'} {item.person?.name || 'Persona'}</div>
+                  <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{item.notes || 'Sin notas adicionales.'}</div>
                 </div>
-              )}
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => reviewRequest(item.id, 'APPROVED')} className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500">Aprobar</button>
+                  <button type="button" onClick={() => reviewRequest(item.id, 'REJECTED')} className="rounded-2xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 dark:border-red-500/30 dark:text-red-200 dark:hover:bg-red-500/10">Rechazar</button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
-      </div>
+      </SectionShell>
 
-      {feedback.message && <div className={`text-sm ${feedbackClass(feedback.type)}`}>{feedback.message}</div>}
+      <SectionShell eyebrow="Gestion de cuentas" title="Crear cuentas y revisar acceso operativo" description="Despues de la cola principal, crea o ajusta cuentas CLIENT y LIQUIDADOR sin tocar privilegios ADMIN.">
+        <form onSubmit={createUser} className="grid gap-4 rounded-[1.5rem] border border-zinc-200/80 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+          <div className="grid gap-4 md:grid-cols-2">
+            <input className={inputClass} placeholder="Correo" value={createForm.email} onChange={(event) => setCreateForm((prev) => ({ ...prev, email: event.target.value }))} />
+            <input className={inputClass} type="password" placeholder="Contrasena" value={createForm.password} onChange={(event) => setCreateForm((prev) => ({ ...prev, password: event.target.value }))} />
+            <select className={inputClass} value={createForm.role} onChange={(event) => setCreateForm((prev) => ({ ...prev, role: event.target.value }))}>
+              <option value="CLIENT">CLIENT</option>
+              <option value="LIQUIDADOR">LIQUIDADOR</option>
+            </select>
+            {createForm.role === 'LIQUIDADOR' && <input className={inputClass} placeholder="Alias liquidador" value={createForm.liquidadorAlias} onChange={(event) => setCreateForm((prev) => ({ ...prev, liquidadorAlias: event.target.value }))} />}
+          </div>
+
+          <div>
+            <PersonAutocomplete label="Vincular persona (opcional)" value={createForm.person} onSelect={(person) => setCreateForm((prev) => ({ ...prev, person }))} />
+          </div>
+
+          <div className="flex justify-end">
+            <button className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200" disabled={createLoading}>
+              <PlusCircle size={16} />
+              {createLoading ? 'Creando...' : 'Crear cuenta'}
+            </button>
+          </div>
+        </form>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="grid gap-3 md:grid-cols-2">
+            <input className={inputClass} placeholder="Buscar email o nombre" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+            <select className={inputClass} value={roleInput} onChange={(event) => setRoleInput(event.target.value)}>
+              <option value="">Todos los roles</option>
+              <option value="LIQUIDADOR">LIQUIDADOR</option>
+              <option value="CLIENT">CLIENT</option>
+            </select>
+          </div>
+          <button type="button" onClick={applyFilters} className="rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70">Buscar cuentas</button>
+        </div>
+
+        <div className="mt-5 overflow-x-auto rounded-[1.5rem] border border-zinc-200/80 dark:border-zinc-800">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-50/90 text-left text-zinc-500 dark:bg-zinc-950/40 dark:text-zinc-400">
+              <tr>
+                <th className="px-3 py-3 font-medium">Cuenta</th>
+                <th className="px-3 py-3 font-medium">Rol</th>
+                <th className="px-3 py-3 font-medium">Activa</th>
+                <th className="px-3 py-3 font-medium">Persona</th>
+                <th className="px-3 py-3 font-medium">Contacto</th>
+                <th className="px-3 py-3 font-medium">Alias</th>
+                <th className="px-3 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((currentUser) => {
+                const editing = editingUserId === currentUser.id;
+                return (
+                  <tr key={currentUser.id} className="border-t border-zinc-200/80 text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
+                    <td className="px-3 py-3">{editing ? <input className={inputClass} value={editingUserDraft.email} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, email: event.target.value }))} /> : currentUser.email}</td>
+                    <td className="px-3 py-3">{currentUser.role === 'ADMIN' ? 'ADMIN' : editing ? <select className={inputClass} value={editingUserDraft.role} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, role: event.target.value }))}><option value="CLIENT">CLIENT</option><option value="LIQUIDADOR">LIQUIDADOR</option></select> : currentUser.role}</td>
+                    <td className="px-3 py-3">{editing ? <input type="checkbox" checked={editingUserDraft.isActive} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, isActive: event.target.checked }))} /> : currentUser.isActive ? 'Si' : 'No'}</td>
+                    <td className="px-3 py-3">{currentUser.person?.name || '-'}</td>
+                    <td className="px-3 py-3">{currentUser.person?.phone || currentUser.person?.cedula || '-'}</td>
+                    <td className="px-3 py-3">{editing ? <input className={inputClass} disabled={editingUserDraft.role !== 'LIQUIDADOR'} value={editingUserDraft.liquidadorAlias} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, liquidadorAlias: event.target.value }))} /> : currentUser.liquidadorAlias || '-'}</td>
+                    <td className="px-3 py-3 text-right">
+                      {currentUser.role === 'ADMIN' ? (
+                        <span className="text-xs text-zinc-500">Protegido</span>
+                      ) : editing ? (
+                        <div className="flex justify-end gap-2">
+                          <button className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" onClick={() => setEditingUserId(null)} type="button">Cancelar</button>
+                          <button className="rounded-2xl bg-zinc-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200" onClick={() => saveEdit(currentUser.id)} type="button">Guardar</button>
+                        </div>
+                      ) : (
+                        <button className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" onClick={() => startEdit(currentUser)} type="button">Editar</button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </SectionShell>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <SectionShell eyebrow="Herramienta secundaria" title="Vinculacion manual" description="Usala cuando necesites corregir o completar una relacion cuenta-persona fuera de la cola principal.">
+          <div className="grid gap-4">
+            <select className={inputClass} value={linking.userId} onChange={(event) => setLinking((prev) => ({ ...prev, userId: event.target.value }))}>
+              <option value="">Seleccionar cuenta</option>
+              {users.filter((currentUser) => currentUser.role !== 'ADMIN').map((currentUser) => <option key={currentUser.id} value={currentUser.id}>{currentUser.email} ({currentUser.role})</option>)}
+            </select>
+            <PersonAutocomplete label="Persona" value={linking.person} onSelect={(person) => setLinking((prev) => ({ ...prev, person }))} />
+            <button className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" type="button" onClick={linkUser}>
+              <Link2 size={16} />
+              Vincular cuenta
+            </button>
+          </div>
+        </SectionShell>
+
+        <SectionShell eyebrow="Herramienta secundaria" title="Soporte de contrasenas" description="Mantiene disponibles el cambio manual y la generacion de enlaces, pero con menos peso visual que la cola principal.">
+          <div className="space-y-4">
+            <div className="grid gap-4">
+              <select className={inputClass} value={manualPassword.userId} onChange={(event) => setManualPassword((prev) => ({ ...prev, userId: event.target.value }))}>
+                <option value="">Seleccionar cuenta</option>
+                {users.map((currentUser) => <option key={currentUser.id} value={currentUser.id}>{currentUser.email}</option>)}
+              </select>
+              <input className={inputClass} type="password" placeholder="Nueva contrasena manual" value={manualPassword.newPassword} onChange={(event) => setManualPassword((prev) => ({ ...prev, newPassword: event.target.value }))} />
+              <button className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" type="button" onClick={submitManualPassword}>
+                <KeyRound size={16} />
+                Cambiar contrasena
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {users.map((currentUser) => (
+                <button key={currentUser.id} className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" type="button" onClick={() => requestResetLink(currentUser.id)}>
+                  Generar link: {currentUser.email}
+                </button>
+              ))}
+            </div>
+          </div>
+        </SectionShell>
+      </div>
     </div>
   );
 }
