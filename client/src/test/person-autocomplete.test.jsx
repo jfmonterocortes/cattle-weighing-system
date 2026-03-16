@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import PersonAutocomplete from '../components/PersonAutocomplete';
 
@@ -24,7 +24,7 @@ describe('PersonAutocomplete', () => {
 
     render(<PersonAutocomplete label="Persona" value={null} onSelect={onSelect} />);
 
-    const input = screen.getByPlaceholderText('Buscar persona por nombre o teléfono');
+    const input = screen.getByPlaceholderText('Buscar persona por nombre o telefono');
     fireEvent.click(input);
     fireEvent.change(input, { target: { value: 'Maria' } });
 
@@ -38,5 +38,29 @@ describe('PersonAutocomplete', () => {
 
     expect(onSelect).toHaveBeenCalledWith(person);
     expect(input).toHaveValue('Maria Perez');
+  });
+
+  it('waits for the client minimum query length and renders masked hints', async () => {
+    const maskedPerson = { id: 7, name: 'Rosa Martinez', phone: '***2255', cedula: '***9003' };
+    mockGet.mockResolvedValue({ data: [maskedPerson] });
+
+    render(<PersonAutocomplete label="Persona" value={null} onSelect={vi.fn()} minQueryLength={3} />);
+
+    const input = screen.getByPlaceholderText('Buscar persona por nombre o telefono');
+    fireEvent.click(input);
+    fireEvent.change(input, { target: { value: 'Ro' } });
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(mockGet).not.toHaveBeenCalled();
+    expect(screen.getByText('Escribe al menos 3 caracteres para buscar.')).toBeInTheDocument();
+    expect(screen.queryByText('Sin resultados.')).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: 'Rosa' } });
+
+    await waitFor(() => expect(screen.getByText('Rosa Martinez')).toBeInTheDocument());
+    expect(mockGet).toHaveBeenCalledWith('/people/search', {
+      params: { q: 'Rosa', limit: 25 },
+    });
+    expect(screen.getByText('***2255 - CI ***9003')).toBeInTheDocument();
   });
 });

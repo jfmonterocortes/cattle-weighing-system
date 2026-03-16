@@ -14,7 +14,7 @@ BASCULA LA ESPERANZA is a full-stack cattle weighing system for operational shee
 - `GET /people` is operator-facing and not available to clients.
 - `GET /people/search` is role-aware:
   - operators receive richer linked-account metadata for operational workflows
-  - clients receive only the minimum person payload required for account-linking
+  - clients receive only the minimum linking payload, with masked phone/cedula hints and a 3-character minimum query
 
 ## Consistency Rules
 - Sheet create, update, and row mutations commit their primary business writes transactionally.
@@ -39,7 +39,7 @@ Copy [`/.env.example`](./.env.example) to `.env` and set the required values:
 ```env
 PORT=3000
 JWT_SECRET=supersecretkey
-PASSWORD_RESET_SECRET=optional-reset-secret
+PASSWORD_RESET_SECRET=separate-reset-secret
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cattle_weighing_db
 TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cattle_weighing_test_db
 CORS_ORIGIN=http://localhost:5173
@@ -122,3 +122,7 @@ npm run build
 - `admin@bascula.com / Admin123!`
 - `liquidador@bascula.com / Liquidador123!`
 - `cliente@bascula.com / Cliente123!`
+
+## Password Reset
+- Password reset links now target `/reset-password?token=...` and are meant to be opened while logged out.
+- Authenticated account settings remain on `/settings`, which no longer handles emailed reset tokens.

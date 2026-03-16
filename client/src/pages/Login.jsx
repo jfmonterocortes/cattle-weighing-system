@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import FeedbackBanner from '../components/FeedbackBanner';
 
@@ -10,10 +10,12 @@ function homeForRole(role) {
 
 export default function Login({ onLogin }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const resetSuccess = searchParams.get('reset') === 'success';
 
   const submit = async (e) => {
     e.preventDefault();
@@ -26,7 +28,7 @@ export default function Login({ onLogin }) {
       onLogin?.(res.data.user || null);
       navigate(homeForRole(res.data?.user?.role), { replace: true });
     } catch (err) {
-      setError(err?.response?.data?.message || 'No fue posible iniciar sesión.');
+      setError(err?.response?.data?.message || 'No fue posible iniciar sesion.');
     } finally {
       setLoading(false);
     }
@@ -39,8 +41,14 @@ export default function Login({ onLogin }) {
           <div className="flex h-20 w-20 items-center justify-center">
             <img src="/logo-bascula-la-esperanza.png" alt="BASCULA LA ESPERANZA" className="max-h-full max-w-full object-contain" />
           </div>
-          <h2 className="mt-2 text-xl font-semibold">Iniciar sesión</h2>
+          <h2 className="mt-2 text-xl font-semibold">Iniciar sesion</h2>
         </div>
+
+        <FeedbackBanner
+          message={resetSuccess ? 'Contrasena restablecida correctamente. Ya puedes iniciar sesion.' : ''}
+          type="success"
+          className="mb-4"
+        />
 
         <form className="space-y-3" onSubmit={submit}>
           <div>
@@ -55,7 +63,7 @@ export default function Login({ onLogin }) {
           </div>
 
           <div>
-            <label className="text-sm text-zinc-300">Contraseña</label>
+            <label className="text-sm text-zinc-300">Contrasena</label>
             <input
               className="mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
               type="password"
@@ -65,7 +73,7 @@ export default function Login({ onLogin }) {
             />
           </div>
 
-          <FeedbackBanner message={error} type='error' />
+          <FeedbackBanner message={error} type="error" />
 
           <button className="w-full rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black disabled:opacity-60" disabled={loading}>
             {loading ? 'Ingresando...' : 'Ingresar'}

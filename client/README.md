@@ -29,15 +29,16 @@ npm run build
 
 ## Key UI Areas
 - `/login`: authentication and role-based redirect
+- `/reset-password`: public token-based password reset flow
 - `/dashboard`: summary metrics and operational snapshots
 - `/planillas`: sheet listing and filtering
 - `/planillas/new`: create weighing sheets
 - `/planillas/:id`: edit rows, reorder cattle, export PDF, and update payment status
 - `/personas`: operator-facing people directory
 - `/usuarios`: admin-managed user creation, linking, password reset, and link-request review
-- `/settings`: account settings, client linking workflow, and system defaults
+- `/settings`: authenticated account settings, client linking workflow, and system defaults
 
 ## Contract Notes
 - Client account linking uses `/people/search`, not the full `/people` directory.
-- Client-facing person search only depends on the minimal linking payload returned by the backend.
+- Client-facing person search requires at least 3 characters and only depends on masked linking hints returned by the backend.
 - The frontend test suite includes coverage for login, person autocomplete, admin user management, and sheet detail behavior.

@@ -13,6 +13,7 @@ function getEnv(options = {}) {
     requireDatabase = true,
     requireJwt = true,
     requireTestDatabase = false,
+    requirePasswordResetSecret = true,
   } = options;
 
   loadDotenv();
@@ -20,6 +21,7 @@ function getEnv(options = {}) {
   const missing = [];
   if (requireDatabase && !process.env.DATABASE_URL) missing.push('DATABASE_URL');
   if (requireJwt && !process.env.JWT_SECRET) missing.push('JWT_SECRET');
+  if (requirePasswordResetSecret && !process.env.PASSWORD_RESET_SECRET) missing.push('PASSWORD_RESET_SECRET');
   if (requireTestDatabase && !process.env.TEST_DATABASE_URL) missing.push('TEST_DATABASE_URL');
 
   if (missing.length) {
@@ -41,7 +43,7 @@ function getEnv(options = {}) {
     DATABASE_URL: process.env.DATABASE_URL,
     TEST_DATABASE_URL: process.env.TEST_DATABASE_URL,
     JWT_SECRET: process.env.JWT_SECRET,
-    PASSWORD_RESET_SECRET: process.env.PASSWORD_RESET_SECRET || process.env.JWT_SECRET,
+    PASSWORD_RESET_SECRET: process.env.PASSWORD_RESET_SECRET,
     CORS_ORIGIN: corsOrigin,
     FRONTEND_BASE_URL: frontendBaseUrl,
   };

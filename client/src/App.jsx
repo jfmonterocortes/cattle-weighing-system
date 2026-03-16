@@ -7,6 +7,7 @@ import SheetDetailPage from './pages/SheetDetailPage';
 import PersonasPage from './pages/PersonasPage';
 import UsersPage from './pages/UsersPage';
 import SettingsPage from './pages/SettingsPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import AppLayout from './components/AppLayout';
 import { parseJwt } from './utils/jwt';
 
@@ -44,6 +45,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>

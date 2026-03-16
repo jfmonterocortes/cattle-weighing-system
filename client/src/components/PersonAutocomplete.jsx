@@ -8,7 +8,8 @@ export default function PersonAutocomplete({
   onSelect,
   onCreate,
   onError,
-  placeholder = 'Buscar persona por nombre o teléfono',
+  placeholder = 'Buscar persona por nombre o telefono',
+  minQueryLength = 1,
 }) {
   const [query, setQuery] = useState(value?.name || '');
   const [results, setResults] = useState([]);
@@ -21,9 +22,17 @@ export default function PersonAutocomplete({
   const dropdownRef = useRef(null);
   const timeoutRef = useRef(null);
 
+  const trimmedQuery = query.trim();
+  const belowMinimum = trimmedQuery.length > 0 && trimmedQuery.length < minQueryLength;
+
   const showCreate = useMemo(
-    () => query.trim().length >= 2 && !loading && results.length === 0 && !error && typeof onCreate === 'function',
-    [query, loading, results, error, onCreate]
+    () =>
+      trimmedQuery.length >= Math.max(2, minQueryLength) &&
+      !loading &&
+      results.length === 0 &&
+      !error &&
+      typeof onCreate === 'function',
+    [trimmedQuery, minQueryLength, loading, results, error, onCreate]
   );
 
   useEffect(() => {
@@ -78,7 +87,7 @@ export default function PersonAutocomplete({
 
   useEffect(() => {
     if (!open) return;
-    if (!query.trim()) {
+    if (!trimmedQuery || belowMinimum) {
       clearTimeout(timeoutRef.current);
       setResults([]);
       setError('');
@@ -87,10 +96,10 @@ export default function PersonAutocomplete({
     }
     clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      loadPeople(query.trim());
+      loadPeople(trimmedQuery);
     }, 200);
     return () => clearTimeout(timeoutRef.current);
-  }, [query, open]);
+  }, [trimmedQuery, belowMinimum, open]);
 
   const selectItem = (person) => {
     setQuery(person.name);
@@ -123,8 +132,13 @@ export default function PersonAutocomplete({
             onMouseDown={(e) => e.stopPropagation()}
           >
             {loading && <div className="px-3 py-2 text-sm text-zinc-400">Buscando...</div>}
+            {!loading && !error && belowMinimum && (
+              <div className="px-3 py-2 text-sm text-zinc-400">Escribe al menos {minQueryLength} caracteres para buscar.</div>
+            )}
             {!loading && error && <div className="px-3 py-2 text-sm text-red-300">{error}</div>}
-            {!loading && !error && results.length === 0 && <div className="px-3 py-2 text-sm text-zinc-400">Sin resultados.</div>}
+            {!loading && !error && !belowMinimum && trimmedQuery && results.length === 0 && (
+              <div className="px-3 py-2 text-sm text-zinc-400">Sin resultados.</div>
+            )}
 
             {!loading &&
               !error &&
@@ -140,7 +154,7 @@ export default function PersonAutocomplete({
                 >
                   <div className="text-sm font-medium text-zinc-100">{person.name}</div>
                   <div className="text-xs text-zinc-400">
-                    {person.phone || 'Sin teléfono'} {person.cedula ? `- CI ${person.cedula}` : ''}
+                    {person.phone || 'Sin telefono'} {person.cedula ? `- CI ${person.cedula}` : ''}
                   </div>
                 </button>
               ))}
@@ -152,7 +166,7 @@ export default function PersonAutocomplete({
                 onMouseDown={async (e) => {
                   e.preventDefault();
                   try {
-                    const created = await onCreate(query.trim());
+                    const created = await onCreate(trimmedQuery);
                     if (created?.id) selectItem(created);
                     else setOpen(false);
                   } catch {
@@ -160,7 +174,7 @@ export default function PersonAutocomplete({
                   }
                 }}
               >
-                Crear persona "{query.trim()}"
+                Crear persona "{trimmedQuery}"
               </button>
             )}
           </div>,

@@ -47,7 +47,21 @@ describe('auth and people access boundaries', () => {
     expect(res.body.message).toBe('Forbidden');
   });
 
-  it('returns a minimal person payload to clients during linking search', async () => {
+  it('rejects short client linking searches with the existing validation-style response', async () => {
+    const clientToken = await login('cliente@bascula.com', 'Cliente123!');
+    const res = await request(app)
+      .get('/people/search')
+      .set('Authorization', `Bearer ${clientToken}`)
+      .query({ q: 'Ro', limit: 10 });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({
+      message: 'Validation failed',
+      errors: [{ path: 'q', message: 'Escribe al menos 3 caracteres para buscar.' }],
+    });
+  });
+
+  it('returns masked client search hints without linked-user metadata', async () => {
     const clientToken = await login('cliente@bascula.com', 'Cliente123!');
     const res = await request(app)
       .get('/people/search')
@@ -58,6 +72,13 @@ describe('auth and people access boundaries', () => {
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThan(0);
     expect(res.body.every((person) => !Object.prototype.hasOwnProperty.call(person, 'user'))).toBe(true);
+
+    const hinted = res.body.find((person) => person.name === 'Rosa Martinez');
+    expect(hinted).toBeTruthy();
+    expect(hinted.phone).toMatch(/^\*\*\*/);
+    expect(hinted.cedula).toMatch(/^\*\*\*/);
+    expect(hinted.phone).not.toBe('3001112255');
+    expect(hinted.cedula).not.toBe('1099003');
   });
 
   it('keeps operator-grade metadata available to admins on people search', async () => {
@@ -65,12 +86,14 @@ describe('auth and people access boundaries', () => {
     const res = await request(app)
       .get('/people/search')
       .set('Authorization', `Bearer ${adminToken}`)
-      .query({ q: 'Rosa', limit: 10 });
+      .query({ q: 'Ro', limit: 10 });
 
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     const linked = res.body.find((person) => person.user?.email === 'cliente@bascula.com');
     expect(linked).toBeTruthy();
+    expect(linked.phone).toBe('3001112255');
+    expect(linked.cedula).toBe('1099003');
   });
 
   it('preserves the client linking flow with the tightened search contract', async () => {
@@ -83,12 +106,13 @@ describe('auth and people access boundaries', () => {
     expect(register.body.role).toBe('CLIENT');
 
     const adminToken = await login('admin@bascula.com', 'Admin123!');
+    const phone = `395${Date.now().toString().slice(-7)}`;
     const personCreate = await request(app)
       .post('/people')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         name: `Phase1 Link Person ${Date.now()}`,
-        phone: `395${Date.now().toString().slice(-7)}`,
+        phone,
       });
     expect(personCreate.statusCode).toBe(201);
 
@@ -102,6 +126,7 @@ describe('auth and people access boundaries', () => {
     const matched = search.body.find((person) => person.id === personCreate.body.id);
     expect(matched).toBeTruthy();
     expect(Object.prototype.hasOwnProperty.call(matched, 'user')).toBe(false);
+    expect(matched.phone).toBe(`***${phone.slice(-4)}`);
 
     const linkRequest = await request(app)
       .post('/link-requests')

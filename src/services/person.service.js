@@ -4,6 +4,7 @@ const { normalizeNameKey, normalizePhone, normalizeCedula, normalizeSpace } = re
 
 const DEFAULT_SEARCH_LIMIT = 10;
 const MAX_SEARCH_LIMIT = 100;
+const CLIENT_SEARCH_MIN_LENGTH = 3;
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -32,6 +33,13 @@ function buildDuplicateError(message) {
   const error = new Error(message);
   error.statusCode = 409;
   return error;
+}
+
+function maskClientIdentifier(value) {
+  const normalized = normalizeSpace(value || '');
+  if (!normalized) return null;
+  if (normalized.length < 4) return '***';
+  return `***${normalized.slice(-4)}`;
 }
 
 async function createPersonRecord(input) {
@@ -231,7 +239,7 @@ async function searchPeople({ user, q, limit = DEFAULT_SEARCH_LIMIT }) {
           },
         };
 
-  return prisma.person.findMany({
+  const items = await prisma.person.findMany({
     where: {
       OR: [
         { name: { contains: query, mode: 'insensitive' } },
@@ -243,9 +251,21 @@ async function searchPeople({ user, q, limit = DEFAULT_SEARCH_LIMIT }) {
     orderBy: { name: 'asc' },
     select,
   });
+
+  if (user?.role !== ROLE.CLIENT) {
+    return items;
+  }
+
+  return items.map((person) => ({
+    id: person.id,
+    name: person.name,
+    phone: maskClientIdentifier(person.phone),
+    cedula: maskClientIdentifier(person.cedula),
+  }));
 }
 
 module.exports = {
+  CLIENT_SEARCH_MIN_LENGTH,
   createPersonRecord,
   updatePersonRecord,
   listPeople,

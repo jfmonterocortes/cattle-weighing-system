@@ -108,7 +108,7 @@ async function generatePasswordResetLink(userId) {
 
   const { FRONTEND_BASE_URL } = getEnv();
   const base = FRONTEND_BASE_URL;
-  const resetLink = `${base.replace(/\/$/, '')}/settings?resetToken=${encodeURIComponent(token)}`;
+  const resetLink = `${base.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
 
   return {
     resetToken: token,

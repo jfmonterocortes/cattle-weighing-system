@@ -1,4 +1,12 @@
-﻿const { createPersonRecord, updatePersonRecord, searchPeople, listPeople } = require('../services/person.service');
+const { ROLE } = require('../constants/domain');
+const { createPersonRecord, updatePersonRecord, searchPeople, listPeople, CLIENT_SEARCH_MIN_LENGTH } = require('../services/person.service');
+
+function validationErrorResponse(message, path = 'q') {
+  return {
+    message: 'Validation failed',
+    errors: [{ path, message }],
+  };
+}
 
 async function createPerson(req, res, next) {
   try {
@@ -29,6 +37,10 @@ async function listPeopleController(req, res, next) {
 
 async function searchPerson(req, res, next) {
   try {
+    if (req.user?.role === ROLE.CLIENT && String(req.query.q || '').trim().length < CLIENT_SEARCH_MIN_LENGTH) {
+      return res.status(400).json(validationErrorResponse(`Escribe al menos ${CLIENT_SEARCH_MIN_LENGTH} caracteres para buscar.`));
+    }
+
     const result = await searchPeople({
       user: req.user,
       q: req.query.q,

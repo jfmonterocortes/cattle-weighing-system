@@ -1,4 +1,4 @@
-﻿const request = require('supertest');
+const request = require('supertest');
 const app = require('../app');
 
 async function login(email, password) {
@@ -45,7 +45,7 @@ describe('auth reset + client one-time link', () => {
     );
   });
 
-  it('supports admin generated password reset link + token reset endpoint', async () => {
+  it('generates public reset links and resets passwords by token', async () => {
     const adminToken = await login('admin@bascula.com', 'Admin123!');
 
     const users = await request(app).get('/users').set('Authorization', `Bearer ${adminToken}`).query({ limit: 100 });
@@ -61,6 +61,7 @@ describe('auth reset + client one-time link', () => {
 
     expect(generated.statusCode).toBe(200);
     expect(generated.body.resetToken).toBeTruthy();
+    expect(generated.body.resetLink).toContain('/reset-password?token=');
 
     const reset = await request(app)
       .post('/auth/reset-password')
