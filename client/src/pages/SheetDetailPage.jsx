@@ -43,6 +43,12 @@ function toIsoDateTime(value) {
   return parsed.toISOString();
 }
 
+function formatSexLabel(value) {
+  if (value === 'MACHO') return 'M';
+  if (value === 'HEMBRA') return 'H';
+  return value || '-';
+}
+
 function formatAuditAction(action) {
   const labels = {
     PLANILLA_CREATED: 'Planilla creada',
@@ -190,6 +196,9 @@ export default function SheetDetailPage() {
   const groupedStats = useMemo(() => sheet?.computed?.totalsByTypeSex || [], [sheet]);
   const paymentLogs = sheet?.paymentLogs || [];
   const auditLogs = sheet?.auditLogs || [];
+  const paymentHeaderDetail = isClient
+    ? 'Consulta el estado actual de esta planilla.'
+    : `Creada por: ${sheet?.createdBy?.email || 'Sin dato'}`;
 
   const headerStateLabel = role === 'ADMIN' ? 'Control admin' : editable && sheet?.editableUntilByLiquidador ? `Edicion abierta hasta ${new Date(sheet.editableUntilByLiquidador).toLocaleTimeString()}` : role === 'CLIENT' ? '' : 'Solo lectura';
 
@@ -350,7 +359,7 @@ export default function SheetDetailPage() {
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[480px]">
             <Stat label="Cabezas" value={sheet.headCount} caption="Total de reses registradas." />
             <Stat label="Valor total" value={sheet.totalValue} caption="Lectura rapida del cierre economico." />
-            <Stat label="Precio/cabeza" value={sheet.pricePerHead} caption="Referencia activa para esta planilla." />
+            {!isClient && <Stat label="Precio/cabeza" value={sheet.pricePerHead} caption="Referencia activa para esta planilla." />}
             <Stat label="Liquidador" value={sheet.liquidadorAliasSnapshot || 'Sin alias'} caption="Alias guardado en el encabezado." />
           </div>
         </div>
@@ -374,12 +383,12 @@ export default function SheetDetailPage() {
         <div className="grid gap-4 lg:grid-cols-3">
           <PartyCard icon={UserRound} label="Vendedor" name={sheet.seller.name} detail={sheet.seller.phone || 'Sin telefono'} />
           <PartyCard icon={UserRound} label="Comprador" name={sheet.buyer.name} detail={sheet.buyer.phone || 'Sin telefono'} />
-          <PartyCard icon={Wallet} label="Pago" name={sheet.isPaid ? 'Pagada' : 'Pendiente'} detail={`Creada por: ${sheet.createdBy?.email || 'Sin dato'}`} />
+          <PartyCard icon={Wallet} label="Pago" name={sheet.isPaid ? 'Pagada' : 'Pendiente'} detail={paymentHeaderDetail} />
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className={`mt-4 grid gap-3 ${isClient ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
           <Stat label="Fecha operativa" value={new Date(sheet.date).toLocaleString()} />
-          <Stat label="Precio por cabeza" value={sheet.pricePerHead} />
-          <Stat label="Alias de liquidador" value={sheet.liquidadorAliasSnapshot || 'Sin alias'} />
+          {!isClient && <Stat label="Precio por cabeza" value={sheet.pricePerHead} />}
+          <Stat label="Liquidador" value={sheet.liquidadorAliasSnapshot || 'Sin dato'} />
         </div>
 
         {editingHeader && (
@@ -400,7 +409,7 @@ export default function SheetDetailPage() {
                 <input className={inputClass} value={headerDraft.pricePerHead} onChange={(event) => setHeaderDraft((prev) => ({ ...prev, pricePerHead: event.target.value }))} />
               </label>
               <label className="lg:col-span-2">
-                <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Alias de liquidador</div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Liquidador</div>
                 <input className={inputClass} value={headerDraft.liquidadorAliasSnapshot} onChange={(event) => setHeaderDraft((prev) => ({ ...prev, liquidadorAliasSnapshot: event.target.value }))} />
               </label>
             </div>
@@ -464,7 +473,6 @@ export default function SheetDetailPage() {
             <thead className="bg-zinc-50/90 text-left text-zinc-500 dark:bg-zinc-950/40 dark:text-zinc-400">
               <tr>
                 <th className="px-3 py-3 font-medium">No.</th>
-                <th className="px-3 py-3 font-medium">Especificacion</th>
                 <th className="px-3 py-3 font-medium">Tipo</th>
                 <th className="px-3 py-3 font-medium">Sexo</th>
                 <th className="px-3 py-3 font-medium">Kilos</th>
@@ -474,13 +482,12 @@ export default function SheetDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {sheet.rows.length === 0 && <tr><td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={editable ? 8 : 7}>No hay reses registradas todavia.</td></tr>}
+              {sheet.rows.length === 0 && <tr><td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={editable ? 7 : 6}>No hay reses registradas todavia.</td></tr>}
               {sheet.rows.map((row) => (
                 <tr key={row.id} draggable={editable} onDragStart={(event) => event.dataTransfer.setData('text/plain', String(row.id))} onDragOver={(event) => event.preventDefault()} onDrop={(event) => onDropRow(event, row.id)} className="border-t border-zinc-200/80 text-zinc-700 transition hover:bg-zinc-50/80 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-950/30">
                   <td className="px-3 py-3 font-medium text-zinc-900 dark:text-zinc-100">{row.rowOrder}</td>
-                  <td className="px-3 py-3">{`${row.type} ${row.sex}`}</td>
                   <td className="px-3 py-3">{editable ? <select className={inputClass} value={row.type} onChange={(event) => { const nextType = event.target.value; const nextSex = getSexDefaultByType(nextType, row.sex); setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type: nextType, sex: nextSex } : item)) })); }} onBlur={() => updateRowField(row.id, { type: row.type, sex: row.sex })}>{TYPE_OPTIONS.map((type) => <option key={type} value={type}>{type}</option>)}</select> : row.type}</td>
-                  <td className="px-3 py-3">{editable ? <select className={inputClass} value={row.sex} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, sex: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { sex: row.sex, type: row.type })}>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}</select> : row.sex}</td>
+                  <td className="px-3 py-3">{editable ? <select className={inputClass} value={row.sex} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, sex: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { sex: row.sex, type: row.type })}>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{formatSexLabel(sex)}</option>)}</select> : formatSexLabel(row.sex)}</td>
                   <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.weight} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, weight: Math.trunc(Number(event.target.value || 0)) } : item)) }))} onBlur={() => updateRowField(row.id, { weight: row.weight })} /> : row.weight}</td>
                   <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.cattleNumber} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, cattleNumber: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { cattleNumber: row.cattleNumber })} /> : row.cattleNumber}</td>
                   <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.letters || ''} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, letters: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { letters: row.letters || null })} /> : row.letters || '-'}</td>
@@ -498,7 +505,7 @@ export default function SheetDetailPage() {
             </div>
             <div className="grid items-end gap-3 md:grid-cols-6">
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Tipo</div><select className={inputClass} value={draftRow.type} onChange={(event) => { const nextType = event.target.value; const nextSex = getSexDefaultByType(nextType, draftRow.sex); setDraftRow((prev) => ({ ...prev, type: nextType, sex: nextSex })); setSessionDefaults((prev) => ({ ...prev, type: nextType, sex: nextSex })); }}>{TYPE_OPTIONS.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
-              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Sexo</div><select className={inputClass} value={draftRow.sex} onChange={(event) => { setDraftRow((prev) => ({ ...prev, sex: event.target.value })); setSessionDefaults((prev) => ({ ...prev, sex: event.target.value })); }}>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}</select></label>
+              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Sexo</div><select className={inputClass} value={draftRow.sex} onChange={(event) => { setDraftRow((prev) => ({ ...prev, sex: event.target.value })); setSessionDefaults((prev) => ({ ...prev, sex: event.target.value })); }}>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{formatSexLabel(sex)}</option>)}</select></label>
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Kilos</div><input className={inputClass} value={draftRow.weight} onChange={(event) => setDraftRow((prev) => ({ ...prev, weight: event.target.value }))} /></label>
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">No. Res</div><input className={inputClass} value={draftRow.cattleNumber} onChange={(event) => setDraftRow((prev) => ({ ...prev, cattleNumber: event.target.value }))} /></label>
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Letras</div><input className={inputClass} value={draftRow.letters} onChange={(event) => setDraftRow((prev) => ({ ...prev, letters: event.target.value }))} /></label>

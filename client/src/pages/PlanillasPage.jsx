@@ -103,6 +103,16 @@ function QueueSummaryItem({ label, value }) {
   );
 }
 
+function ClientStatusMetric({ label, value, caption }) {
+  return (
+    <div className="rounded-[1.3rem] border border-zinc-200/80 bg-white/75 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/45">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
+      <div className="mt-2 text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
+      {caption && <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{caption}</div>}
+    </div>
+  );
+}
+
 const inputClass =
   'w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800';
 
@@ -112,6 +122,7 @@ export default function PlanillasPage() {
   const isClient = user?.role === 'CLIENT';
   const isLiquidador = user?.role === 'LIQUIDADOR';
   const [clientHomeState, setClientHomeState] = useState({ loading: isClient, error: '', data: null });
+  const [showClientAdvancedFilters, setShowClientAdvancedFilters] = useState(false);
 
   const [filters, setFilters] = useState({
     q: '',
@@ -145,6 +156,18 @@ export default function PlanillasPage() {
 
   const paidCount = useMemo(() => state.items.filter((sheet) => sheet.isPaid).length, [state.items]);
   const unpaidCount = useMemo(() => state.items.filter((sheet) => !sheet.isPaid).length, [state.items]);
+  const clientVisibleLatestDate = useMemo(() => {
+    if (!isClient || state.items.length === 0) return null;
+    const timestamps = state.items
+      .map((sheet) => new Date(sheet.date))
+      .filter((value) => value instanceof Date && !Number.isNaN(value.getTime()))
+      .map((value) => value.getTime());
+    if (timestamps.length === 0) return null;
+    return new Date(Math.max(...timestamps));
+  }, [isClient, state.items]);
+  const clientAdvancedVisible =
+    showClientAdvancedFilters ||
+    Boolean(filters.seller.trim() || filters.buyer.trim() || filters.sellerPhone.trim() || filters.buyerPhone.trim());
 
   useEffect(() => {
     let active = true;
@@ -210,6 +233,7 @@ export default function PlanillasPage() {
   }, [isClient]);
 
   const clearFilters = () => {
+    setShowClientAdvancedFilters(false);
     setFilters({
       q: '',
       seller: '',
@@ -274,18 +298,28 @@ export default function PlanillasPage() {
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[480px]">
             <SummaryCard
               icon={FileStack}
-              label={isClient ? 'Historial' : 'Totales'}
+              label={isClient ? 'Mis planillas' : 'Totales'}
               value={state.total}
-              caption={isClient ? 'Planillas registradas para tu cuenta.' : 'Resultados disponibles con los filtros actuales.'}
+              caption={isClient ? 'Total de registros visibles para tu cuenta con los filtros activos.' : 'Resultados disponibles con los filtros actuales.'}
             />
             <SummaryCard
               icon={Wallet}
-              label="En pagina"
-              value={state.items.length}
-              caption={`Pagina ${state.page} de ${state.totalPages}`}
+              label={isClient ? 'Pendientes' : 'En pagina'}
+              value={isClient ? unpaidCount : state.items.length}
+              caption={isClient ? 'Planillas de esta pagina que aun esperan pago.' : `Pagina ${state.page} de ${state.totalPages}`}
             />
-            <SummaryCard icon={CalendarDays} label="Pagadas" value={paidCount} caption="Registros marcados como pagados en esta pagina." />
-            <SummaryCard icon={Search} label="Pendientes" value={unpaidCount} caption="Registros que aun requieren seguimiento de pago." />
+            <SummaryCard
+              icon={CalendarDays}
+              label={isClient ? 'Pagadas' : 'Pagadas'}
+              value={paidCount}
+              caption={isClient ? 'Registros de esta pagina que ya fueron marcados como pagados.' : 'Registros marcados como pagados en esta pagina.'}
+            />
+            <SummaryCard
+              icon={Search}
+              label={isClient ? 'Ultimo movimiento' : 'Pendientes'}
+              value={isClient ? (clientVisibleLatestDate ? clientVisibleLatestDate.toLocaleDateString() : '-') : unpaidCount}
+              caption={isClient ? 'Fecha mas reciente dentro de lo que estas viendo ahora.' : 'Registros que aun requieren seguimiento de pago.'}
+            />
           </div>
         </div>
       </section>
@@ -311,28 +345,91 @@ export default function PlanillasPage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <span
-                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                  clientLinked
-                    ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-100'
-                    : clientPendingLink
-                      ? 'bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-100'
-                      : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
-                }`}
-              >
-                {clientLinked ? 'Cuenta vinculada' : clientPendingLink ? 'Solicitud pendiente' : 'Sin vinculacion'}
-              </span>
+            <div className="grid gap-3 lg:min-w-[360px] lg:max-w-[420px]">
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                    clientLinked
+                      ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-100'
+                      : clientPendingLink
+                        ? 'bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-100'
+                        : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
+                  }`}
+                >
+                  {clientLinked ? 'Cuenta vinculada' : clientPendingLink ? 'Solicitud pendiente' : 'Sin vinculacion'}
+                </span>
 
-              <Link
-                to="/settings"
-                className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"
-              >
-                Ir a Mi cuenta
-                <ArrowRight size={16} />
-              </Link>
+                <Link
+                  to="/settings"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"
+                >
+                  Ir a Mi cuenta
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ClientStatusMetric
+                  label="Persona"
+                  value={clientProfile?.person?.name || (clientPendingLink ? 'En revision' : 'Pendiente de vincular')}
+                  caption={clientLinked ? 'Nombre asociado a la cuenta.' : 'Estado actual de la vinculacion.'}
+                />
+                <ClientStatusMetric
+                  label="Pendientes visibles"
+                  value={unpaidCount}
+                  caption="Planillas de esta pagina que aun no figuran como pagadas."
+                />
+                <ClientStatusMetric
+                  label="Ultima fecha visible"
+                  value={clientVisibleLatestDate ? clientVisibleLatestDate.toLocaleDateString() : '-'}
+                  caption="Sirve para ubicar rapido el movimiento mas reciente."
+                />
+                <ClientStatusMetric
+                  label="Pagina actual"
+                  value={`${state.page}/${state.totalPages}`}
+                  caption="Navega tu historial sin perder contexto."
+                />
+              </div>
             </div>
           </div>
+
+          {clientLinked && (
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setFilters((prev) => ({ ...prev, paymentStatus: '', page: 1 }))}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  !filters.paymentStatus
+                    ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                    : 'border border-zinc-300 text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70'
+                }`}
+              >
+                Todas
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilters((prev) => ({ ...prev, paymentStatus: 'unpaid', page: 1 }))}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  filters.paymentStatus === 'unpaid'
+                    ? 'bg-amber-500 text-zinc-950'
+                    : 'border border-zinc-300 text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70'
+                }`}
+              >
+                Pendientes
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilters((prev) => ({ ...prev, paymentStatus: 'paid', page: 1 }))}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  filters.paymentStatus === 'paid'
+                    ? 'bg-emerald-500 text-zinc-950'
+                    : 'border border-zinc-300 text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70'
+                }`}
+              >
+                Pagadas
+              </button>
+            </div>
+          )}
 
           <FeedbackBanner message={clientHomeState.error} type="error" className="mt-4" />
         </section>
@@ -345,9 +442,13 @@ export default function PlanillasPage() {
               <Filter size={14} />
               Filtros y busqueda
             </div>
-            <h3 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Encuentra la planilla correcta sin perder tiempo.</h3>
+            <h3 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {isClient ? 'Busca dentro de tu historial sin llenar la pantalla de ruido.' : 'Encuentra la planilla correcta sin perder tiempo.'}
+            </h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-              Ajusta los criterios que necesites y limpia la vista en un clic cuando quieras volver al panorama general.
+              {isClient
+                ? 'La busqueda general, la fecha y el pago quedan primero. Los filtros por contrapartes siguen disponibles cuando realmente los necesites.'
+                : 'Ajusta los criterios que necesites y limpia la vista en un clic cuando quieras volver al panorama general.'}
             </p>
           </div>
 
@@ -372,84 +473,189 @@ export default function PlanillasPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Field label="Busqueda general">
-            <input
-              className={inputClass}
-              placeholder="Buscar general"
-              value={filters.q}
-              onChange={(event) => setFilters((prev) => ({ ...prev, q: event.target.value, page: 1 }))}
-            />
-          </Field>
+        {isClient ? (
+          <div className="mt-6 space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <Field label="Busqueda general">
+                <input
+                  className={inputClass}
+                  placeholder="Buscar general"
+                  value={filters.q}
+                  onChange={(event) => setFilters((prev) => ({ ...prev, q: event.target.value, page: 1 }))}
+                />
+              </Field>
 
-          <Field label="Vendedor">
-            <input
-              className={inputClass}
-              placeholder="Vendedor"
-              value={filters.seller}
-              onChange={(event) => setFilters((prev) => ({ ...prev, seller: event.target.value, page: 1 }))}
-            />
-          </Field>
+              <Field label="Estado de pago">
+                <select
+                  className={inputClass}
+                  value={filters.paymentStatus}
+                  onChange={(event) => setFilters((prev) => ({ ...prev, paymentStatus: event.target.value, page: 1 }))}
+                >
+                  <option value="">Todos los estados de pago</option>
+                  <option value="paid">Pagadas</option>
+                  <option value="unpaid">Pendientes</option>
+                  <option value="paid_today">Pagadas hoy</option>
+                  <option value="paid_yesterday">Pagadas ayer</option>
+                </select>
+              </Field>
 
-          <Field label="Comprador">
-            <input
-              className={inputClass}
-              placeholder="Comprador"
-              value={filters.buyer}
-              onChange={(event) => setFilters((prev) => ({ ...prev, buyer: event.target.value, page: 1 }))}
-            />
-          </Field>
+              <Field label="Desde">
+                <input
+                  className={inputClass}
+                  type="date"
+                  value={filters.from}
+                  onChange={(event) => setFilters((prev) => ({ ...prev, from: event.target.value, page: 1 }))}
+                />
+              </Field>
 
-          <Field label="Telefono vendedor">
-            <input
-              className={inputClass}
-              placeholder="Telefono vendedor"
-              value={filters.sellerPhone}
-              onChange={(event) => setFilters((prev) => ({ ...prev, sellerPhone: event.target.value, page: 1 }))}
-            />
-          </Field>
+              <Field label="Hasta">
+                <input
+                  className={inputClass}
+                  type="date"
+                  value={filters.to}
+                  onChange={(event) => setFilters((prev) => ({ ...prev, to: event.target.value, page: 1 }))}
+                />
+              </Field>
+            </div>
 
-          <Field label="Telefono comprador">
-            <input
-              className={inputClass}
-              placeholder="Telefono comprador"
-              value={filters.buyerPhone}
-              onChange={(event) => setFilters((prev) => ({ ...prev, buyerPhone: event.target.value, page: 1 }))}
-            />
-          </Field>
+            <div className="rounded-[1.45rem] border border-zinc-200/80 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/35">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Filtros secundarios</div>
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                    Usa contrapartes o telefonos solo cuando quieras ubicar una planilla muy puntual.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowClientAdvancedFilters((value) => !value)}
+                  className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"
+                >
+                  {clientAdvancedVisible ? 'Ocultar filtros por contraparte' : 'Ver filtros por contraparte'}
+                </button>
+              </div>
 
-          <Field label="Desde">
-            <input
-              className={inputClass}
-              type="date"
-              value={filters.from}
-              onChange={(event) => setFilters((prev) => ({ ...prev, from: event.target.value, page: 1 }))}
-            />
-          </Field>
+              {clientAdvancedVisible && (
+                <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <Field label="Vendedor">
+                    <input
+                      className={inputClass}
+                      placeholder="Vendedor"
+                      value={filters.seller}
+                      onChange={(event) => setFilters((prev) => ({ ...prev, seller: event.target.value, page: 1 }))}
+                    />
+                  </Field>
 
-          <Field label="Hasta">
-            <input
-              className={inputClass}
-              type="date"
-              value={filters.to}
-              onChange={(event) => setFilters((prev) => ({ ...prev, to: event.target.value, page: 1 }))}
-            />
-          </Field>
+                  <Field label="Comprador">
+                    <input
+                      className={inputClass}
+                      placeholder="Comprador"
+                      value={filters.buyer}
+                      onChange={(event) => setFilters((prev) => ({ ...prev, buyer: event.target.value, page: 1 }))}
+                    />
+                  </Field>
 
-          <Field label="Estado de pago">
-            <select
-              className={inputClass}
-              value={filters.paymentStatus}
-              onChange={(event) => setFilters((prev) => ({ ...prev, paymentStatus: event.target.value, page: 1 }))}
-            >
-              <option value="">Todos los estados de pago</option>
-              <option value="paid">Pagadas</option>
-              <option value="unpaid">Pendientes</option>
-              <option value="paid_today">Pagadas hoy</option>
-              <option value="paid_yesterday">Pagadas ayer</option>
-            </select>
-          </Field>
-        </div>
+                  <Field label="Telefono vendedor">
+                    <input
+                      className={inputClass}
+                      placeholder="Telefono vendedor"
+                      value={filters.sellerPhone}
+                      onChange={(event) => setFilters((prev) => ({ ...prev, sellerPhone: event.target.value, page: 1 }))}
+                    />
+                  </Field>
+
+                  <Field label="Telefono comprador">
+                    <input
+                      className={inputClass}
+                      placeholder="Telefono comprador"
+                      value={filters.buyerPhone}
+                      onChange={(event) => setFilters((prev) => ({ ...prev, buyerPhone: event.target.value, page: 1 }))}
+                    />
+                  </Field>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Field label="Busqueda general">
+              <input
+                className={inputClass}
+                placeholder="Buscar general"
+                value={filters.q}
+                onChange={(event) => setFilters((prev) => ({ ...prev, q: event.target.value, page: 1 }))}
+              />
+            </Field>
+
+            <Field label="Vendedor">
+              <input
+                className={inputClass}
+                placeholder="Vendedor"
+                value={filters.seller}
+                onChange={(event) => setFilters((prev) => ({ ...prev, seller: event.target.value, page: 1 }))}
+              />
+            </Field>
+
+            <Field label="Comprador">
+              <input
+                className={inputClass}
+                placeholder="Comprador"
+                value={filters.buyer}
+                onChange={(event) => setFilters((prev) => ({ ...prev, buyer: event.target.value, page: 1 }))}
+              />
+            </Field>
+
+            <Field label="Telefono vendedor">
+              <input
+                className={inputClass}
+                placeholder="Telefono vendedor"
+                value={filters.sellerPhone}
+                onChange={(event) => setFilters((prev) => ({ ...prev, sellerPhone: event.target.value, page: 1 }))}
+              />
+            </Field>
+
+            <Field label="Telefono comprador">
+              <input
+                className={inputClass}
+                placeholder="Telefono comprador"
+                value={filters.buyerPhone}
+                onChange={(event) => setFilters((prev) => ({ ...prev, buyerPhone: event.target.value, page: 1 }))}
+              />
+            </Field>
+
+            <Field label="Desde">
+              <input
+                className={inputClass}
+                type="date"
+                value={filters.from}
+                onChange={(event) => setFilters((prev) => ({ ...prev, from: event.target.value, page: 1 }))}
+              />
+            </Field>
+
+            <Field label="Hasta">
+              <input
+                className={inputClass}
+                type="date"
+                value={filters.to}
+                onChange={(event) => setFilters((prev) => ({ ...prev, to: event.target.value, page: 1 }))}
+              />
+            </Field>
+
+            <Field label="Estado de pago">
+              <select
+                className={inputClass}
+                value={filters.paymentStatus}
+                onChange={(event) => setFilters((prev) => ({ ...prev, paymentStatus: event.target.value, page: 1 }))}
+              >
+                <option value="">Todos los estados de pago</option>
+                <option value="paid">Pagadas</option>
+                <option value="unpaid">Pendientes</option>
+                <option value="paid_today">Pagadas hoy</option>
+                <option value="paid_yesterday">Pagadas ayer</option>
+              </select>
+            </Field>
+          </div>
+        )}
       </section>
 
       <FeedbackBanner message={state.error} type="error" />
@@ -457,12 +663,20 @@ export default function PlanillasPage() {
       <section className="overflow-hidden rounded-[1.9rem] border border-zinc-200/80 bg-white/90 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
         <div className="flex flex-col gap-3 border-b border-zinc-200/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
           <div>
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{state.loading ? 'Cargando planillas...' : 'Resultados listos para revisar.'}</h3>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              {state.loading ? 'Cargando planillas...' : isClient ? 'Tu historial listo para revisar.' : 'Resultados listos para revisar.'}
+            </h3>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              {state.loading ? 'Actualizando la tabla con tus filtros.' : `${state.items.length} planillas en pagina / ${state.total} totales`}
+              {state.loading
+                ? 'Actualizando la tabla con tus filtros.'
+                : isClient
+                  ? `${state.items.length} planillas visibles en esta pagina / ${state.total} en total`
+                  : `${state.items.length} planillas en pagina / ${state.total} totales`}
             </p>
           </div>
-          <div className="text-sm text-zinc-500 dark:text-zinc-400">Navega entre paginas y entra al detalle de cada registro.</div>
+          <div className="text-sm text-zinc-500 dark:text-zinc-400">
+            {isClient ? 'Empieza por las pendientes y entra al detalle cuando necesites validar el movimiento.' : 'Navega entre paginas y entra al detalle de cada registro.'}
+          </div>
         </div>
 
         <div className="space-y-3 p-4">
@@ -482,6 +696,11 @@ export default function PlanillasPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <h4 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Planilla {sheet.visibleNumber}</h4>
                     <PaymentBadge isPaid={sheet.isPaid} />
+                    {isClient && (
+                      <span className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-300">
+                        {new Date(sheet.date).toLocaleDateString()}
+                      </span>
+                    )}
                     <ActionStateBadge role={user?.role} userId={user?.userId} sheet={sheet} />
                   </div>
 
@@ -498,7 +717,8 @@ export default function PlanillasPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 dark:text-zinc-500">
-                    <span>{new Date(sheet.date).toLocaleString()}</span>
+                    {!isClient && <span>{new Date(sheet.date).toLocaleString()}</span>}
+                    {isClient && <span>Movimiento registrado el {new Date(sheet.date).toLocaleString()}</span>}
                     {!isClient && sheet.liquidadorAliasSnapshot && <span>Liquidador: {sheet.liquidadorAliasSnapshot}</span>}
                     {isLiquidador && sheet.editableUntilByLiquidador && (
                       <span>Ventana: hasta {new Date(sheet.editableUntilByLiquidador).toLocaleTimeString()}</span>

@@ -85,10 +85,16 @@ describe('SheetDetail page', () => {
     expect(screen.getByText('Total hembras')).toBeInTheDocument();
     expect(screen.getByText('Promedio hembras')).toBeInTheDocument();
     expect(screen.getAllByText('TERNERO MACHO').length).toBeGreaterThan(0);
+    expect(screen.getByText('M')).toBeInTheDocument();
     expect(screen.getByText('No.')).toBeInTheDocument();
-    expect(screen.getAllByText('Especificacion').length).toBeGreaterThan(0);
+    expect(screen.getByText('Especificacion')).toBeInTheDocument();
     expect(screen.getByText('No. Res')).toBeInTheDocument();
     expect(screen.getByText('Encabezado de planilla')).toBeInTheDocument();
+    expect(screen.getAllByText('Liquidador').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Precio/cabeza')).not.toBeInTheDocument();
+    expect(screen.queryByText('Precio por cabeza')).not.toBeInTheDocument();
+    expect(screen.queryByText('Alias de liquidador')).not.toBeInTheDocument();
+    expect(screen.queryByText('Creada por: admin@bascula.com')).not.toBeInTheDocument();
     expect(screen.queryByText('Trazabilidad')).not.toBeInTheDocument();
     expect(screen.queryByText('Editar encabezado')).not.toBeInTheDocument();
   });
@@ -108,5 +114,7 @@ describe('SheetDetail page', () => {
     expect(screen.getByText('Editar encabezado')).toBeInTheDocument();
     expect(screen.getByText('Trazabilidad')).toBeInTheDocument();
     expect(screen.getByText('Seguimiento de pago')).toBeInTheDocument();
+    expect(screen.getByText('Precio/cabeza')).toBeInTheDocument();
+    expect(screen.getByText('Precio por cabeza')).toBeInTheDocument();
   });
 });
