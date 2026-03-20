@@ -20,15 +20,14 @@ function SectionShell({ eyebrow, title, description, children, actions }) {
   );
 }
 
-function StatCard({ icon, label, value, caption }) {
+function StatCard({ icon, label, value }) {
   const CardIcon = icon;
   return (
     <div className="rounded-[1.45rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
-          <div className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
-          <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{caption}</div>
+          <div className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
         </div>
         <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
           <CardIcon size={18} />
@@ -206,31 +205,28 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-sky-50 via-white to-amber-50 p-6 shadow-[0_22px_65px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:from-[#0c1620] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-sky-50 via-white to-amber-50 p-5 shadow-[0_22px_65px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:from-[#0c1620] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
               <Users2 size={14} />
               Cuentas y vinculaciones
             </div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Atiende primero la cola de vinculaciones y despues el mantenimiento de cuentas.</h1>
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
-              Esta pantalla agrupa la supervision de cuentas, la aprobacion de solicitudes y las herramientas de soporte sin darle el mismo peso a todo.
-            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Cuentas y vinculaciones</h1>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[500px]">
-            <StatCard icon={ShieldCheck} label="Pendientes" value={pendingRequests.length} caption="Solicitudes esperando revision." />
-            <StatCard icon={Users2} label="Cuentas" value={users.length} caption={loading ? 'Actualizando listado...' : 'Cuentas visibles con los filtros actuales.'} />
-            <StatCard icon={UserRound} label="Clientes" value={clientCount} caption="Cuentas CLIENT disponibles." />
-            <StatCard icon={Link2} label="Liquidadores" value={operatorCount} caption="Cuentas LIQUIDADOR activas." />
+            <StatCard icon={ShieldCheck} label="Pendientes" value={pendingRequests.length} />
+            <StatCard icon={Users2} label="Cuentas" value={users.length} />
+            <StatCard icon={UserRound} label="Clientes" value={clientCount} />
+            <StatCard icon={Link2} label="Liquidadores" value={operatorCount} />
           </div>
         </div>
       </section>
 
       <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
 
-      <SectionShell eyebrow="Cola principal" title="Solicitudes de vinculacion pendientes" description="Resuelve primero esta cola porque desbloquea la experiencia del cliente y reduce consultas de soporte.">
+      <SectionShell eyebrow="Cola principal" title="Solicitudes pendientes">
         <div className="space-y-3">
           {pendingRequests.length === 0 && <div className="rounded-[1.35rem] border border-dashed border-zinc-300/90 bg-zinc-50/80 px-4 py-5 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">No hay solicitudes pendientes en este momento.</div>}
           {pendingRequests.map((item) => (
@@ -250,7 +246,7 @@ export default function UsersPage() {
         </div>
       </SectionShell>
 
-      <SectionShell eyebrow="Gestion de cuentas" title="Crear cuentas y revisar acceso operativo" description="Despues de la cola principal, crea o ajusta cuentas CLIENT y LIQUIDADOR sin tocar privilegios ADMIN.">
+      <SectionShell eyebrow="Gestion de cuentas" title="Crear y administrar cuentas">
         <form onSubmit={createUser} className="grid gap-4 rounded-[1.5rem] border border-zinc-200/80 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
           <div className="grid gap-4 md:grid-cols-2">
             <input className={inputClass} placeholder="Correo" value={createForm.email} onChange={(event) => setCreateForm((prev) => ({ ...prev, email: event.target.value }))} />
@@ -331,7 +327,7 @@ export default function UsersPage() {
       </SectionShell>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <SectionShell eyebrow="Herramienta secundaria" title="Vinculacion manual" description="Usala cuando necesites corregir o completar una relacion cuenta-persona fuera de la cola principal.">
+        <SectionShell eyebrow="Herramienta secundaria" title="Vinculacion manual">
           <div className="grid gap-4">
             <select className={inputClass} value={linking.userId} onChange={(event) => setLinking((prev) => ({ ...prev, userId: event.target.value }))}>
               <option value="">Seleccionar cuenta</option>
@@ -345,7 +341,7 @@ export default function UsersPage() {
           </div>
         </SectionShell>
 
-        <SectionShell eyebrow="Herramienta secundaria" title="Soporte de contrasenas" description="Mantiene disponibles el cambio manual y la generacion de enlaces, pero con menos peso visual que la cola principal.">
+        <SectionShell eyebrow="Herramienta secundaria" title="Soporte de contrasenas">
           <div className="space-y-4">
             <div className="grid gap-4">
               <select className={inputClass} value={manualPassword.userId} onChange={(event) => setManualPassword((prev) => ({ ...prev, userId: event.target.value }))}>

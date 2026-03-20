@@ -14,8 +14,9 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import FeedbackBanner from '../components/FeedbackBanner';
 import { getSession } from '../utils/authSession';
+import { fmtCurrency, fmtNumber, fmtWeight } from '../utils/format';
 
-function SummaryCard({ icon, label, value, caption, tone = 'neutral' }) {
+function SummaryCard({ icon, label, value, tone = 'neutral' }) {
   const CardIcon = icon;
   const toneStyles = {
     neutral: 'border-zinc-200/80 bg-white/90 dark:border-zinc-800 dark:bg-zinc-950/60',
@@ -29,8 +30,7 @@ function SummaryCard({ icon, label, value, caption, tone = 'neutral' }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
-          <div className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
-          <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{caption}</div>
+          <div className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
         </div>
         <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
           <CardIcon size={18} />
@@ -100,9 +100,9 @@ function RecentSheetItem({ sheet }) {
             <span className="font-medium text-zinc-900 dark:text-zinc-100">{sheet.buyer?.name || 'Sin comprador'}</span>
           </div>
           <div className="mt-2 flex flex-wrap gap-3 text-xs text-zinc-500 dark:text-zinc-500">
-            <span>Cabezas: {sheet.headCount ?? '-'}</span>
-            <span>Peso total: {sheet.totalWeight ?? '-'}</span>
-            <span>Valor: {sheet.totalValue ?? '-'}</span>
+            <span>Cabezas: {fmtNumber(sheet.headCount)}</span>
+            <span>Peso: {fmtWeight(sheet.totalWeight)}</span>
+            <span>Valor: {fmtCurrency(sheet.totalValue)}</span>
           </div>
         </div>
 
@@ -198,83 +198,30 @@ export default function DashboardPage() {
 
   const overviewCards = isAdmin
     ? [
-        {
-          icon: Link2,
-          label: 'Solicitudes pendientes',
-          value: state.pendingLinks.length,
-          caption: 'Vinculaciones en cola para revision.',
-          tone: state.pendingLinks.length ? 'amber' : 'neutral',
-        },
-        {
-          icon: Wallet,
-          label: 'Pendientes de pago',
-          value: state.unpaid,
-          caption: 'Planillas que requieren seguimiento.',
-          tone: state.unpaid ? 'amber' : 'neutral',
-        },
-        {
-          icon: BadgeDollarSign,
-          label: 'Pagadas',
-          value: state.paid,
-          caption: 'Planillas ya cerradas por pago.',
-          tone: 'emerald',
-        },
-        {
-          icon: FileStack,
-          label: 'Planillas registradas',
-          value: state.total,
-          caption: 'Volumen total disponible en el sistema.',
-          tone: 'blue',
-        },
+        { icon: Link2, label: 'Solicitudes pendientes', value: fmtNumber(state.pendingLinks.length), tone: state.pendingLinks.length ? 'amber' : 'neutral' },
+        { icon: Wallet, label: 'Pendientes de pago', value: fmtNumber(state.unpaid), tone: state.unpaid ? 'amber' : 'neutral' },
+        { icon: BadgeDollarSign, label: 'Pagadas', value: fmtNumber(state.paid), tone: 'emerald' },
+        { icon: FileStack, label: 'Planillas registradas', value: fmtNumber(state.total), tone: 'blue' },
       ]
     : [
-        {
-          icon: Wallet,
-          label: 'Pendientes de pago',
-          value: state.unpaid,
-          caption: 'Registros que todavia necesitan cierre.',
-          tone: state.unpaid ? 'amber' : 'neutral',
-        },
-        {
-          icon: Tractor,
-          label: 'Edicion abierta',
-          value: editableNowCount,
-          caption: 'Planillas recientes que aun puedes corregir.',
-          tone: editableNowCount ? 'blue' : 'neutral',
-        },
-        {
-          icon: ClipboardList,
-          label: 'Planillas recientes',
-          value: state.recent.length,
-          caption: 'Trabajo visible para retomar rapido.',
-          tone: 'neutral',
-        },
-        {
-          icon: BadgeDollarSign,
-          label: 'Pagadas',
-          value: state.paid,
-          caption: 'Planillas ya liquidadas en la operacion.',
-          tone: 'emerald',
-        },
+        { icon: Wallet, label: 'Pendientes de pago', value: fmtNumber(state.unpaid), tone: state.unpaid ? 'amber' : 'neutral' },
+        { icon: Tractor, label: 'Edicion abierta', value: fmtNumber(editableNowCount), tone: editableNowCount ? 'blue' : 'neutral' },
+        { icon: ClipboardList, label: 'Planillas recientes', value: fmtNumber(state.recent.length), tone: 'neutral' },
+        { icon: BadgeDollarSign, label: 'Pagadas', value: fmtNumber(state.paid), tone: 'emerald' },
       ];
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-amber-50 via-white to-sky-50 p-6 shadow-[0_22px_65px_rgba(120,53,15,0.08)] dark:border-zinc-800 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0c1620] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-amber-50 via-white to-sky-50 p-5 shadow-[0_22px_65px_rgba(120,53,15,0.08)] dark:border-zinc-800 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0c1620] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
               <ClipboardList size={14} />
               Centro operativo
             </div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {isAdmin ? 'Supervisa colas, pagos y vinculaciones sin perder el contexto.' : 'Retoma las planillas que importan y sigue con la captura.'}
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {isAdmin ? 'Centro operativo' : 'Tu operacion del dia'}
             </h1>
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
-              {isAdmin
-                ? 'Prioriza solicitudes pendientes, observa la carga de pago y entra rapido a las pantallas donde se destraba la operacion.'
-                : 'Usa esta vista como punto de arranque para registrar nuevas planillas, revisar las que siguen abiertas y volver a los detalles que aun requieren accion.'}
-            </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[500px]">
@@ -289,20 +236,15 @@ export default function DashboardPage() {
 
       <SectionCard
         eyebrow="Acciones principales"
-        title={isAdmin ? 'Supervision y atencion inmediata' : 'Operacion del dia'}
-        description={
-          isAdmin
-            ? 'Abre primero las colas con impacto directo en clientes y pagos, y despues entra al mantenimiento de cuentas.'
-            : 'Empieza por registrar una nueva planilla o retoma el trabajo reciente antes de que cierre la ventana de edicion.'
-        }
+        title={isAdmin ? 'Supervision y atencion' : 'Operacion del dia'}
       >
         <div className="grid gap-3 lg:grid-cols-3">
-          <QuickAction to="/planillas/new" label="Registrar planilla" caption="Inicia una nueva pesada con vendedor y comprador." primary />
-          <QuickAction to="/planillas" label="Revisar planillas" caption="Filtra, revisa pagos y entra a los detalles operativos." />
+          <QuickAction to="/planillas/new" label="Registrar planilla" caption="Nueva pesada" primary />
+          <QuickAction to="/planillas" label="Revisar planillas" caption="Filtros, pagos y detalles" />
           {isAdmin ? (
-            <QuickAction to="/usuarios" label="Cuentas y vinculaciones" caption="Atiende solicitudes pendientes y administra accesos." />
+            <QuickAction to="/usuarios" label="Cuentas y vinculaciones" caption="Solicitudes y accesos" />
           ) : (
-            <QuickAction to="/personas" label="Personas" caption="Consulta el directorio operativo de vendedores y compradores." />
+            <QuickAction to="/personas" label="Personas" caption="Vendedores y compradores" />
           )}
         </div>
       </SectionCard>
@@ -310,8 +252,7 @@ export default function DashboardPage() {
       {isAdmin && (
         <SectionCard
           eyebrow="Cola de vinculaciones"
-          title="Solicitudes que requieren revision"
-          description="Este es el primer cuello de botella de la experiencia cliente. Resuelvelo antes de pasar a tareas de mantenimiento."
+          title="Solicitudes pendientes"
           actions={
             <Link
               to="/usuarios"
@@ -353,12 +294,7 @@ export default function DashboardPage() {
 
       <SectionCard
         eyebrow="Actividad reciente"
-        title={isAdmin ? 'Planillas con contexto operativo inmediato' : 'Planillas recientes para retomar rapido'}
-        description={
-          isAdmin
-            ? 'Usa esta lista para detectar pagos pendientes y entrar a las planillas mas recientes sin perder tiempo en filtros.'
-            : 'Aqui quedan las ultimas planillas visibles para seguir con filas, revisar pagos o exportar el documento final.'
-        }
+        title="Planillas recientes"
       >
         <div className="space-y-3">
           {!state.loading && state.recent.length === 0 && (
