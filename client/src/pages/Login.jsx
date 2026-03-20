@@ -73,13 +73,9 @@ export default function Login({ onLogin }) {
                   </div>
                   <div>
                     <p className="text-sm font-medium uppercase tracking-[0.28em] text-zinc-500 dark:text-zinc-400">Bascula La Esperanza</p>
-                    <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Tu reporte de ganado, mas claro y mas facil de seguir.</h1>
+                    <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Tu reporte de ganado, claro y facil.</h1>
                   </div>
                 </div>
-
-                <p className="max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-300">
-                  Entra para revisar planillas, pesos, movimientos y pagos desde una vista pensada para consultar tu informacion sin complicaciones.
-                </p>
               </div>
 
               <div className="rounded-[1.6rem] border border-zinc-200/80 bg-white/75 p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/50">
