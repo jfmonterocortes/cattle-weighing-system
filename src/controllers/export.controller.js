@@ -13,9 +13,9 @@ async function exportExcelController(req, res, next) {
 
 async function exportSheetPdfController(req, res, next) {
   try {
-    const buffer = await exportSheetPdf(Number(req.params.sheetId), req.user);
+    const { buffer, visibleNumber } = await exportSheetPdf(Number(req.params.sheetId), req.user);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="planilla-${req.params.sheetId}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="planilla-${visibleNumber}.pdf"`);
     return res.send(buffer);
   } catch (error) {
     return next(error);
