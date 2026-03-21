@@ -66,10 +66,10 @@ describe('SettingsPage', () => {
     );
 
     await waitFor(() => expect(screen.getByText(/Administra tu cuenta sin perder el contexto operativo/i)).toBeInTheDocument());
-    expect(screen.getByText('Cambiar contrasena')).toBeInTheDocument();
-    expect(screen.getByText('Vinculacion de cuenta')).toBeInTheDocument();
+    expect(screen.getByText('Cambiar contraseña')).toBeInTheDocument();
+    expect(screen.getByText('Vinculación de cuenta')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Volver a mis planillas/i })).toBeInTheDocument();
-    expect(screen.queryByText('Restablecer contrasena')).not.toBeInTheDocument();
+    expect(screen.queryByText('Restablecer contraseña')).not.toBeInTheDocument();
     expect(screen.queryByText(/Token detectado/i)).not.toBeInTheDocument();
     expect(mockGet).toHaveBeenCalledWith('/settings');
     expect(mockGet).toHaveBeenCalledWith('/link-requests/me');

@@ -14,9 +14,8 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import FeedbackBanner from '../components/FeedbackBanner';
 import { getSession } from '../utils/authSession';
-import { fmtCurrency, fmtNumber, fmtWeight } from '../utils/format';
 
-function SummaryCard({ icon, label, value, tone = 'neutral' }) {
+function SummaryCard({ icon, label, value, caption, tone = 'neutral' }) {
   const CardIcon = icon;
   const toneStyles = {
     neutral: 'border-zinc-200/80 bg-white/90 dark:border-zinc-800 dark:bg-zinc-950/60',
@@ -30,9 +29,10 @@ function SummaryCard({ icon, label, value, tone = 'neutral' }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
-          <div className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
+          <div className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
+          <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{caption}</div>
         </div>
-        <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+        <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-900 text-white dark:bg-amber-500 dark:text-zinc-950">
           <CardIcon size={18} />
         </div>
       </div>
@@ -46,7 +46,7 @@ function SectionCard({ eyebrow, title, description, actions, children }) {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">{eyebrow}</div>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
+          <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
           {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -62,16 +62,16 @@ function QuickAction({ to, label, caption, primary = false }) {
       to={to}
       className={`rounded-[1.35rem] border px-4 py-4 transition ${
         primary
-          ? 'border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-700 dark:border-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200'
+          ? 'border-emerald-900 bg-emerald-900 text-white shadow-md shadow-emerald-900/15 hover:bg-emerald-800 dark:border-amber-500 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400'
           : 'border-zinc-200 bg-white/80 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-950/80'
       }`}
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className={`text-sm font-semibold ${primary ? 'text-white dark:text-zinc-900' : 'text-zinc-900 dark:text-zinc-100'}`}>{label}</div>
-          <div className={`mt-1 text-sm ${primary ? 'text-zinc-100 dark:text-zinc-700' : 'text-zinc-600 dark:text-zinc-400'}`}>{caption}</div>
+          <div className={`text-sm font-semibold ${primary ? 'text-white dark:text-zinc-950' : 'text-zinc-900 dark:text-zinc-100'}`}>{label}</div>
+          <div className={`mt-1 text-sm ${primary ? 'text-emerald-100 dark:text-amber-900' : 'text-zinc-600 dark:text-zinc-400'}`}>{caption}</div>
         </div>
-        <ArrowRight size={16} className={primary ? 'text-white dark:text-zinc-900' : 'text-zinc-500 dark:text-zinc-400'} />
+        <ArrowRight size={16} className={primary ? 'text-white dark:text-zinc-950' : 'text-zinc-500 dark:text-zinc-400'} />
       </div>
     </Link>
   );
@@ -100,9 +100,9 @@ function RecentSheetItem({ sheet }) {
             <span className="font-medium text-zinc-900 dark:text-zinc-100">{sheet.buyer?.name || 'Sin comprador'}</span>
           </div>
           <div className="mt-2 flex flex-wrap gap-3 text-xs text-zinc-500 dark:text-zinc-500">
-            <span>Cabezas: {fmtNumber(sheet.headCount)}</span>
-            <span>Peso: {fmtWeight(sheet.totalWeight)}</span>
-            <span>Valor: {fmtCurrency(sheet.totalValue)}</span>
+            <span>Cabezas: {sheet.headCount ?? '-'}</span>
+            <span>Peso total: {sheet.totalWeight ?? '-'}</span>
+            <span>Valor: {sheet.totalValue ?? '-'}</span>
           </div>
         </div>
 
@@ -198,30 +198,83 @@ export default function DashboardPage() {
 
   const overviewCards = isAdmin
     ? [
-        { icon: Link2, label: 'Solicitudes pendientes', value: fmtNumber(state.pendingLinks.length), tone: state.pendingLinks.length ? 'amber' : 'neutral' },
-        { icon: Wallet, label: 'Pendientes de pago', value: fmtNumber(state.unpaid), tone: state.unpaid ? 'amber' : 'neutral' },
-        { icon: BadgeDollarSign, label: 'Pagadas', value: fmtNumber(state.paid), tone: 'emerald' },
-        { icon: FileStack, label: 'Planillas registradas', value: fmtNumber(state.total), tone: 'blue' },
+        {
+          icon: Link2,
+          label: 'Solicitudes pendientes',
+          value: state.pendingLinks.length,
+          caption: 'Vinculaciones en cola para revisión.',
+          tone: state.pendingLinks.length ? 'amber' : 'neutral',
+        },
+        {
+          icon: Wallet,
+          label: 'Pendientes de pago',
+          value: state.unpaid,
+          caption: 'Planillas que requieren seguimiento.',
+          tone: state.unpaid ? 'amber' : 'neutral',
+        },
+        {
+          icon: BadgeDollarSign,
+          label: 'Pagadas',
+          value: state.paid,
+          caption: 'Planillas ya cerradas por pago.',
+          tone: 'emerald',
+        },
+        {
+          icon: FileStack,
+          label: 'Planillas registradas',
+          value: state.total,
+          caption: 'Volumen total disponible en el sistema.',
+          tone: 'blue',
+        },
       ]
     : [
-        { icon: Wallet, label: 'Pendientes de pago', value: fmtNumber(state.unpaid), tone: state.unpaid ? 'amber' : 'neutral' },
-        { icon: Tractor, label: 'Edicion abierta', value: fmtNumber(editableNowCount), tone: editableNowCount ? 'blue' : 'neutral' },
-        { icon: ClipboardList, label: 'Planillas recientes', value: fmtNumber(state.recent.length), tone: 'neutral' },
-        { icon: BadgeDollarSign, label: 'Pagadas', value: fmtNumber(state.paid), tone: 'emerald' },
+        {
+          icon: Wallet,
+          label: 'Pendientes de pago',
+          value: state.unpaid,
+          caption: 'Registros que todavía necesitan cierre.',
+          tone: state.unpaid ? 'amber' : 'neutral',
+        },
+        {
+          icon: Tractor,
+          label: 'Edición abierta',
+          value: editableNowCount,
+          caption: 'Planillas recientes que aún puedes corregir.',
+          tone: editableNowCount ? 'blue' : 'neutral',
+        },
+        {
+          icon: ClipboardList,
+          label: 'Planillas recientes',
+          value: state.recent.length,
+          caption: 'Trabajo visible para retomar rápido.',
+          tone: 'neutral',
+        },
+        {
+          icon: BadgeDollarSign,
+          label: 'Pagadas',
+          value: state.paid,
+          caption: 'Planillas ya liquidadas en la operación.',
+          tone: 'emerald',
+        },
       ];
 
   return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-amber-50 via-white to-sky-50 p-5 shadow-[0_22px_65px_rgba(120,53,15,0.08)] dark:border-zinc-800 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0c1620] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <div className="space-y-6 stagger">
+      <section className="overflow-hidden rounded-[2rem] border border-stone-200/60 bg-gradient-to-br from-amber-50/80 via-white to-sky-50/60 p-6 shadow-[0_22px_65px_rgba(120,53,15,0.06)] dark:border-zinc-800/60 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0c1620] dark:shadow-[0_28px_75px_rgba(0,0,0,0.35)]">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
-              <ClipboardList size={14} />
+            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-stone-500 dark:border-zinc-700/60 dark:bg-zinc-950/50 dark:text-zinc-400">
+              <ClipboardList size={13} />
               Centro operativo
             </div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {isAdmin ? 'Centro operativo' : 'Tu operacion del dia'}
+            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {isAdmin ? 'Supervisa colas, pagos y vinculaciones sin perder el contexto.' : 'Retoma las planillas que importan y sigue con la captura.'}
             </h1>
+            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+              {isAdmin
+                ? 'Prioriza solicitudes pendientes, observa la carga de pago y entra rápido a las pantallas donde se destraba la operación.'
+                : 'Usa esta vista como punto de arranque para registrar nuevas planillas, revisar las que siguen abiertas y volver a los detalles que aún requieren acción.'}
+            </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[500px]">
@@ -236,15 +289,20 @@ export default function DashboardPage() {
 
       <SectionCard
         eyebrow="Acciones principales"
-        title={isAdmin ? 'Supervision y atencion' : 'Operacion del dia'}
+        title={isAdmin ? 'Supervisión y atención inmediata' : 'Operación del día'}
+        description={
+          isAdmin
+            ? 'Abre primero las colas con impacto directo en clientes y pagos, y después entra al mantenimiento de cuentas.'
+            : 'Empieza por registrar una nueva planilla o retoma el trabajo reciente antes de que cierre la ventana de edición.'
+        }
       >
         <div className="grid gap-3 lg:grid-cols-3">
-          <QuickAction to="/planillas/new" label="Registrar planilla" caption="Nueva pesada" primary />
-          <QuickAction to="/planillas" label="Revisar planillas" caption="Filtros, pagos y detalles" />
+          <QuickAction to="/planillas/new" label="Registrar planilla" caption="Inicia una nueva pesada con vendedor y comprador." primary />
+          <QuickAction to="/planillas" label="Revisar planillas" caption="Filtra, revisa pagos y entra a los detalles operativos." />
           {isAdmin ? (
-            <QuickAction to="/usuarios" label="Cuentas y vinculaciones" caption="Solicitudes y accesos" />
+            <QuickAction to="/usuarios" label="Cuentas y vinculaciones" caption="Atiende solicitudes pendientes y administra accesos." />
           ) : (
-            <QuickAction to="/personas" label="Personas" caption="Vendedores y compradores" />
+            <QuickAction to="/personas" label="Personas" caption="Consulta el directorio operativo de vendedores y compradores." />
           )}
         </div>
       </SectionCard>
@@ -252,7 +310,8 @@ export default function DashboardPage() {
       {isAdmin && (
         <SectionCard
           eyebrow="Cola de vinculaciones"
-          title="Solicitudes pendientes"
+          title="Solicitudes que requieren revisión"
+          description="Este es el primer cuello de botella de la experiencia cliente. Resuelvelo antes de pasar a tareas de mantenimiento."
           actions={
             <Link
               to="/usuarios"
@@ -294,7 +353,12 @@ export default function DashboardPage() {
 
       <SectionCard
         eyebrow="Actividad reciente"
-        title="Planillas recientes"
+        title={isAdmin ? 'Planillas con contexto operativo inmediato' : 'Planillas recientes para retomar rápido'}
+        description={
+          isAdmin
+            ? 'Usa esta lista para detectar pagos pendientes y entrar a las planillas más recientes sin perder tiempo en filtros.'
+            : 'Aquí quedan las últimas planillas visibles para seguir con filas, revisar pagos o exportar el documento final.'
+        }
       >
         <div className="space-y-3">
           {!state.loading && state.recent.length === 0 && (

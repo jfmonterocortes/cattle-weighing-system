@@ -81,7 +81,7 @@ describe('DashboardPage', () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => expect(screen.getByText('Solicitudes que requieren revision')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Solicitudes que requieren revisión')).toBeInTheDocument());
     expect(screen.getByText('Solicitudes pendientes')).toBeInTheDocument();
     expect(screen.getByText('Registrar planilla')).toBeInTheDocument();
     expect(screen.getByText('Cuentas y vinculaciones')).toBeInTheDocument();

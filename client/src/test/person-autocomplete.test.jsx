@@ -24,7 +24,7 @@ describe('PersonAutocomplete', () => {
 
     render(<PersonAutocomplete label="Persona" value={null} onSelect={onSelect} />);
 
-    const input = screen.getByPlaceholderText('Buscar persona por nombre o telefono');
+    const input = screen.getByPlaceholderText('Buscar persona por nombre o teléfono');
     fireEvent.click(input);
     fireEvent.change(input, { target: { value: 'Maria' } });
 
@@ -46,7 +46,7 @@ describe('PersonAutocomplete', () => {
 
     render(<PersonAutocomplete label="Persona" value={null} onSelect={vi.fn()} minQueryLength={3} />);
 
-    const input = screen.getByPlaceholderText('Buscar persona por nombre o telefono');
+    const input = screen.getByPlaceholderText('Buscar persona por nombre o teléfono');
     fireEvent.click(input);
     fireEvent.change(input, { target: { value: 'Ro' } });
 

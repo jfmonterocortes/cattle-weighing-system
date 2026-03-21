@@ -9,7 +9,7 @@ export default function PersonAutocomplete({
   onSelect,
   onCreate,
   onError,
-  placeholder = 'Buscar persona por nombre o telefono',
+  placeholder = 'Buscar persona por nombre o teléfono',
   minQueryLength = 1,
 }) {
   const [query, setQuery] = useState(value?.name || '');
@@ -58,7 +58,7 @@ export default function PersonAutocomplete({
     if (!open || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     setDropdownStyle({
-      top: rect.bottom + 10,
+      top: rect.bottom + 8,
       left: rect.left,
       width: rect.width,
     });
@@ -112,11 +112,11 @@ export default function PersonAutocomplete({
   return (
     <>
       <div ref={containerRef}>
-        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-200">{label}</label>
+        <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{label}</label>
         <div className="relative mt-2">
-          <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+          <Search size={15} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 dark:text-zinc-500" />
           <input
-            className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 pl-11 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+            className="w-full rounded-xl border border-stone-300/80 bg-white px-4 py-3 pl-11 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onFocus={() => setOpen(true)}
@@ -132,7 +132,7 @@ export default function PersonAutocomplete({
           <div
             ref={dropdownRef}
             style={{ position: 'fixed', top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width, zIndex: 10000 }}
-            className="max-h-80 overflow-auto rounded-[1.4rem] border border-zinc-200 bg-white/95 shadow-[0_20px_45px_rgba(15,23,42,0.12)] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-[0_20px_45px_rgba(0,0,0,0.45)]"
+            className="animate-fade-up max-h-80 overflow-auto rounded-xl border border-stone-200/80 bg-white/97 shadow-[0_16px_40px_rgba(15,23,42,0.10)] backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/97 dark:shadow-[0_16px_40px_rgba(0,0,0,0.4)]"
             onMouseDown={(event) => event.stopPropagation()}
           >
             {loading && <div className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">Buscando...</div>}
@@ -150,15 +150,15 @@ export default function PersonAutocomplete({
                 <button
                   key={person.id}
                   type="button"
-                  className="w-full border-b border-zinc-200/70 px-4 py-3 text-left transition last:border-b-0 hover:bg-zinc-50 dark:border-zinc-800/80 dark:hover:bg-zinc-900/80"
+                  className="w-full border-b border-stone-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-stone-50 dark:border-zinc-800/60 dark:hover:bg-zinc-900/70"
                   onMouseDown={(event) => {
                     event.preventDefault();
                     selectItem(person);
                   }}
                 >
                   <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{person.name}</div>
-                  <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                    {person.phone || 'Sin telefono'} {person.cedula ? `- CI ${person.cedula}` : ''}
+                  <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    {person.phone || 'Sin teléfono'} {person.cedula ? `- CI ${person.cedula}` : ''}
                   </div>
                 </button>
               ))}
@@ -166,7 +166,7 @@ export default function PersonAutocomplete({
             {showCreate && (
               <button
                 type="button"
-                className="w-full border-t border-zinc-200 px-4 py-3 text-left text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 dark:border-zinc-800 dark:text-emerald-300 dark:hover:bg-emerald-500/10"
+                className="w-full border-t border-stone-200/80 px-4 py-3 text-left text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 dark:border-zinc-800/60 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
                 onMouseDown={async (event) => {
                   event.preventDefault();
                   try {

@@ -1,5 +1,13 @@
 ﻿const { z } = require('zod');
 
+const strongPassword = z
+  .string()
+  .min(8, 'La contraseña debe tener al menos 8 caracteres')
+  .max(120)
+  .regex(/[a-z]/, 'Debe incluir al menos una letra minúscula')
+  .regex(/[A-Z]/, 'Debe incluir al menos una letra mayúscula')
+  .regex(/[0-9]/, 'Debe incluir al menos un número');
+
 const loginSchema = z.object({
   email: z.string().email().transform((v) => v.toLowerCase()),
   password: z.string().min(8).max(120),
@@ -8,14 +16,14 @@ const loginSchema = z.object({
 const publicRegisterSchema = z
   .object({
     email: z.string().email().transform((v) => v.toLowerCase()),
-    password: z.string().min(8).max(120),
+    password: strongPassword,
     role: z.literal('CLIENT').optional(),
   })
   .strict();
 
 const managedRegisterSchema = z.object({
   email: z.string().email().transform((v) => v.toLowerCase()),
-  password: z.string().min(8).max(120),
+  password: strongPassword,
   role: z.enum(['CLIENT', 'LIQUIDADOR']).optional(),
   liquidadorAlias: z.string().trim().max(20).optional(),
   person: z
@@ -29,7 +37,7 @@ const managedRegisterSchema = z.object({
 
 const resetPasswordSchema = z.object({
   token: z.string().trim().min(20).max(2000),
-  newPassword: z.string().min(8).max(120),
+  newPassword: strongPassword,
 });
 
 module.exports = {

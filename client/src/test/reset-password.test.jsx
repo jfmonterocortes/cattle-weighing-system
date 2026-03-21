@@ -34,8 +34,8 @@ describe('ResetPasswordPage', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByPlaceholderText('Nueva contrasena'), { target: { value: 'Nueva123!!' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Actualizar contrasena' }));
+    fireEvent.change(screen.getByPlaceholderText('Nueva contraseña'), { target: { value: 'Nueva123!!' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Actualizar contraseña' }));
 
     await waitFor(() => expect(mockPost).toHaveBeenCalledWith('/auth/reset-password', { token: 'test-token', newPassword: 'Nueva123!!' }));
     await waitFor(() => expect(screen.getByTestId('login-location')).toHaveTextContent('/login?reset=success'));
@@ -48,7 +48,7 @@ describe('ResetPasswordPage', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('El enlace de restablecimiento no es valido o ya no esta disponible.')).toBeInTheDocument();
+    expect(screen.getByText('El enlace de restablecimiento no es válido o ya no está disponible.')).toBeInTheDocument();
     expect(mockPost).not.toHaveBeenCalled();
   });
 });

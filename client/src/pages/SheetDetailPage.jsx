@@ -5,12 +5,11 @@ import { api } from '../api';
 import FeedbackBanner from '../components/FeedbackBanner';
 import PersonAutocomplete from '../components/PersonAutocomplete';
 import { getSession } from '../utils/authSession';
-import { fmtCurrency, fmtNumber, fmtWeight } from '../utils/format';
 
 const TYPE_OPTIONS = ['VACA', 'TORO', 'BUFALO', 'NOVILLO', 'TERNERO'];
 const SEX_OPTIONS = ['MACHO', 'HEMBRA'];
 const inputClass =
-  'w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800';
+  'w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10';
 
 function canEdit(role, sheet, userId) {
   if (role === 'ADMIN') return true;
@@ -74,7 +73,7 @@ function Shell({ eyebrow, title, description, actions, className = '', children 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">{eyebrow}</div>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
+          <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
           {description && <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -99,7 +98,7 @@ function PartyCard({ icon, label, name, detail }) {
   return (
     <div className="rounded-[1.4rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
       <div className="flex items-start gap-3">
-        <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+        <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-900 text-white dark:bg-amber-500 dark:text-zinc-950">
           <IconComponent size={18} />
         </div>
         <div>
@@ -201,7 +200,7 @@ export default function SheetDetailPage() {
     ? 'Consulta el estado actual de esta planilla.'
     : `Creada por: ${sheet?.createdBy?.email || 'Sin dato'}`;
 
-  const headerStateLabel = role === 'ADMIN' ? 'Control admin' : editable && sheet?.editableUntilByLiquidador ? `Edicion abierta hasta ${new Date(sheet.editableUntilByLiquidador).toLocaleTimeString()}` : role === 'CLIENT' ? '' : 'Solo lectura';
+  const headerStateLabel = role === 'ADMIN' ? 'Control admin' : editable && sheet?.editableUntilByLiquidador ? `Edición abierta hasta ${new Date(sheet.editableUntilByLiquidador).toLocaleTimeString()}` : role === 'CLIENT' ? '' : 'Solo lectura';
 
   const addRow = async (event) => {
     event.preventDefault();
@@ -333,14 +332,18 @@ export default function SheetDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-amber-50 via-white to-sky-50 p-5 shadow-[0_22px_65px_rgba(120,53,15,0.08)] dark:border-zinc-800 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0c1620] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <div className="space-y-6 stagger">
+      <section className="overflow-hidden rounded-[2rem] border border-stone-200/60 bg-gradient-to-br from-amber-50/80 via-white to-sky-50/60 p-6 shadow-[0_22px_65px_rgba(120,53,15,0.06)] dark:border-zinc-800/60 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0c1620] dark:shadow-[0_28px_75px_rgba(0,0,0,0.35)]">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-stone-500 dark:border-zinc-700/60 dark:bg-zinc-950/50 dark:text-zinc-400">
+              <History size={13} />
+              Planilla operativa
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               <Link to="/planillas" className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70">
                 <ArrowLeft size={16} />
-                Planillas
+                Volver a planillas
               </Link>
               <PaymentChip isPaid={sheet.isPaid} />
               {!isClient && (
@@ -349,15 +352,15 @@ export default function SheetDetailPage() {
                 </span>
               )}
             </div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Planilla {sheet.visibleNumber}</h1>
-            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{new Date(sheet.date).toLocaleString()}</p>
+            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Planilla {sheet.visibleNumber}</h1>
+            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">{new Date(sheet.date).toLocaleString()} · Revisa encabezado, resumen, reses y pago en el orden operativo del trabajo diario.</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[480px]">
-            <Stat label="Cabezas" value={fmtNumber(sheet.headCount)} />
-            <Stat label="Valor total" value={fmtCurrency(sheet.totalValue)} />
-            {!isClient && <Stat label="Precio/cabeza" value={fmtCurrency(sheet.pricePerHead)} />}
-            <Stat label="Liquidador" value={sheet.liquidadorAliasSnapshot || 'Sin alias'} />
+            <Stat label="Cabezas" value={sheet.headCount} caption="Total de reses registradas." />
+            <Stat label="Valor total" value={sheet.totalValue} caption="Lectura rápida del cierre económico." />
+            {!isClient && <Stat label="Precio/cabeza" value={sheet.pricePerHead} caption="Referencia activa para esta planilla." />}
+            <Stat label="Liquidador" value={sheet.liquidadorAliasSnapshot || 'Sin alias'} caption="Alias guardado en el encabezado." />
           </div>
         </div>
       </section>
@@ -365,32 +368,34 @@ export default function SheetDetailPage() {
       <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
 
       <Shell
-        eyebrow="Encabezado"
-        title="Contrapartes y parametros"
+        eyebrow="Encabezado de planilla"
+        title="Contrapartes y parametros operativos"
+        description={editable ? 'Valida vendedor, comprador, fecha, alias y precio antes de seguir con las reses.' : 'Este bloque resume el encabezado principal con el que se construyo la planilla.'}
         actions={
           editable && (
             <button type="button" onClick={() => setEditingHeader((value) => !value)} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70">
               <PencilLine size={16} />
-              {editingHeader ? 'Cerrar edicion' : 'Editar encabezado'}
+              {editingHeader ? 'Cerrar edición' : 'Editar encabezado'}
             </button>
           )
         }
       >
         <div className="grid gap-4 lg:grid-cols-3">
-          <PartyCard icon={UserRound} label="Vendedor" name={sheet.seller.name} detail={sheet.seller.phone || 'Sin telefono'} />
-          <PartyCard icon={UserRound} label="Comprador" name={sheet.buyer.name} detail={sheet.buyer.phone || 'Sin telefono'} />
+          <PartyCard icon={UserRound} label="Vendedor" name={sheet.seller.name} detail={sheet.seller.phone || 'Sin teléfono'} />
+          <PartyCard icon={UserRound} label="Comprador" name={sheet.buyer.name} detail={sheet.buyer.phone || 'Sin teléfono'} />
           <PartyCard icon={Wallet} label="Pago" name={sheet.isPaid ? 'Pagada' : 'Pendiente'} detail={paymentHeaderDetail} />
         </div>
         <div className={`mt-4 grid gap-3 ${isClient ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
           <Stat label="Fecha operativa" value={new Date(sheet.date).toLocaleString()} />
-          {!isClient && <Stat label="Precio por cabeza" value={fmtCurrency(sheet.pricePerHead)} />}
+          {!isClient && <Stat label="Precio por cabeza" value={sheet.pricePerHead} />}
           <Stat label="Liquidador" value={sheet.liquidadorAliasSnapshot || 'Sin dato'} />
         </div>
 
         {editingHeader && (
           <div className="mt-5 rounded-[1.5rem] border border-zinc-200/80 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
             <div className="mb-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">Editar encabezado</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">Edición segura</div>
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Ajusta solo los datos principales del encabezado. Las reses y el pago se administran en sus secciónes respectivas.</p>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               <PersonAutocomplete label="Vendedor" value={headerDraft.seller} onSelect={(person) => setHeaderDraft((prev) => ({ ...prev, seller: person }))} />
@@ -401,7 +406,7 @@ export default function SheetDetailPage() {
               </label>
               <label>
                 <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Precio por cabeza</div>
-                <input className={inputClass} value={headerDraft.pricePerHead} onChange={(event) => setHeaderDraft((prev) => ({ ...prev, pricePerHead: event.target.value }))} />
+                <input className={inputClass} type="number" min="0" value={headerDraft.pricePerHead} onChange={(event) => setHeaderDraft((prev) => ({ ...prev, pricePerHead: event.target.value }))} />
               </label>
               <label className="lg:col-span-2">
                 <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Liquidador</div>
@@ -409,7 +414,7 @@ export default function SheetDetailPage() {
               </label>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <button type="button" onClick={saveHeader} disabled={savingHeader} className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
+              <button type="button" onClick={saveHeader} disabled={savingHeader} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400">
                 <Save size={16} />
                 {savingHeader ? 'Guardando...' : 'Guardar encabezado'}
               </button>
@@ -422,16 +427,16 @@ export default function SheetDetailPage() {
         )}
       </Shell>
 
-      <Shell eyebrow="Resumen" title="Volumen y mezcla">
+      <Shell eyebrow="Resumen" title="Lectura rápida de volumen y mezcla" description="Primero valida las métricas generales. Debajo queda el desglose técnico por especificación para confirmar promedios y distribución.">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Stat label="Cabezas" value={fmtNumber(sheet.headCount)} />
-          <Stat label="Peso total" value={fmtWeight(sheet.totalWeight)} />
-          <Stat label="Promedio general" value={fmtWeight(sheet.averageWeight)} />
-          <Stat label="Valor total" value={fmtCurrency(sheet.totalValue)} />
-          <Stat label="Total machos" value={fmtWeight(sheet.totalMaleWeight)} />
-          <Stat label="Promedio machos" value={fmtWeight(sheet.averageMaleWeight)} />
-          <Stat label="Total hembras" value={fmtWeight(sheet.totalFemaleWeight)} />
-          <Stat label="Promedio hembras" value={fmtWeight(sheet.averageFemaleWeight)} />
+          <Stat label="Cabezas" value={sheet.headCount} />
+          <Stat label="Peso total" value={sheet.totalWeight} />
+          <Stat label="Promedio general" value={sheet.averageWeight} />
+          <Stat label="Valor total" value={sheet.totalValue} />
+          <Stat label="Total machos" value={sheet.totalMaleWeight} />
+          <Stat label="Promedio machos" value={sheet.averageMaleWeight} />
+          <Stat label="Total hembras" value={sheet.totalFemaleWeight} />
+          <Stat label="Promedio hembras" value={sheet.averageFemaleWeight} />
         </div>
         <div className="mt-5 overflow-x-auto rounded-[1.5rem] border border-zinc-200/80 dark:border-zinc-800">
           <table className="w-full min-w-[540px] text-sm">
@@ -448,9 +453,9 @@ export default function SheetDetailPage() {
               {groupedStats.map((group) => (
                 <tr key={`${group.type}-${group.sex}`} className="border-t border-zinc-200/80 text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
                   <td className="px-3 py-3 font-medium text-zinc-900 dark:text-zinc-100">{String(group.specification || '').toUpperCase()}</td>
-                  <td className="px-3 py-3">{fmtNumber(group.count)}</td>
-                  <td className="px-3 py-3">{fmtWeight(group.totalWeight)}</td>
-                  <td className="px-3 py-3">{fmtWeight(group.averageWeight)}</td>
+                  <td className="px-3 py-3">{group.count}</td>
+                  <td className="px-3 py-3">{group.totalWeight}</td>
+                  <td className="px-3 py-3">{group.averageWeight}</td>
                 </tr>
               ))}
             </tbody>
@@ -458,7 +463,7 @@ export default function SheetDetailPage() {
         </div>
       </Shell>
 
-      <Shell eyebrow="Reses" title="Filas y captura" actions={<button type="button" onClick={exportPdf} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"><Download size={16} />Exportar PDF</button>}>
+      <Shell eyebrow="Reses" title="Filas, orden y captura" description={editable ? 'Mientras la edición siga abierta puedes corregir filas, reordenarlas y continuar la captura.' : 'Esta vista queda en lectura para consultar las reses registradas y exportar la planilla final.'} actions={<button type="button" onClick={exportPdf} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"><Download size={16} />Exportar PDF</button>}>
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[1.4rem] border border-zinc-200/80 bg-zinc-50/80 px-4 py-3 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
           <span>{sheet.rows.length} filas registradas</span>
           {editable && <span className="inline-flex items-center gap-1"><GripVertical size={14} />Arrastra una fila sobre otra para reordenar.</span>}
@@ -477,13 +482,13 @@ export default function SheetDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {sheet.rows.length === 0 && <tr><td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={editable ? 7 : 6}>No hay reses registradas todavia.</td></tr>}
+              {sheet.rows.length === 0 && <tr><td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={editable ? 7 : 6}>No hay reses registradas todavía.</td></tr>}
               {sheet.rows.map((row) => (
                 <tr key={row.id} draggable={editable} onDragStart={(event) => event.dataTransfer.setData('text/plain', String(row.id))} onDragOver={(event) => event.preventDefault()} onDrop={(event) => onDropRow(event, row.id)} className="border-t border-zinc-200/80 text-zinc-700 transition hover:bg-zinc-50/80 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-950/30">
                   <td className="px-3 py-3 font-medium text-zinc-900 dark:text-zinc-100">{row.rowOrder}</td>
                   <td className="px-3 py-3">{editable ? <select className={inputClass} value={row.type} onChange={(event) => { const nextType = event.target.value; const nextSex = getSexDefaultByType(nextType, row.sex); setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type: nextType, sex: nextSex } : item)) })); }} onBlur={() => updateRowField(row.id, { type: row.type, sex: row.sex })}>{TYPE_OPTIONS.map((type) => <option key={type} value={type}>{type}</option>)}</select> : row.type}</td>
                   <td className="px-3 py-3">{editable ? <select className={inputClass} value={row.sex} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, sex: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { sex: row.sex, type: row.type })}>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{formatSexLabel(sex)}</option>)}</select> : formatSexLabel(row.sex)}</td>
-                  <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.weight} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, weight: Math.trunc(Number(event.target.value || 0)) } : item)) }))} onBlur={() => updateRowField(row.id, { weight: row.weight })} /> : fmtWeight(row.weight)}</td>
+                  <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.weight} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, weight: Math.trunc(Number(event.target.value || 0)) } : item)) }))} onBlur={() => updateRowField(row.id, { weight: row.weight })} /> : row.weight}</td>
                   <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.cattleNumber} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, cattleNumber: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { cattleNumber: row.cattleNumber })} /> : row.cattleNumber}</td>
                   <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.letters || ''} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, letters: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { letters: row.letters || null })} /> : row.letters || '-'}</td>
                   {editable && <td className="px-3 py-3 text-right"><button type="button" className="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50 dark:border-red-500/30 dark:text-red-200 dark:hover:bg-red-500/10" onClick={() => deleteRow(row.id)}>Eliminar</button></td>}
@@ -496,6 +501,7 @@ export default function SheetDetailPage() {
           <form onSubmit={addRow} className="mt-5 rounded-[1.5rem] border border-zinc-200/80 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
             <div className="mb-4">
               <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">Nueva fila</div>
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Agrega una res y conserva los ultimos valores utiles para acelerar la captura.</p>
             </div>
             <div className="grid items-end gap-3 md:grid-cols-6">
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Tipo</div><select className={inputClass} value={draftRow.type} onChange={(event) => { const nextType = event.target.value; const nextSex = getSexDefaultByType(nextType, draftRow.sex); setDraftRow((prev) => ({ ...prev, type: nextType, sex: nextSex })); setSessionDefaults((prev) => ({ ...prev, type: nextType, sex: nextSex })); }}>{TYPE_OPTIONS.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
@@ -503,16 +509,16 @@ export default function SheetDetailPage() {
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Kilos</div><input className={inputClass} value={draftRow.weight} onChange={(event) => setDraftRow((prev) => ({ ...prev, weight: event.target.value }))} /></label>
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">No. Res</div><input className={inputClass} value={draftRow.cattleNumber} onChange={(event) => setDraftRow((prev) => ({ ...prev, cattleNumber: event.target.value }))} /></label>
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Letras</div><input className={inputClass} value={draftRow.letters} onChange={(event) => setDraftRow((prev) => ({ ...prev, letters: event.target.value }))} /></label>
-              <button disabled={savingRow} className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">{savingRow ? 'Guardando...' : 'Agregar'}</button>
+              <button disabled={savingRow} className="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400">{savingRow ? 'Guardando...' : 'Agregar'}</button>
             </div>
           </form>
         )}
       </Shell>
 
-      <Shell eyebrow="Pago" title={isClient ? 'Estado de pago' : 'Seguimiento de pago'} actions={!isClient && <button type="button" onClick={togglePayment} className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"><Wallet size={16} />{sheet.isPaid ? 'Marcar pendiente' : 'Marcar pagada'}</button>}>
+      <Shell eyebrow="Pago" title={isClient ? 'Estado de pago' : 'Seguimiento de pago'} description={isClient ? 'Consulta el estado actual y el historial básico de cambios de pago sin exponer datos internos de operación.' : 'Marca la planilla como pagada o pendiente y revisa quién hizo los cambios de estado.'} actions={!isClient && <button type="button" onClick={togglePayment} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400"><Wallet size={16} />{sheet.isPaid ? 'Marcar pendiente' : 'Marcar pagada'}</button>}>
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[1.4rem] border border-zinc-200/80 bg-zinc-50/80 px-4 py-3 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
           <PaymentChip isPaid={sheet.isPaid} />
-          {sheet.paidBy && !isClient && <span>Ultimo cambio por {sheet.paidBy.email}</span>}
+          {sheet.paidBy && !isClient && <span>Último cambio por {sheet.paidBy.email}</span>}
         </div>
         <div className="space-y-3 text-sm">
           {paymentLogs.length === 0 && <div className="rounded-[1.3rem] border border-dashed border-zinc-300/90 bg-zinc-50/80 px-4 py-5 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">Sin eventos de pago.</div>}
@@ -528,7 +534,7 @@ export default function SheetDetailPage() {
       </Shell>
 
       {!isClient && (
-        <Shell eyebrow="Trazabilidad" title="Historial operativo" className="border-dashed bg-zinc-50/70 dark:bg-zinc-950/35">
+        <Shell eyebrow="Trazabilidad" title="Historial operativo" description="Mantiene una lectura secundaria del rastro administrativo sin quitarle protagonismo al trabajo principal de la planilla." className="border-dashed bg-zinc-50/70 dark:bg-zinc-950/35">
           <div className="space-y-3">
             {auditLogs.length === 0 && <div className="rounded-[1.3rem] border border-dashed border-zinc-300/90 bg-white/80 px-4 py-5 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">Sin movimientos de trazabilidad registrados.</div>}
             {auditLogs.map((log) => (

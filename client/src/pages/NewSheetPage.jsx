@@ -16,7 +16,7 @@ function SummaryCard({ icon, label, value }) {
           <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
           <div className="mt-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">{value}</div>
         </div>
-        <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+        <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-900 text-white dark:bg-amber-500 dark:text-zinc-950">
           <CardIcon size={18} />
         </div>
       </div>
@@ -104,15 +104,18 @@ export default function NewSheetPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-sky-50 via-white to-amber-50 p-5 shadow-[0_22px_65px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:from-[#0c1620] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <div className="space-y-6 stagger">
+      <section className="overflow-hidden rounded-[2rem] border border-stone-200/60 bg-gradient-to-br from-sky-50/70 via-white to-amber-50/60 p-6 shadow-[0_22px_65px_rgba(15,23,42,0.06)] dark:border-zinc-800/60 dark:from-[#0c1620] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.35)]">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
-              <ClipboardPenLine size={14} />
+            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-stone-500 dark:border-zinc-700/60 dark:bg-zinc-950/50 dark:text-zinc-400">
+              <ClipboardPenLine size={13} />
               Registrar planilla
             </div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Registrar planilla</h1>
+            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Empieza por vendedor y comprador, y sigue al detalle sin perder tiempo.</h1>
+            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+              La captura principal se resuelve aqui. Los ajustes opcionales quedan disponibles si necesitas registrar una fecha puntual, un precio distinto o un alias de liquidador.
+            </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3 xl:w-[460px]">
@@ -128,7 +131,10 @@ export default function NewSheetPage() {
           <section className="rounded-[1.6rem] border border-emerald-200/70 bg-emerald-50/70 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/10">
             <div className="mb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-800 dark:text-emerald-200">Parte vendedora</p>
-              <h2 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Vendedor</h2>
+              <h2 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Selecciona o crea el vendedor</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+                Busca una persona existente o crea el registro minimo sin salir del flujo de captura.
+              </p>
             </div>
 
             <PersonAutocomplete
@@ -149,7 +155,10 @@ export default function NewSheetPage() {
           <section className="rounded-[1.6rem] border border-amber-200/70 bg-amber-50/70 p-5 dark:border-amber-500/20 dark:bg-amber-500/10">
             <div className="mb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-800 dark:text-amber-200">Parte compradora</p>
-              <h2 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Comprador</h2>
+              <h2 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Selecciona o crea el comprador</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+                Mantiene el mismo flujo para que la planilla salga lista para continuar con las reses.
+              </p>
             </div>
 
             <PersonAutocomplete
@@ -175,11 +184,14 @@ export default function NewSheetPage() {
             className="flex w-full items-center justify-between gap-3 text-left"
           >
             <div className="flex items-start gap-3">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-900 text-white dark:bg-amber-500 dark:text-zinc-950">
                 <Settings2 size={18} />
               </div>
               <div>
-                <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Ajustes opcionales</div>
+                <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Ajustes de captura opcionales</div>
+                <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                  Solo abre esta sección si necesitas registrar una fecha puntual, un precio distinto o un alias operativo.
+                </div>
               </div>
             </div>
             <ChevronDown
@@ -194,7 +206,7 @@ export default function NewSheetPage() {
                 <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Fecha y hora</div>
                 <input
                   type="datetime-local"
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10"
                   value={advancedFields.date}
                   onChange={(event) => setAdvancedFields((prev) => ({ ...prev, date: event.target.value }))}
                 />
@@ -203,7 +215,9 @@ export default function NewSheetPage() {
               <label>
                 <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Precio por cabeza</div>
                 <input
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10"
+                  type="number"
+                  min="0"
                   placeholder="5000"
                   value={advancedFields.pricePerHead}
                   onChange={(event) => setAdvancedFields((prev) => ({ ...prev, pricePerHead: event.target.value }))}
@@ -213,7 +227,7 @@ export default function NewSheetPage() {
               <label>
                 <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Alias de liquidador</div>
                 <input
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10"
                   placeholder="Iniciales o alias"
                   value={advancedFields.liquidadorAlias}
                   onChange={(event) => setAdvancedFields((prev) => ({ ...prev, liquidadorAlias: event.target.value }))}
@@ -223,6 +237,10 @@ export default function NewSheetPage() {
           )}
         </section>
 
+        <div className="mt-6 rounded-[1.5rem] border border-dashed border-zinc-300/90 bg-zinc-50/90 p-4 text-sm leading-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/50 dark:text-zinc-400">
+          Al guardar, se crea la planilla con estado inicial pendiente y se abre el detalle para continuar con las reses, el pago y la exportacion.
+        </div>
+
         <div className="mt-5 flex flex-col gap-4 border-t border-zinc-200/80 pt-5 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
           <div className="min-w-0 flex-1">
             <FeedbackBanner message={sheetFeedback.message} type={sheetFeedback.type || 'info'} />
@@ -230,7 +248,7 @@ export default function NewSheetPage() {
           <button
             type="submit"
             disabled={creatingSheet}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400"
           >
             <span>{creatingSheet ? 'Creando...' : 'Registrar planilla'}</span>
             {!creatingSheet && <ArrowRight size={16} />}

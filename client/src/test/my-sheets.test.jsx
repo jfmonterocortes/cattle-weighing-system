@@ -73,7 +73,8 @@ describe('Planillas page', () => {
 
     await waitFor(() => expect(screen.getByText('Planilla 2026-001')).toBeInTheDocument());
     expect(screen.getByText('Pendiente')).toBeInTheDocument();
-    expect(screen.getByText(/Cuenta vinculada a Carlos Propietario/i)).toBeInTheDocument();
+    expect(screen.getByText('Cuenta vinculada')).toBeInTheDocument();
+    expect(screen.getAllByText('Carlos Propietario').length).toBeGreaterThan(0);
     expect(screen.getByText('Tu historial listo para revisar.')).toBeInTheDocument();
     expect(screen.getByText('Carlos')).toBeInTheDocument();
     expect(screen.getByText('Ana')).toBeInTheDocument();
@@ -94,12 +95,12 @@ describe('Planillas page', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Busca dentro de tu historial sin llenar la pantalla de ruido.')).toBeInTheDocument());
-    expect(screen.queryByPlaceholderText('Telefono vendedor')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Teléfono vendedor')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Ver filtros por contraparte/i }));
 
-    expect(screen.getByPlaceholderText('Telefono vendedor')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Telefono comprador')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Teléfono vendedor')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Teléfono comprador')).toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText('Buscar general'), { target: { value: 'Carlos' } });
 

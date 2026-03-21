@@ -50,7 +50,7 @@ describe('UsersPage', () => {
               status: 'PENDING',
               user: { email: 'pending@example.com' },
               person: { name: 'Rosa Martinez' },
-              notes: 'Esperando revision',
+              notes: 'Esperando revisión',
             },
           ],
         });
@@ -63,7 +63,7 @@ describe('UsersPage', () => {
     mockPost.mockResolvedValue({ data: {} });
   });
 
-  it('renders queue-first admin supervision with linked person data', async () => {
+  it('renders queue-first admin supervisión with linked person data', async () => {
     render(
       <MemoryRouter>
         <UsersPage />
@@ -71,10 +71,10 @@ describe('UsersPage', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Cuentas y vinculaciones')).toBeInTheDocument());
-    expect(screen.getByText('Solicitudes de vinculacion pendientes')).toBeInTheDocument();
+    expect(screen.getByText('Solicitudes de vinculación pendientes')).toBeInTheDocument();
     expect(screen.getByText(/pending@example.com/i)).toBeInTheDocument();
     expect(screen.getByText(/Rosa Martinez/i)).toBeInTheDocument();
-    expect(screen.getByText('Gestion de cuentas')).toBeInTheDocument();
+    expect(screen.getByText('Gestión de cuentas')).toBeInTheDocument();
     expect(screen.getAllByText('client@example.com').length).toBeGreaterThan(0);
     expect(screen.getByText('Carlos Gomez')).toBeInTheDocument();
     expect(screen.getByText('311111')).toBeInTheDocument();

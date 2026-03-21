@@ -7,7 +7,7 @@ import FeedbackBanner from '../components/FeedbackBanner';
 import { getSession } from '../utils/authSession';
 
 const ONE_TIME_MSG =
-  'Tu solicitud de vinculacion ya fue utilizada. Si necesitas hacer una correccion, por favor comunicate con atencion al cliente o con el administrador.';
+  'Tu solicitud de vinculación ya fue utilizada. Si necesitas hacer una corrección, por favor comunícate con atención al cliente o con el administrador.';
 
 const toneStyles = {
   amber: {
@@ -60,7 +60,7 @@ function SectionCard({ icon, eyebrow, title, description, tone = 'amber', classN
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className={`text-sm font-medium uppercase tracking-[0.22em] ${palette.eyebrow}`}>{eyebrow}</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
+          <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
           <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">{description}</p>
         </div>
         <div className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${palette.icon}`}>
@@ -108,7 +108,7 @@ export default function SettingsPage() {
 
         setSettings(null);
         setClientLink(null);
-        setLoadError(error.response?.data?.message || 'No se pudo cargar configuracion.');
+        setLoadError(error.response?.data?.message || 'No se pudo cargar configuración.');
         return;
       }
 
@@ -126,7 +126,7 @@ export default function SettingsPage() {
       } catch (error) {
         if (cancelled) return;
         setClientLink(null);
-        setLoadError(error.response?.data?.message || 'No se pudo cargar estado de vinculacion.');
+        setLoadError(error.response?.data?.message || 'No se pudo cargar estado de vinculación.');
       }
     }, 0);
 
@@ -152,13 +152,13 @@ export default function SettingsPage() {
 
   const submitLinkRequest = async () => {
     if (!selectedPerson?.id) {
-      setFeedback({ type: 'error', message: 'Selecciona una persona para solicitar vinculacion.' });
+      setFeedback({ type: 'error', message: 'Selecciona una persona para solicitar vinculación.' });
       return;
     }
 
     try {
-      await api.post('/link-requests', { personId: selectedPerson.id, notes: 'Solicitud enviada desde Configuracion' });
-      setFeedback({ type: 'success', message: 'Solicitud de vinculacion enviada.' });
+      await api.post('/link-requests', { personId: selectedPerson.id, notes: 'Solicitud enviada desde Configuración' });
+      setFeedback({ type: 'success', message: 'Solicitud de vinculación enviada.' });
       setSelectedPerson(null);
       reloadSettings();
     } catch (error) {
@@ -172,7 +172,7 @@ export default function SettingsPage() {
         phone: clientProfileForm.phone,
         cedula: clientProfileForm.cedula,
       });
-      setFeedback({ type: 'success', message: 'Telefono y cedula actualizados.' });
+      setFeedback({ type: 'success', message: 'Teléfono y cédula actualizados.' });
       reloadSettings();
     } catch (error) {
       setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar el perfil.' });
@@ -186,9 +186,9 @@ export default function SettingsPage() {
         newPassword: passwordForm.newPassword,
       });
       setPasswordForm({ currentPassword: '', newPassword: '' });
-      setFeedback({ type: 'success', message: 'Contrasena actualizada correctamente.' });
+      setFeedback({ type: 'success', message: 'Contraseña actualizada correctamente.' });
     } catch (error) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar la contrasena.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar la contraseña.' });
     }
   };
 
@@ -197,15 +197,18 @@ export default function SettingsPage() {
   const linkedLabel = clientLinked ? 'Cuenta vinculada' : isClient ? 'Cuenta por vincular' : 'Acceso operativo';
 
   return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-5 shadow-[0_22px_65px_rgba(120,53,15,0.08)] dark:border-zinc-800 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0d1812] dark:shadow-[0_28px_75px_rgba(0,0,0,0.4)]">
+    <div className="space-y-6 stagger">
+      <section className="overflow-hidden rounded-[2rem] border border-stone-200/60 bg-gradient-to-br from-amber-50/80 via-white to-emerald-50/60 p-6 shadow-[0_22px_65px_rgba(120,53,15,0.06)] dark:border-zinc-800/60 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0d1812] dark:shadow-[0_28px_75px_rgba(0,0,0,0.35)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
-              <Sparkles size={14} />
+            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-stone-500 dark:border-zinc-700/60 dark:bg-zinc-950/50 dark:text-zinc-400">
+              <Sparkles size={13} />
               Mi cuenta
             </div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Mi cuenta</h1>
+            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Administra tu cuenta sin perder el contexto operativo.</h1>
+            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+              Este espacio queda para mantenimiento de cuenta, seguridad y vinculación. El seguimiento diario de planillas sigue concentrado en la vista principal.
+            </p>
 
             <div className="mt-5 flex flex-wrap gap-2">
               <StatusChip tone="info">Rol: {settings?.profile?.role || user?.role || '-'}</StatusChip>
@@ -245,15 +248,19 @@ export default function SettingsPage() {
       {isAdmin && (
         <SectionCard
           icon={SlidersHorizontal}
-          eyebrow="Parametros globales"
-          title="Configuracion del sistema"
+          eyebrow="Parámetros globales"
+          title="Configuración del sistema"
+          description="Ajusta el precio base por cabeza sin salir del panel de administración."
           tone="amber"
         >
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div>
-              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-200">Precio global por cabeza</label>
+              <label htmlFor="global-price" className="text-sm font-medium text-zinc-700 dark:text-zinc-200">Precio global por cabeza</label>
               <input
-                className="mt-2 w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+                id="global-price"
+                className="mt-2 w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10"
+                type="number"
+                min="0"
                 value={priceInput}
                 onChange={(event) => setPriceInput(event.target.value)}
               />
@@ -261,7 +268,7 @@ export default function SettingsPage() {
 
             <button
               type="button"
-              className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+              className="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400"
               onClick={updateGlobalPrice}
             >
               Guardar
@@ -276,27 +283,28 @@ export default function SettingsPage() {
             icon={Phone}
             eyebrow="Datos personales"
             title="Datos de contacto"
+            description="Actualiza teléfono y cédula cuando tu cuenta ya esté correctamente vinculada."
             tone="emerald"
           >
             {!clientLinked && (
               <FeedbackBanner
                 type="warning"
                 className="mb-4"
-                message="Debes vincular tu cuenta a una persona antes de actualizar telefono o cedula."
+                message="Debes vincular tu cuenta a una persona antes de actualizar teléfono o cédula."
               />
             )}
 
             <div className="grid gap-3 md:grid-cols-2">
               <input
                 className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
-                placeholder="Telefono"
+                placeholder="Teléfono"
                 value={clientProfileForm.phone}
                 disabled={!clientLinked}
                 onChange={(event) => setClientProfileForm((prev) => ({ ...prev, phone: event.target.value }))}
               />
               <input
                 className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
-                placeholder="Cedula"
+                placeholder="Cédula"
                 value={clientProfileForm.cedula}
                 disabled={!clientLinked}
                 onChange={(event) => setClientProfileForm((prev) => ({ ...prev, cedula: event.target.value }))}
@@ -305,7 +313,7 @@ export default function SettingsPage() {
 
             <button
               type="button"
-              className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400"
               onClick={submitClientProfile}
               disabled={!clientLinked}
             >
@@ -316,21 +324,24 @@ export default function SettingsPage() {
           <SectionCard
             icon={KeyRound}
             eyebrow="Seguridad"
-            title="Cambiar contrasena"
+            title="Cambiar contraseña"
+            description="Actualiza tu acceso con una nueva contraseña manteniendo la validación de la contraseña actual."
             tone="blue"
           >
             <div className="grid gap-3 md:grid-cols-2">
               <input
-                className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+                className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10"
                 type="password"
-                placeholder="Contrasena actual"
+                placeholder="Contraseña actual"
+                aria-label="Contraseña actual"
                 value={passwordForm.currentPassword}
                 onChange={(event) => setPasswordForm((prev) => ({ ...prev, currentPassword: event.target.value }))}
               />
               <input
-                className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+                className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10"
                 type="password"
-                placeholder="Nueva contrasena"
+                placeholder="Nueva contraseña"
+                aria-label="Nueva contraseña"
                 value={passwordForm.newPassword}
                 onChange={(event) => setPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))}
               />
@@ -338,17 +349,18 @@ export default function SettingsPage() {
 
             <button
               type="button"
-              className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 sm:w-auto dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 sm:w-auto dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400"
               onClick={submitOwnPassword}
             >
-              Actualizar contrasena
+              Actualizar contraseña
             </button>
           </SectionCard>
 
           <SectionCard
             icon={Link2}
             eyebrow="Relacion con tu persona"
-            title="Vinculacion de cuenta"
+            title="Vinculación de cuenta"
+            description="Busca una persona existente, revisa el estado de tu solicitud y mantén el proceso claro en todo momento."
             tone="amber"
             className="xl:col-span-2"
           >
@@ -382,7 +394,7 @@ export default function SettingsPage() {
 
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                    className="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400"
                     onClick={submitLinkRequest}
                   >
                     Enviar solicitud
@@ -405,6 +417,7 @@ export default function SettingsPage() {
           icon={UserRound}
           eyebrow="Perfil operativo"
           title="Resumen de cuenta"
+          description="Tu panel ya muestra el estado principal de tu cuenta. Aquí mantendremos futuras opciones específicas de este rol."
           tone="blue"
         >
           <div className="grid gap-3 sm:grid-cols-2">

@@ -10,7 +10,7 @@ function SectionShell({ eyebrow, title, description, children, actions }) {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">{eyebrow}</div>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
+          <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
           {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -20,16 +20,17 @@ function SectionShell({ eyebrow, title, description, children, actions }) {
   );
 }
 
-function StatCard({ icon, label, value }) {
+function StatCard({ icon, label, value, caption }) {
   const CardIcon = icon;
   return (
     <div className="rounded-[1.45rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
-          <div className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
+          <div className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
+          <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{caption}</div>
         </div>
-        <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+        <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-900 text-white dark:bg-amber-500 dark:text-zinc-950">
           <CardIcon size={18} />
         </div>
       </div>
@@ -38,7 +39,7 @@ function StatCard({ icon, label, value }) {
 }
 
 const inputClass =
-  'w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800';
+  'w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10';
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -107,7 +108,7 @@ export default function UsersPage() {
   const createUser = async (event) => {
     event.preventDefault();
     if (!createForm.email || !createForm.password) {
-      setFeedback({ type: 'error', message: 'Correo y contrasena son obligatorios.' });
+      setFeedback({ type: 'error', message: 'Correo y contraseña son obligatorios.' });
       return;
     }
     setCreateLoading(true);
@@ -176,15 +177,15 @@ export default function UsersPage() {
 
   const submitManualPassword = async () => {
     if (!manualPassword.userId || !manualPassword.newPassword) {
-      setFeedback({ type: 'error', message: 'Selecciona una cuenta y una nueva contrasena.' });
+      setFeedback({ type: 'error', message: 'Selecciona una cuenta y una nueva contraseña.' });
       return;
     }
     try {
       await api.patch(`/users/${manualPassword.userId}/password`, { newPassword: manualPassword.newPassword });
       setManualPassword({ userId: '', newPassword: '' });
-      setFeedback({ type: 'success', message: 'Contrasena actualizada manualmente.' });
+      setFeedback({ type: 'success', message: 'Contraseña actualizada manualmente.' });
     } catch (error) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo cambiar la contrasena.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo cambiar la contraseña.' });
     }
   };
 
@@ -204,29 +205,32 @@ export default function UsersPage() {
   const operatorCount = users.filter((user) => user.role === 'LIQUIDADOR').length;
 
   return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-sky-50 via-white to-amber-50 p-5 shadow-[0_22px_65px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:from-[#0c1620] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <div className="space-y-6 stagger">
+      <section className="overflow-hidden rounded-[2rem] border border-stone-200/60 bg-gradient-to-br from-sky-50/70 via-white to-amber-50/60 p-6 shadow-[0_22px_65px_rgba(15,23,42,0.06)] dark:border-zinc-800/60 dark:from-[#0c1620] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.35)]">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
-              <Users2 size={14} />
+            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-stone-500 dark:border-zinc-700/60 dark:bg-zinc-950/50 dark:text-zinc-400">
+              <Users2 size={13} />
               Cuentas y vinculaciones
             </div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Cuentas y vinculaciones</h1>
+            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Atiende primero la cola de vinculaciones y después el mantenimiento de cuentas.</h1>
+            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+              Esta pantalla agrupa la supervisión de cuentas, la aprobación de solicitudes y las herramientas de soporte sin darle el mismo peso a todo.
+            </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[500px]">
-            <StatCard icon={ShieldCheck} label="Pendientes" value={pendingRequests.length} />
-            <StatCard icon={Users2} label="Cuentas" value={users.length} />
-            <StatCard icon={UserRound} label="Clientes" value={clientCount} />
-            <StatCard icon={Link2} label="Liquidadores" value={operatorCount} />
+            <StatCard icon={ShieldCheck} label="Pendientes" value={pendingRequests.length} caption="Solicitudes esperando revisión." />
+            <StatCard icon={Users2} label="Cuentas" value={users.length} caption={loading ? 'Actualizando listado...' : 'Cuentas visibles con los filtros actuales.'} />
+            <StatCard icon={UserRound} label="Clientes" value={clientCount} caption="Cuentas CLIENT disponibles." />
+            <StatCard icon={Link2} label="Liquidadores" value={operatorCount} caption="Cuentas LIQUIDADOR activas." />
           </div>
         </div>
       </section>
 
       <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
 
-      <SectionShell eyebrow="Cola principal" title="Solicitudes pendientes">
+      <SectionShell eyebrow="Cola principal" title="Solicitudes de vinculación pendientes" description="Resuelve primero esta cola porque desbloquea la experiencia del cliente y reduce consultas de soporte.">
         <div className="space-y-3">
           {pendingRequests.length === 0 && <div className="rounded-[1.35rem] border border-dashed border-zinc-300/90 bg-zinc-50/80 px-4 py-5 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">No hay solicitudes pendientes en este momento.</div>}
           {pendingRequests.map((item) => (
@@ -246,11 +250,11 @@ export default function UsersPage() {
         </div>
       </SectionShell>
 
-      <SectionShell eyebrow="Gestion de cuentas" title="Crear y administrar cuentas">
+      <SectionShell eyebrow="Gestión de cuentas" title="Crear cuentas y revisar acceso operativo" description="Despues de la cola principal, crea o ajusta cuentas CLIENT y LIQUIDADOR sin tocar privilegios ADMIN.">
         <form onSubmit={createUser} className="grid gap-4 rounded-[1.5rem] border border-zinc-200/80 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
           <div className="grid gap-4 md:grid-cols-2">
             <input className={inputClass} placeholder="Correo" value={createForm.email} onChange={(event) => setCreateForm((prev) => ({ ...prev, email: event.target.value }))} />
-            <input className={inputClass} type="password" placeholder="Contrasena" value={createForm.password} onChange={(event) => setCreateForm((prev) => ({ ...prev, password: event.target.value }))} />
+            <input className={inputClass} type="password" placeholder="Contraseña" value={createForm.password} onChange={(event) => setCreateForm((prev) => ({ ...prev, password: event.target.value }))} />
             <select className={inputClass} value={createForm.role} onChange={(event) => setCreateForm((prev) => ({ ...prev, role: event.target.value }))}>
               <option value="CLIENT">CLIENT</option>
               <option value="LIQUIDADOR">LIQUIDADOR</option>
@@ -263,7 +267,7 @@ export default function UsersPage() {
           </div>
 
           <div className="flex justify-end">
-            <button className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200" disabled={createLoading}>
+            <button className="inline-flex items-center gap-2 rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400" disabled={createLoading}>
               <PlusCircle size={16} />
               {createLoading ? 'Creando...' : 'Crear cuenta'}
             </button>
@@ -312,7 +316,7 @@ export default function UsersPage() {
                       ) : editing ? (
                         <div className="flex justify-end gap-2">
                           <button className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" onClick={() => setEditingUserId(null)} type="button">Cancelar</button>
-                          <button className="rounded-2xl bg-zinc-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200" onClick={() => saveEdit(currentUser.id)} type="button">Guardar</button>
+                          <button className="rounded-xl bg-emerald-900 px-3 py-2 text-xs font-semibold text-white shadow-sm shadow-emerald-900/15 transition hover:bg-emerald-800 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/10 dark:hover:bg-amber-400" onClick={() => saveEdit(currentUser.id)} type="button">Guardar</button>
                         </div>
                       ) : (
                         <button className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" onClick={() => startEdit(currentUser)} type="button">Editar</button>
@@ -327,7 +331,7 @@ export default function UsersPage() {
       </SectionShell>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <SectionShell eyebrow="Herramienta secundaria" title="Vinculacion manual">
+        <SectionShell eyebrow="Herramienta secundaria" title="Vinculación manual" description="Usala cuando necesites corregir o completar una relación cuenta-persona fuera de la cola principal.">
           <div className="grid gap-4">
             <select className={inputClass} value={linking.userId} onChange={(event) => setLinking((prev) => ({ ...prev, userId: event.target.value }))}>
               <option value="">Seleccionar cuenta</option>
@@ -341,17 +345,17 @@ export default function UsersPage() {
           </div>
         </SectionShell>
 
-        <SectionShell eyebrow="Herramienta secundaria" title="Soporte de contrasenas">
+        <SectionShell eyebrow="Herramienta secundaria" title="Soporte de contraseñas" description="Mantiene disponibles el cambio manual y la generacion de enlaces, pero con menos peso visual que la cola principal.">
           <div className="space-y-4">
             <div className="grid gap-4">
               <select className={inputClass} value={manualPassword.userId} onChange={(event) => setManualPassword((prev) => ({ ...prev, userId: event.target.value }))}>
                 <option value="">Seleccionar cuenta</option>
                 {users.map((currentUser) => <option key={currentUser.id} value={currentUser.id}>{currentUser.email}</option>)}
               </select>
-              <input className={inputClass} type="password" placeholder="Nueva contrasena manual" value={manualPassword.newPassword} onChange={(event) => setManualPassword((prev) => ({ ...prev, newPassword: event.target.value }))} />
+              <input className={inputClass} type="password" placeholder="Nueva contraseña manual" value={manualPassword.newPassword} onChange={(event) => setManualPassword((prev) => ({ ...prev, newPassword: event.target.value }))} />
               <button className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" type="button" onClick={submitManualPassword}>
                 <KeyRound size={16} />
-                Cambiar contrasena
+                Cambiar contraseña
               </button>
             </div>
 

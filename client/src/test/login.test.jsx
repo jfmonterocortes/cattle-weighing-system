@@ -42,6 +42,6 @@ describe('Login page', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Contrasena restablecida correctamente. Ya puedes iniciar sesion.')).toBeInTheDocument();
+    expect(screen.getByText('Contraseña restablecida correctamente. Ya puedes iniciar sesión.')).toBeInTheDocument();
   });
 });

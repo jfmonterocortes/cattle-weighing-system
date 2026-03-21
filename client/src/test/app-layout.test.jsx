@@ -52,7 +52,7 @@ describe('AppLayout', () => {
     expect(screen.getByText('Registrar planilla')).toBeInTheDocument();
     expect(screen.getByText('Cuentas y vinculaciones')).toBeInTheDocument();
     expect(screen.getByText('Mi cuenta')).toBeInTheDocument();
-    expect(screen.getByText('admin@bascula.com')).toBeInTheDocument();
-    expect(screen.getByText('Supervision operativa y control')).toBeInTheDocument();
+    expect(screen.getByTitle('admin@bascula.com')).toBeInTheDocument();
+    expect(screen.getByText('Supervisión operativa y control')).toBeInTheDocument();
   });
 });
