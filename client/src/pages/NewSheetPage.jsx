@@ -105,17 +105,14 @@ export default function NewSheetPage() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-sky-50 via-white to-amber-50 p-6 shadow-[0_22px_65px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:from-[#0c1620] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-sky-50 via-white to-amber-50 p-5 shadow-[0_22px_65px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:from-[#0c1620] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
               <ClipboardPenLine size={14} />
               Registrar planilla
             </div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Empieza por vendedor y comprador, y sigue al detalle sin perder tiempo.</h1>
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
-              La captura principal se resuelve aqui. Los ajustes opcionales quedan disponibles si necesitas registrar una fecha puntual, un precio distinto o un alias de liquidador.
-            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Registrar planilla</h1>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3 xl:w-[460px]">
@@ -131,10 +128,7 @@ export default function NewSheetPage() {
           <section className="rounded-[1.6rem] border border-emerald-200/70 bg-emerald-50/70 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/10">
             <div className="mb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-800 dark:text-emerald-200">Parte vendedora</p>
-              <h2 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Selecciona o crea el vendedor</h2>
-              <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-                Busca una persona existente o crea el registro minimo sin salir del flujo de captura.
-              </p>
+              <h2 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Vendedor</h2>
             </div>
 
             <PersonAutocomplete
@@ -155,10 +149,7 @@ export default function NewSheetPage() {
           <section className="rounded-[1.6rem] border border-amber-200/70 bg-amber-50/70 p-5 dark:border-amber-500/20 dark:bg-amber-500/10">
             <div className="mb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-800 dark:text-amber-200">Parte compradora</p>
-              <h2 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Selecciona o crea el comprador</h2>
-              <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-                Mantiene el mismo flujo para que la planilla salga lista para continuar con las reses.
-              </p>
+              <h2 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Comprador</h2>
             </div>
 
             <PersonAutocomplete
@@ -188,10 +179,7 @@ export default function NewSheetPage() {
                 <Settings2 size={18} />
               </div>
               <div>
-                <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Ajustes de captura opcionales</div>
-                <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                  Solo abre esta seccion si necesitas registrar una fecha puntual, un precio distinto o un alias operativo.
-                </div>
+                <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Ajustes opcionales</div>
               </div>
             </div>
             <ChevronDown
@@ -234,10 +222,6 @@ export default function NewSheetPage() {
             </div>
           )}
         </section>
-
-        <div className="mt-6 rounded-[1.5rem] border border-dashed border-zinc-300/90 bg-zinc-50/90 p-4 text-sm leading-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/50 dark:text-zinc-400">
-          Al guardar, se crea la planilla con estado inicial pendiente y se abre el detalle para continuar con las reses, el pago y la exportacion.
-        </div>
 
         <div className="mt-5 flex flex-col gap-4 border-t border-zinc-200/80 pt-5 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
           <div className="min-w-0 flex-1">

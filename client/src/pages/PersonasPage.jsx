@@ -107,17 +107,14 @@ export default function PersonasPage() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-6 shadow-[0_22px_65px_rgba(16,185,129,0.08)] dark:border-zinc-800 dark:from-[#0d1812] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-5 shadow-[0_22px_65px_rgba(16,185,129,0.08)] dark:border-zinc-800 dark:from-[#0d1812] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.42)]">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
               <Users2 size={14} />
-              Directorio operativo
+              Directorio
             </div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Gestiona el directorio de vendedores y compradores con la vinculacion a la vista.</h1>
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
-              Las personas son la base de las planillas y de la visibilidad para clientes. Mantener este directorio claro evita errores de captura y problemas de enlace.
-            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Personas</h1>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[430px]">
@@ -136,7 +133,7 @@ export default function PersonasPage() {
       <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
       <FeedbackBanner message={state.error} type="error" />
 
-      <SectionShell eyebrow="Busqueda y permisos" title="Busca rapido y edita segun tu rol" description={isAdmin ? 'Como ADMIN puedes crear personas y editar nombre, telefono y cedula.' : 'Como LIQUIDADOR puedes usar el directorio y corregir contacto o cedula sin cambiar el nombre base.'}>
+      <SectionShell eyebrow="Busqueda" title="Buscar personas">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
           <div className="flex gap-3">
             <div className="relative w-full">
@@ -150,7 +147,7 @@ export default function PersonasPage() {
         </div>
       </SectionShell>
 
-      <SectionShell eyebrow="Alta de persona" title="Agregar un nuevo actor al directorio" description="Crea rapidamente la persona cuando no exista todavia en el flujo operativo.">
+      <SectionShell eyebrow="Alta" title="Agregar persona">
         <form onSubmit={createPerson} className="grid gap-4 md:grid-cols-4">
           <input className={inputClass} placeholder="Nombre" value={createForm.name} onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))} />
           <input className={inputClass} placeholder="Telefono" value={createForm.phone} onChange={(event) => setCreateForm((prev) => ({ ...prev, phone: event.target.value }))} />
@@ -159,7 +156,7 @@ export default function PersonasPage() {
         </form>
       </SectionShell>
 
-      <SectionShell eyebrow="Listado" title="Personas del directorio" description="Consulta vinculos, contacto y datos base sin perder la vista de las personas mas importantes para las planillas.">
+      <SectionShell eyebrow="Listado" title="Directorio">
         <div className="overflow-x-auto rounded-[1.5rem] border border-zinc-200/80 dark:border-zinc-800">
           <table className="w-full text-sm">
             <thead className="bg-zinc-50/90 text-left text-zinc-500 dark:bg-zinc-950/40 dark:text-zinc-400">

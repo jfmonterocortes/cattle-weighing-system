@@ -198,17 +198,14 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-6 shadow-[0_22px_65px_rgba(120,53,15,0.08)] dark:border-zinc-800 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0d1812] dark:shadow-[0_28px_75px_rgba(0,0,0,0.4)]">
+      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-5 shadow-[0_22px_65px_rgba(120,53,15,0.08)] dark:border-zinc-800 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0d1812] dark:shadow-[0_28px_75px_rgba(0,0,0,0.4)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
               <Sparkles size={14} />
               Mi cuenta
             </div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Administra tu cuenta sin perder el contexto operativo.</h1>
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
-              Este espacio queda para mantenimiento de cuenta, seguridad y vinculacion. El seguimiento diario de planillas sigue concentrado en la vista principal.
-            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Mi cuenta</h1>
 
             <div className="mt-5 flex flex-wrap gap-2">
               <StatusChip tone="info">Rol: {settings?.profile?.role || user?.role || '-'}</StatusChip>
@@ -250,7 +247,6 @@ export default function SettingsPage() {
           icon={SlidersHorizontal}
           eyebrow="Parametros globales"
           title="Configuracion del sistema"
-          description="Ajusta el precio base por cabeza sin salir del panel de administracion."
           tone="amber"
         >
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
@@ -280,7 +276,6 @@ export default function SettingsPage() {
             icon={Phone}
             eyebrow="Datos personales"
             title="Datos de contacto"
-            description="Actualiza telefono y cedula cuando tu cuenta ya este correctamente vinculada."
             tone="emerald"
           >
             {!clientLinked && (
@@ -322,7 +317,6 @@ export default function SettingsPage() {
             icon={KeyRound}
             eyebrow="Seguridad"
             title="Cambiar contrasena"
-            description="Actualiza tu acceso con una nueva contrasena manteniendo la validacion de la contrasena actual."
             tone="blue"
           >
             <div className="grid gap-3 md:grid-cols-2">
@@ -355,7 +349,6 @@ export default function SettingsPage() {
             icon={Link2}
             eyebrow="Relacion con tu persona"
             title="Vinculacion de cuenta"
-            description="Busca una persona existente, revisa el estado de tu solicitud y manten el proceso claro en todo momento."
             tone="amber"
             className="xl:col-span-2"
           >
@@ -412,7 +405,6 @@ export default function SettingsPage() {
           icon={UserRound}
           eyebrow="Perfil operativo"
           title="Resumen de cuenta"
-          description="Tu panel ya muestra el estado principal de tu cuenta. Aqui mantendremos futuras opciones especificas de este rol."
           tone="blue"
         >
           <div className="grid gap-3 sm:grid-cols-2">

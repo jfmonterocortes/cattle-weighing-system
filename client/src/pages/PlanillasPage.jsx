@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import FeedbackBanner from '../components/FeedbackBanner';
 import { getSession } from '../utils/authSession';
+import { fmtCurrency, fmtNumber, fmtWeight } from '../utils/format';
 
 function parseFilters(input) {
   return {
@@ -20,7 +21,7 @@ function parseFilters(input) {
   };
 }
 
-function SummaryCard({ icon, label, value, caption }) {
+function SummaryCard({ icon, label, value }) {
   const CardIcon = icon;
 
   return (
@@ -28,8 +29,7 @@ function SummaryCard({ icon, label, value, caption }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
-          <div className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
-          <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{caption}</div>
+          <div className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
         </div>
         <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
           <CardIcon size={18} />
@@ -278,48 +278,23 @@ export default function PlanillasPage() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-6 shadow-[0_22px_65px_rgba(120,53,15,0.08)] dark:border-zinc-800 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0d1812] dark:shadow-[0_28px_75px_rgba(0,0,0,0.4)]">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+      <section className="overflow-hidden rounded-[2rem] border border-zinc-200/80 bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-5 shadow-[0_22px_65px_rgba(120,53,15,0.08)] dark:border-zinc-800 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0d1812] dark:shadow-[0_28px_75px_rgba(0,0,0,0.4)]">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-200">
               <FileStack size={14} />
-              Centro de planillas
+              {isClient ? 'Mis planillas' : 'Planillas'}
             </div>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {isClient ? 'Mis planillas con lectura mas clara.' : 'Planillas listas para filtrar, revisar y exportar.'}
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {isClient ? 'Mis planillas' : 'Planillas'}
             </h2>
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
-              {isClient
-                ? 'Consulta tu historial, revisa pagos pendientes y entra rapido al detalle de cada movimiento.'
-                : 'Cruza vendedor, comprador, telefono, fechas y estado de pago desde una sola vista con contexto inmediato.'}
-            </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[480px]">
-            <SummaryCard
-              icon={FileStack}
-              label={isClient ? 'Mis planillas' : 'Totales'}
-              value={state.total}
-              caption={isClient ? 'Total de registros visibles para tu cuenta con los filtros activos.' : 'Resultados disponibles con los filtros actuales.'}
-            />
-            <SummaryCard
-              icon={Wallet}
-              label={isClient ? 'Pendientes' : 'En pagina'}
-              value={isClient ? unpaidCount : state.items.length}
-              caption={isClient ? 'Planillas de esta pagina que aun esperan pago.' : `Pagina ${state.page} de ${state.totalPages}`}
-            />
-            <SummaryCard
-              icon={CalendarDays}
-              label={isClient ? 'Pagadas' : 'Pagadas'}
-              value={paidCount}
-              caption={isClient ? 'Registros de esta pagina que ya fueron marcados como pagados.' : 'Registros marcados como pagados en esta pagina.'}
-            />
-            <SummaryCard
-              icon={Search}
-              label={isClient ? 'Ultimo movimiento' : 'Pendientes'}
-              value={isClient ? (clientVisibleLatestDate ? clientVisibleLatestDate.toLocaleDateString() : '-') : unpaidCount}
-              caption={isClient ? 'Fecha mas reciente dentro de lo que estas viendo ahora.' : 'Registros que aun requieren seguimiento de pago.'}
-            />
+            <SummaryCard icon={FileStack} label={isClient ? 'Mis planillas' : 'Totales'} value={fmtNumber(state.total)} />
+            <SummaryCard icon={Wallet} label={isClient ? 'Pendientes' : 'En pagina'} value={fmtNumber(isClient ? unpaidCount : state.items.length)} />
+            <SummaryCard icon={CalendarDays} label="Pagadas" value={fmtNumber(paidCount)} />
+            <SummaryCard icon={Search} label={isClient ? 'Ultimo movimiento' : 'Pendientes'} value={isClient ? (clientVisibleLatestDate ? clientVisibleLatestDate.toLocaleDateString() : '-') : fmtNumber(unpaidCount)} />
           </div>
         </div>
       </section>
@@ -338,10 +313,10 @@ export default function PlanillasPage() {
               </h3>
               <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
                 {clientLinked
-                  ? 'Tu historial y el estado de pago de tus planillas aparecen aqui. Usa Mi cuenta solo cuando necesites actualizar datos o seguridad.'
+                  ? 'Tu historial y pagos aparecen aqui.'
                   : clientPendingLink
-                    ? 'La solicitud ya fue enviada. Cuando el administrador la apruebe, tus planillas apareceran automaticamente en esta vista.'
-                    : 'Todavia no podemos mostrarte planillas porque la cuenta no esta asociada a la persona correcta dentro del directorio operativo.'}
+                    ? 'Cuando el administrador apruebe tu solicitud, tus planillas apareceran aqui.'
+                    : 'Vincula tu cuenta en Mi cuenta para ver tus planillas.'}
               </p>
             </div>
 
@@ -369,26 +344,10 @@ export default function PlanillasPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <ClientStatusMetric
-                  label="Persona"
-                  value={clientProfile?.person?.name || (clientPendingLink ? 'En revision' : 'Pendiente de vincular')}
-                  caption={clientLinked ? 'Nombre asociado a la cuenta.' : 'Estado actual de la vinculacion.'}
-                />
-                <ClientStatusMetric
-                  label="Pendientes visibles"
-                  value={unpaidCount}
-                  caption="Planillas de esta pagina que aun no figuran como pagadas."
-                />
-                <ClientStatusMetric
-                  label="Ultima fecha visible"
-                  value={clientVisibleLatestDate ? clientVisibleLatestDate.toLocaleDateString() : '-'}
-                  caption="Sirve para ubicar rapido el movimiento mas reciente."
-                />
-                <ClientStatusMetric
-                  label="Pagina actual"
-                  value={`${state.page}/${state.totalPages}`}
-                  caption="Navega tu historial sin perder contexto."
-                />
+                <ClientStatusMetric label="Persona" value={clientProfile?.person?.name || (clientPendingLink ? 'En revision' : 'Pendiente')} />
+                <ClientStatusMetric label="Pendientes" value={unpaidCount} />
+                <ClientStatusMetric label="Ultimo movimiento" value={clientVisibleLatestDate ? clientVisibleLatestDate.toLocaleDateString() : '-'} />
+                <ClientStatusMetric label="Pagina" value={`${state.page}/${state.totalPages}`} />
               </div>
             </div>
           </div>
@@ -435,36 +394,25 @@ export default function PlanillasPage() {
         </section>
       )}
 
-      <section className="rounded-[1.9rem] border border-zinc-200/80 bg-white/90 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-300">
-              <Filter size={14} />
-              Filtros y busqueda
-            </div>
-            <h3 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {isClient ? 'Busca dentro de tu historial sin llenar la pantalla de ruido.' : 'Encuentra la planilla correcta sin perder tiempo.'}
-            </h3>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-              {isClient
-                ? 'La busqueda general, la fecha y el pago quedan primero. Los filtros por contrapartes siguen disponibles cuando realmente los necesites.'
-                : 'Ajusta los criterios que necesites y limpia la vista en un clic cuando quieras volver al panorama general.'}
-            </p>
+      <section className="rounded-[1.9rem] border border-zinc-200/80 bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            <Filter size={14} className="text-zinc-500" />
+            Filtros
           </div>
-
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={clearFilters}
-              className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"
+              className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"
             >
-              Limpiar filtros
+              Limpiar
             </button>
             {isAdmin && (
               <button
                 type="button"
                 onClick={exportExcel}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
               >
                 <Download size={16} />
                 Exportar Excel
@@ -520,12 +468,7 @@ export default function PlanillasPage() {
 
             <div className="rounded-[1.45rem] border border-zinc-200/80 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/35">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Filtros secundarios</div>
-                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                    Usa contrapartes o telefonos solo cuando quieras ubicar una planilla muy puntual.
-                  </p>
-                </div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Filtros por contraparte</div>
                 <button
                   type="button"
                   onClick={() => setShowClientAdvancedFilters((value) => !value)}
@@ -661,21 +604,14 @@ export default function PlanillasPage() {
       <FeedbackBanner message={state.error} type="error" />
 
       <section className="overflow-hidden rounded-[1.9rem] border border-zinc-200/80 bg-white/90 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
-        <div className="flex flex-col gap-3 border-b border-zinc-200/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
+        <div className="flex items-center justify-between border-b border-zinc-200/80 px-5 py-4 dark:border-zinc-800">
           <div>
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              {state.loading ? 'Cargando planillas...' : isClient ? 'Tu historial listo para revisar.' : 'Resultados listos para revisar.'}
+              {state.loading ? 'Cargando...' : 'Resultados'}
             </h3>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              {state.loading
-                ? 'Actualizando la tabla con tus filtros.'
-                : isClient
-                  ? `${state.items.length} planillas visibles en esta pagina / ${state.total} en total`
-                  : `${state.items.length} planillas en pagina / ${state.total} totales`}
+            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
+              {state.loading ? 'Actualizando...' : `${fmtNumber(state.items.length)} en pagina / ${fmtNumber(state.total)} totales`}
             </p>
-          </div>
-          <div className="text-sm text-zinc-500 dark:text-zinc-400">
-            {isClient ? 'Empieza por las pendientes y entra al detalle cuando necesites validar el movimiento.' : 'Navega entre paginas y entra al detalle de cada registro.'}
           </div>
         </div>
 
@@ -711,14 +647,13 @@ export default function PlanillasPage() {
                   </div>
 
                   <div className="grid gap-2 sm:grid-cols-3">
-                    <QueueSummaryItem label="Cabezas" value={sheet.headCount} />
-                    <QueueSummaryItem label="Peso total" value={sheet.totalWeight} />
-                    <QueueSummaryItem label="Valor total" value={sheet.totalValue} />
+                    <QueueSummaryItem label="Cabezas" value={fmtNumber(sheet.headCount)} />
+                    <QueueSummaryItem label="Peso total" value={fmtWeight(sheet.totalWeight)} />
+                    <QueueSummaryItem label="Valor total" value={fmtCurrency(sheet.totalValue)} />
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 dark:text-zinc-500">
-                    {!isClient && <span>{new Date(sheet.date).toLocaleString()}</span>}
-                    {isClient && <span>Movimiento registrado el {new Date(sheet.date).toLocaleString()}</span>}
+                    <span>{new Date(sheet.date).toLocaleString()}</span>
                     {!isClient && sheet.liquidadorAliasSnapshot && <span>Liquidador: {sheet.liquidadorAliasSnapshot}</span>}
                     {isLiquidador && sheet.editableUntilByLiquidador && (
                       <span>Ventana: hasta {new Date(sheet.editableUntilByLiquidador).toLocaleTimeString()}</span>
