@@ -1,33 +1,56 @@
-const { M, CW, SP, FS, BORDER_STRONG, INK_MUTED } = require('../theme');
+const { M, CW, SP, FS, BORDER, BORDER_STRONG, INK_MUTED } = require('../theme');
+const { ensureSpace } = require('../layout');
 
-// Height of the signature zone — must match the SIG_H constant in summary.js
-// so ensureSpace reserves exactly the right amount of space.
-const SIG_ZONE_H = 60;
+const SIG_ZONE_H = 60; // total height consumed by the signature zone (pts)
 
 /**
- * Dashed signature line drawn immediately below the summary box.
+ * Two-panel signature block drawn after the last table row.
  *
- * Uses a fixed SP[3] gap (not doc.moveDown) so the spacing between the
- * summary and the signature is always 12 pt regardless of which font the
- * summary left active.
+ * Reserves enough space to avoid being orphaned at the top of a new page,
+ * then draws a FIRMA Y SELLO box on the left and a SELLO stamp placeholder
+ * on the right.
  *
  * Total height consumed = SP[3] (gap) + SIG_ZONE_H = 72 pt.
- * This must stay ≥ the SIG_H reserved in summary.js (currently 72 pt).
  */
 function drawSignature(doc, sheet) {
+  ensureSpace(doc, SP[3] + SIG_ZONE_H);
   doc.y += SP[3]; // fixed 12 pt gap — no doc.moveDown font dependency
 
-  const y         = doc.y;
-  const lineStart = M + 6;
-  const lineEnd   = M + CW / 2 - SP[5]; // half-width signature box
+  const y = doc.y;
 
-  // Dashed underline
-  doc.moveTo(lineStart, y + 22).lineTo(lineEnd, y + 22)
+  // Layout: FIRMA Y SELLO box (left ~58 %) + gap + SELLO stamp box (right ~38 %)
+  const firmaW = Math.round(CW * 0.58); // ≈ 299 pt
+  const selloW = Math.round(CW * 0.36); // ≈ 186 pt
+  const gap    = CW - firmaW - selloW;  // remaining space as gutter
+  const firmaX = M;
+  const selloX = M + firmaW + gap;
+  const boxH   = 48; // fits within SIG_ZONE_H = 60 with a 12 pt bottom margin
+  const pad    = SP[2]; // 8 pt inner text padding
+
+  // ── FIRMA Y SELLO box ────────────────────────────────────────────────────────
+  doc.rect(firmaX, y, firmaW, boxH).lineWidth(0.5).stroke(BORDER);
+
+  // "FIRMA Y SELLO" eyebrow label
+  doc.fontSize(FS.xxs).font('Helvetica').fillColor(INK_MUTED)
+    .text('FIRMA Y SELLO', firmaX + pad, y + SP[1],
+          { width: firmaW - pad * 2, align: 'center', lineBreak: false });
+
+  // Dashed signature line — inset from box edges
+  const lineY = y + 30;
+  doc.moveTo(firmaX + SP[3], lineY).lineTo(firmaX + firmaW - SP[3], lineY)
      .dash(3, { space: 2 }).lineWidth(0.5).stroke('#aaaaaa').undash();
 
+  // Liquidador alias below the line
   doc.fontSize(FS.xs).font('Helvetica').fillColor(INK_MUTED)
-    .text(`Firma  (${sheet.liquidadorAliasSnapshot})`, lineStart, y + 26,
-          { width: lineEnd - lineStart, lineBreak: false });
+    .text(sheet.liquidadorAliasSnapshot || '', firmaX + pad, lineY + 4,
+          { width: firmaW - pad * 2, align: 'center', lineBreak: false });
+
+  // ── SELLO (stamp) placeholder box ────────────────────────────────────────────
+  doc.rect(selloX, y, selloW, boxH).lineWidth(0.5).stroke(BORDER);
+
+  doc.fontSize(FS.xxs).font('Helvetica').fillColor(INK_MUTED)
+    .text('SELLO', selloX, y + (boxH - doc.currentLineHeight(true)) / 2,
+          { width: selloW, align: 'center', lineBreak: false });
 
   doc.y = y + SIG_ZONE_H;
 }

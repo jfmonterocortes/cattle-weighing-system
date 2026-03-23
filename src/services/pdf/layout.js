@@ -1,4 +1,4 @@
-const { SP } = require('./theme');
+const { SP, M, CW, BORDER_STRONG, ORNAMENT } = require('./theme');
 
 const PAD = SP[2]; // 8 pt — standard inner cell padding
 
@@ -45,4 +45,39 @@ function ensureSpace(doc, neededPts) {
   if (remaining < neededPts) doc.addPage();
 }
 
-module.exports = { cellText, ensureSpace, truncate };
+/**
+ * Ornamental section divider: a hairline rule split at the centre by a small
+ * diamond ornament.  Provides a refined typographic section break without
+ * consuming additional vertical space — draw at the mid-point of the gap
+ * between two sections (does not advance doc.y).
+ *
+ * @param {PDFDocument} doc
+ * @param {number}      y    Absolute Y coordinate of the rule line
+ */
+function drawOrnamentalRule(doc, y) {
+  const midX = M + CW / 2;
+  const gap  = 9;   // half-gap cleared on each side of the diamond
+  const d    = 2.5; // half-diagonal of the diamond (pts)
+
+  doc.save();
+
+  // Left wing
+  doc.moveTo(M, y).lineTo(midX - gap, y)
+     .lineWidth(0.4).stroke(BORDER_STRONG);
+
+  // Diamond ornament (rotated square drawn as a path)
+  doc.moveTo(midX,     y - d)
+     .lineTo(midX + d, y    )
+     .lineTo(midX,     y + d)
+     .lineTo(midX - d, y    )
+     .closePath()
+     .fill(ORNAMENT);
+
+  // Right wing
+  doc.moveTo(midX + gap, y).lineTo(M + CW, y)
+     .lineWidth(0.4).stroke(BORDER_STRONG);
+
+  doc.restore();
+}
+
+module.exports = { cellText, ensureSpace, truncate, drawOrnamentalRule };

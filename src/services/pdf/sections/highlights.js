@@ -6,7 +6,7 @@ const {
 } = require('../theme');
 const { fmtWeight, fmtMoney } = require('../formatters');
 
-const BAND_H   = 54; // hero band height (pts)
+const BAND_H   = 42; // hero band height (pts)
 const ACCENT_H = 3;  // top accent bar height (pts)
 const CELL_W   = CW / 4;
 
@@ -66,11 +66,11 @@ function drawHighlights(doc, stats) {
 
     doc.fontSize(FS.xxs).font('Helvetica').fillColor(cell.labelFg)
       .text(cell.label, cellX + SP[2], eyebrowY,
-            { width: textW, lineBreak: false });
+            { width: textW, align: 'center', lineBreak: false });
 
     doc.fontSize(heroSize).font('Helvetica-Bold').fillColor(cell.fg)
       .text(cell.value, cellX + SP[2], valueY,
-            { width: textW, lineBreak: false });
+            { width: textW, align: 'center', lineBreak: false });
   });
 
   // Inner column separators
@@ -83,7 +83,7 @@ function drawHighlights(doc, stats) {
   // Outer border
   doc.rect(M, y, CW, BAND_H).lineWidth(0.5).stroke(BORDER);
 
-  doc.y = y + BAND_H + SP[3];
+  doc.y = y + BAND_H + SP[4]; // SP[4] = 16 pt — consistent section gap
   doc.fontSize(FS.sm).fillColor(INK).font('Helvetica');
 }
 

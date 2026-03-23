@@ -6,13 +6,13 @@ const { assertCanViewSheet }  = require('./sheet.service');
 
 // ── PDF modules ───────────────────────────────────────────────────────────────
 
-const { M }                         = require('./pdf/theme');
+const { M, PAGE_W, PAGE_H, WARM_WHITE, ROW_H, HDR_ROW_H } = require('./pdf/theme');
 const { drawHeader }                = require('./pdf/sections/header');
 const { drawMetaGrid }              = require('./pdf/sections/meta');
 const { drawHighlights }            = require('./pdf/sections/highlights');
 const { drawTableHeader, drawRow }  = require('./pdf/sections/table');
-const { drawSummary }               = require('./pdf/sections/summary');
 const { drawSignature, drawFooter } = require('./pdf/sections/footer');
+const { drawOrnamentalRule }        = require('./pdf/layout');
 
 // Re-exported so existing test imports keep working without change.
 const { fmtDate, fmtWeight, fmtMoney } = require('./pdf/formatters');
@@ -100,12 +100,38 @@ function buildSheetPdf(sheet) {
     doc.on('end',   ()      => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
+    // Warm page background — drawn before content on every page so all
+    // subsequent fills sit on a refined cream ground rather than raw white.
+    const paintPageBg = () => {
+      doc.save();
+      doc.rect(0, 0, PAGE_W, PAGE_H).fill(WARM_WHITE);
+      doc.restore();
+    };
+    paintPageBg(); // first page (already created by constructor)
+    doc.on('pageAdded', paintPageBg);
+
     drawHeader(doc, sheet);
     drawMetaGrid(doc, sheet);
+    drawOrnamentalRule(doc, doc.y - 8); // centred in the gap between meta and highlights
     drawHighlights(doc, stats);
-    drawTableHeader(doc);
-    sheet.rows.forEach((row, i) => drawRow(doc, row, i));
-    drawSummary(doc, stats, sheet);
+    drawOrnamentalRule(doc, doc.y - 8); // centred in the gap between highlights and table
+    // Table uses pre-numbered 30-slot blocks, one block per page.
+    // Before each block we check whether HDR_ROW_H + 30×ROW_H fits in the
+    // remaining space; if not, a new page is added.  Unused slots within a
+    // block are drawn as blank rows so every page shows a complete grid.
+    const BLOCK  = 30;
+    const blockH = HDR_ROW_H + BLOCK * ROW_H;
+    const blockCount = Math.ceil(Math.max(sheet.rows.length, 1) / BLOCK);
+
+    for (let b = 0; b < blockCount; b++) {
+      const remaining = doc.page.height - doc.y - doc.page.margins.bottom;
+      if (remaining < blockH) doc.addPage();
+      drawTableHeader(doc);
+      for (let i = 0; i < BLOCK; i++) {
+        const slotIndex = b * BLOCK + i;
+        drawRow(doc, sheet.rows[slotIndex] ?? null, slotIndex);
+      }
+    }
     drawSignature(doc, sheet);
 
     // Post-pass: stamp page numbers now that the total count is known.

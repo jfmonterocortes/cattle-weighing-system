@@ -30,7 +30,7 @@ const FS = {
 
 // ── Table geometry ────────────────────────────────────────────────────────────
 
-const ROW_H     = 18;  // body row height
+const ROW_H     = 16;  // body row height
 const HDR_ROW_H = 22;  // column header row height
 
 // ── Brand palette ─────────────────────────────────────────────────────────────
@@ -42,9 +42,9 @@ const BRAND_LIGHT = '#eaf1eb';  // very light green — cell backgrounds, tints
 
 // ── Semantic colours ──────────────────────────────────────────────────────────
 
-const GOLD        = '#b07d00';  // paid / positive — text/icon
+const GOLD        = '#9a6200';  // paid / positive — text/icon (rich amber)
 const GOLD_STROKE = '#c9960a';  // paid — pill border
-const GOLD_BG     = '#fdf8e6';  // paid — pill / highlight background
+const GOLD_BG     = '#fef3c7';  // paid — pill / highlight background
 
 const RED         = '#8b1c1c';  // unpaid / alert — text/icon
 const RED_STROKE  = '#c0392b';  // unpaid — pill border
@@ -52,7 +52,7 @@ const RED_BG      = '#fef2f2';  // unpaid — pill / highlight background
 
 // ── Neutral surface palette ───────────────────────────────────────────────────
 
-const SURFACE       = '#f7f9f7';  // alternating table row tint
+const SURFACE       = '#ebf3ec';  // alternating table row tint (distinct light green)
 const BORDER        = '#dde5de';  // standard hairline borders
 const BORDER_STRONG = '#b4c2b5';  // heavier separators, rules
 
@@ -62,6 +62,11 @@ const INK       = '#0f1a10';  // near-black primary text
 const INK_MID   = '#435044';  // medium contrast secondary text
 const INK_MUTED = '#7c8e7d';  // muted labels, footers
 const WHITE     = '#ffffff';
+
+// ── Document atmosphere ───────────────────────────────────────────────────────
+
+const WARM_WHITE = '#fafaf8';  // warm cream — page bg and "white" table row fills
+const ORNAMENT   = '#4d8c57';  // medium green — ornamental diamond dividers
 
 // ── Table column definitions ──────────────────────────────────────────────────
 // x values are absolute page coordinates (left margin M is included).
@@ -73,11 +78,11 @@ const WHITE     = '#ffffff';
 //   Letras widened from 115.28→140.28: letter codes can be multi-character.
 
 const COLS = [
-  { x: M,           w: 30,     label: '#',              align: 'right' },
-  { x: M + 30,      w: 185,    label: 'Especificacion', align: 'left'  },
-  { x: M + 215,     w: 80,     label: 'Kilos',          align: 'right' },
-  { x: M + 295,     w: 80,     label: 'No. Res',        align: 'right' },
-  { x: M + 375,     w: 140.28, label: 'Letras',         align: 'left'  },
+  { x: M,           w: 30,     label: '#',              align: 'center' },
+  { x: M + 30,      w: 185,    label: 'Especificacion', align: 'center' },
+  { x: M + 215,     w: 80,     label: 'Kilos',          align: 'center' },
+  { x: M + 295,     w: 80,     label: 'No. Res',        align: 'center' },
+  { x: M + 375,     w: 140.28, label: 'Letras',         align: 'center' },
 ];
 
 module.exports = {
@@ -88,5 +93,6 @@ module.exports = {
   RED, RED_STROKE, RED_BG,
   SURFACE, BORDER, BORDER_STRONG,
   INK, INK_MID, INK_MUTED, WHITE,
+  WARM_WHITE, ORNAMENT,
   COLS,
 };

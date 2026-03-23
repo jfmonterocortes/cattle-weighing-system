@@ -3,7 +3,7 @@ const {
   BRAND, BRAND_LIGHT,
   GOLD, GOLD_BG,
   SURFACE, BORDER, BORDER_STRONG,
-  INK, INK_MID, INK_MUTED, WHITE,
+  WARM_WHITE, INK, INK_MID, INK_MUTED, WHITE,
 } = require('../theme');
 const { fmtWeight, fmtMoney } = require('../formatters');
 const { ensureSpace }         = require('../layout');
@@ -113,14 +113,14 @@ function drawSummary(doc, stats, sheet) {
   doc.fontSize(FS.xs).font('Helvetica-Bold').fillColor(WHITE);
   doc.text('RESUMEN DE OPERACION',
            M + SP[3], y + (SBAR_H - doc.currentLineHeight(true)) / 2,
-           { width: CW - SP[3] * 2, lineBreak: false });
+           { width: CW - SP[3] * 2, align: 'center', lineBreak: false });
 
   // ── 3 main data rows ─────────────────────────────────────────────────────────
   // A single-element row spans the full content width; a two-element row splits
   // into two equal halves.
   mainRows.forEach((row, ri) => {
     const rowY    = y + SBAR_H + ri * SCELL_H;
-    const bgColor = ri % 2 === 0 ? BRAND_LIGHT : WHITE;
+    const bgColor = ri % 2 === 0 ? BRAND_LIGHT : WARM_WHITE;
     const isFullW = row.length === 1;
 
     row.forEach((cell, ci) => {
@@ -154,17 +154,25 @@ function drawSummary(doc, stats, sheet) {
     .text('VALOR TOTAL', M + PAD, valorY + SP[1],
           { width: CW - PAD * 2, lineBreak: false });
 
-  doc.fontSize(FS.lg).font('Helvetica-Bold').fillColor(GOLD)
-    .text(fmtMoney(stats.totalValue),
-          M + PAD, valorY + SP[1] + FS.xxs * 1.2 + 2,
-          { width: CW - PAD * 2, align: 'right', lineBreak: false });
+  // Dynamic font scaling — shrink if the formatted amount is too wide for the cell
+  const valorTextW = CW - PAD * 2;
+  doc.font('Helvetica-Bold').fillColor(GOLD);
+  let valorSize = FS.lg;
+  doc.fontSize(valorSize);
+  while (valorSize > FS.sm && doc.widthOfString(fmtMoney(stats.totalValue)) > valorTextW) {
+    valorSize--;
+    doc.fontSize(valorSize);
+  }
+  doc.text(fmtMoney(stats.totalValue),
+           M + PAD, valorY + SP[1] + FS.xxs * 1.2 + 2,
+           { width: valorTextW, align: 'right', lineBreak: false });
 
   // ── Type / sex breakdown table ────────────────────────────────────────────────
   if (hasBreakdown) {
     const bkBaseY = valorY + VALOR_H;
 
-    // Column header row fill first, then separator rule on top
-    doc.rect(M, bkBaseY, CW, BKDN_HDR_H).fill(SURFACE);
+    // Column header row fill — BRAND_LIGHT ties it visually to the meta grid
+    doc.rect(M, bkBaseY, CW, BKDN_HDR_H).fill(BRAND_LIGHT);
 
     // Section separator (stronger rule) — drawn after fill so it's not covered
     doc.moveTo(M, bkBaseY).lineTo(M + CW, bkBaseY)
@@ -184,7 +192,7 @@ function drawSummary(doc, stats, sheet) {
     // Data rows
     groups.forEach((group, ri) => {
       const rowY = bkBaseY + BKDN_HDR_H + ri * BKDN_ROW_H;
-      const bg   = ri % 2 === 0 ? WHITE : BRAND_LIGHT;
+      const bg   = ri % 2 === 0 ? WARM_WHITE : BRAND_LIGHT;
 
       doc.rect(M, rowY, CW, BKDN_ROW_H).fill(bg);
 
