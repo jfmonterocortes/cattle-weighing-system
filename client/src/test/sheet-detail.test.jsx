@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import SheetDetailPage from '../pages/SheetDetailPage';
 
@@ -69,7 +69,7 @@ describe('SheetDetail page', () => {
     mockDelete.mockResolvedValue({ data: {} });
   });
 
-  it('renders totals, grouped metrics and UTF-8 labels', async () => {
+  it('renders totals and UTF-8 labels', async () => {
     render(
       <MemoryRouter initialEntries={['/planillas/1']}>
         <Routes>
@@ -84,10 +84,7 @@ describe('SheetDetail page', () => {
     expect(screen.getByText('Promedio machos')).toBeInTheDocument();
     expect(screen.getByText('Total hembras')).toBeInTheDocument();
     expect(screen.getByText('Promedio hembras')).toBeInTheDocument();
-    expect(screen.getAllByText('TERNERO MACHO').length).toBeGreaterThan(0);
-    expect(screen.getByText('M')).toBeInTheDocument();
     expect(screen.getByText('No.')).toBeInTheDocument();
-    expect(screen.getByText('Especificacion')).toBeInTheDocument();
     expect(screen.getByText('No. Res')).toBeInTheDocument();
     expect(screen.getByText('Encabezado de planilla')).toBeInTheDocument();
     expect(screen.getAllByText('Liquidador').length).toBeGreaterThan(0);
@@ -97,6 +94,50 @@ describe('SheetDetail page', () => {
     expect(screen.queryByText('Creada por: admin@bascula.com')).not.toBeInTheDocument();
     expect(screen.queryByText('Trazabilidad')).not.toBeInTheDocument();
     expect(screen.queryByText('Editar encabezado')).not.toBeInTheDocument();
+  });
+
+  it('Metricas avanzadas panel is collapsed by default', async () => {
+    render(
+      <MemoryRouter initialEntries={['/planillas/1']}>
+        <Routes>
+          <Route path="/planillas/:id" element={<SheetDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByText('Planilla 2026-001')).toBeInTheDocument());
+
+    const toggle = screen.getByRole('button', { name: /metricas avanzadas/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute('aria-controls', 'metrics-avanzadas-panel');
+
+    // Table content must not be visible when collapsed
+    expect(screen.queryByText('TERNERO MACHO')).not.toBeInTheDocument();
+  });
+
+  it('Metricas avanzadas panel expands and collapses on toggle', async () => {
+    render(
+      <MemoryRouter initialEntries={['/planillas/1']}>
+        <Routes>
+          <Route path="/planillas/:id" element={<SheetDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByText('Planilla 2026-001')).toBeInTheDocument());
+
+    const toggle = screen.getByRole('button', { name: /metricas avanzadas/i });
+
+    // Expand
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('TERNERO MACHO')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /metricas avanzadas/i })).toBeInTheDocument();
+
+    // Collapse again
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('TERNERO MACHO')).not.toBeInTheDocument();
   });
 
   it('shows staff editing and traceability sections for admin users', async () => {

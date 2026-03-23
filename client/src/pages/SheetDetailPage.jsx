@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, GripVertical, History, PencilLine, Save, UserRound, Wallet, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Download, GripVertical, History, PencilLine, Save, UserRound, Wallet, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
@@ -149,6 +149,7 @@ export default function SheetDetailPage() {
   const [savingRow, setSavingRow] = useState(false);
   const [editingHeader, setEditingHeader] = useState(false);
   const [savingHeader, setSavingHeader] = useState(false);
+  const [metricsOpen, setMetricsOpen] = useState(false);
   const [draftRow, setDraftRow] = useState({ category: 'TERNERO', customSpecification: '', sex: 'MACHO', weight: '', cattleNumber: '', letters: '' });
   const [sessionDefaults, setSessionDefaults] = useState({ category: 'TERNERO', customSpecification: '', sex: 'MACHO', lastNumericCattleNumber: null });
   const [headerDraft, setHeaderDraft] = useState({ seller: null, buyer: null, date: '', pricePerHead: '', liquidadorAliasSnapshot: '' });
@@ -456,28 +457,51 @@ export default function SheetDetailPage() {
           <Stat label="Total hembras" value={sheet.totalFemaleWeight} />
           <Stat label="Promedio hembras" value={sheet.averageFemaleWeight} />
         </div>
-        <div className="mt-5 overflow-x-auto rounded-[1.5rem] border border-zinc-200/80 dark:border-zinc-800">
-          <table className="w-full min-w-[540px] text-sm">
-            <thead className="bg-zinc-50/90 text-left text-zinc-500 dark:bg-zinc-950/40 dark:text-zinc-400">
-              <tr>
-                <th className="px-3 py-3 font-medium">Especificacion</th>
-                <th className="px-3 py-3 font-medium">Cantidad</th>
-                <th className="px-3 py-3 font-medium">Peso total</th>
-                <th className="px-3 py-3 font-medium">Promedio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groupedStats.length === 0 && <tr><td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={4}>Sin datos de desglose.</td></tr>}
-              {groupedStats.map((group) => (
-                <tr key={`${group.type}-${group.sex}`} className="border-t border-zinc-200/80 text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
-                  <td className="px-3 py-3 font-medium text-zinc-900 dark:text-zinc-100">{String(group.specification || '').toUpperCase()}</td>
-                  <td className="px-3 py-3">{group.count}</td>
-                  <td className="px-3 py-3">{group.totalWeight}</td>
-                  <td className="px-3 py-3">{group.averageWeight}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="mt-5">
+          <button
+            type="button"
+            aria-expanded={metricsOpen}
+            aria-controls="metrics-avanzadas-panel"
+            onClick={() => setMetricsOpen((v) => !v)}
+            className="flex w-full items-center justify-between rounded-[1.4rem] border border-zinc-200/80 bg-zinc-50/80 px-4 py-3 text-left text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100/80 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-200 dark:hover:bg-zinc-900/60"
+          >
+            <span>Metricas avanzadas</span>
+            <ChevronDown
+              size={16}
+              aria-hidden="true"
+              className={`shrink-0 text-zinc-400 transition-transform duration-200 ${metricsOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {metricsOpen && (
+            <div
+              id="metrics-avanzadas-panel"
+              role="region"
+              aria-label="Metricas avanzadas"
+              className="mt-2 overflow-x-auto rounded-[1.5rem] border border-zinc-200/80 dark:border-zinc-800"
+            >
+              <table className="w-full min-w-[540px] text-sm">
+                <thead className="bg-zinc-50/90 text-left text-zinc-500 dark:bg-zinc-950/40 dark:text-zinc-400">
+                  <tr>
+                    <th className="px-3 py-3 font-medium">Especificacion</th>
+                    <th className="px-3 py-3 font-medium">Cantidad</th>
+                    <th className="px-3 py-3 font-medium">Peso total</th>
+                    <th className="px-3 py-3 font-medium">Promedio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupedStats.length === 0 && <tr><td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={4}>Sin datos de desglose.</td></tr>}
+                  {groupedStats.map((group) => (
+                    <tr key={`${group.type}-${group.sex}`} className="border-t border-zinc-200/80 text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
+                      <td className="px-3 py-3 font-medium text-zinc-900 dark:text-zinc-100">{String(group.specification || '').toUpperCase()}</td>
+                      <td className="px-3 py-3">{group.count}</td>
+                      <td className="px-3 py-3">{group.totalWeight}</td>
+                      <td className="px-3 py-3">{group.averageWeight}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </Shell>
 
