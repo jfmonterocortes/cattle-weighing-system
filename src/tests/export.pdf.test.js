@@ -175,8 +175,15 @@ describe('buildSheetPdf content regression', () => {
     expect(textContent).not.toMatch(/PRECIO/);
   });
 
-  it('still contains "LIQUIDADOR" in the PDF text', () => {
-    expect(textContent).toMatch(/LIQUIDADOR/);
+  it('contains the signature zone label "FIRMA Y SELLO"', () => {
+    expect(textContent).toMatch(/FIRMA Y SELLO/);
+  });
+
+  it('shows category names (NOVILLO, VACA) rather than raw type+sex in table rows', () => {
+    expect(textContent).toMatch(/NOVILLO/);
+    expect(textContent).toMatch(/VACA/);
+    expect(textContent).not.toMatch(/NOVILLO MACHO/);
+    expect(textContent).not.toMatch(/VACA HEMBRA/);
   });
 });
 

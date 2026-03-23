@@ -19,5 +19,12 @@ describe('calculateSheetStats', () => {
     expect(stats.averageFemaleWeight).toBe(400);
     expect(stats.totalValue).toBe(15000);
     expect(stats.totalsByTypeSex).toHaveLength(3);
+    const specs = stats.totalsByTypeSex.map((g) => g.specification);
+    expect(specs).toContain('TERNERO');
+    expect(specs).toContain('NOVILLO');
+    expect(specs).toContain('VACA');
+    // Results should be sorted in CATEGORY_DISPLAY_ORDER
+    expect(specs.indexOf('TERNERO')).toBeLessThan(specs.indexOf('NOVILLO'));
+    expect(specs.indexOf('NOVILLO')).toBeLessThan(specs.indexOf('VACA'));
   });
 });

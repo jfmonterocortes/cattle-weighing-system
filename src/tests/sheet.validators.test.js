@@ -11,16 +11,51 @@ describe('sheet validators', () => {
     expect(parsed.success).toBe(true);
   });
 
+  it('accepts a row with category field', async () => {
+    const { createRowSchema } = await import('../validators/sheet.validators.js');
+
+    const parsed = createRowSchema.safeParse({
+      category: 'VACA',
+      weight: 450,
+      cattleNumber: '12',
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
   it('rejects invalid row weight', async () => {
     const { createRowSchema } = await import('../validators/sheet.validators.js');
 
     const parsed = createRowSchema.safeParse({
-      type: 'VACA',
-      sex: 'HEMBRA',
+      category: 'VACA',
       weight: -1,
       cattleNumber: '12',
     });
 
     expect(parsed.success).toBe(false);
+  });
+
+  it('rejects a row with neither category nor type', async () => {
+    const { createRowSchema } = await import('../validators/sheet.validators.js');
+
+    const parsed = createRowSchema.safeParse({
+      weight: 400,
+      cattleNumber: '12',
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it('still accepts legacy type+sex fields for backward compatibility', async () => {
+    const { createRowSchema } = await import('../validators/sheet.validators.js');
+
+    const parsed = createRowSchema.safeParse({
+      type: 'VACA',
+      sex: 'HEMBRA',
+      weight: 400,
+      cattleNumber: '12',
+    });
+
+    expect(parsed.success).toBe(true);
   });
 });

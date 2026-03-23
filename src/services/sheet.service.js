@@ -1,6 +1,6 @@
 const prisma = require('../db/prisma');
 const { calculateSheetStats, resolveDefaultSex } = require('../utils/sheet-calculations');
-const { ROLE, SHEET_AUDIT_ACTION } = require('../constants/domain');
+const { ROLE, SHEET_AUDIT_ACTION, typeAndSexFromCategory } = require('../constants/domain');
 const { getDefaultPricePerHead } = require('./settings.service');
 const {
   addSheetAuditBestEffort,
@@ -366,7 +366,7 @@ async function addRow({ user, sheetId, data }) {
 
   assertCanEditSheet(user, sheet);
 
-  const sex = resolveDefaultSex(data.type, data.sex);
+  const resolved = data.category ? typeAndSexFromCategory(data.category) : { type: data.type, sex: resolveDefaultSex(data.type, data.sex) };
   const nextOrder = data.rowOrder || sheet.rows.length + 1;
 
   const row = await prisma.$transaction(async (tx) => {
@@ -382,8 +382,8 @@ async function addRow({ user, sheetId, data }) {
       data: {
         weighingSheetId: sheetId,
         rowOrder: nextOrder,
-        type: data.type,
-        sex,
+        type: resolved.type,
+        sex: resolved.sex,
         weight: Math.trunc(data.weight),
         cattleNumber: data.cattleNumber,
         letters: data.letters || null,
@@ -420,8 +420,13 @@ async function updateRow({ user, sheetId, rowId, data }) {
     throw err;
   }
 
-  const type = data.type || row.type;
-  const sex = resolveDefaultSex(type, data.sex || row.sex);
+  let type, sex;
+  if (data.category) {
+    ({ type, sex } = typeAndSexFromCategory(data.category));
+  } else {
+    type = data.type || row.type;
+    sex = resolveDefaultSex(type, data.sex || row.sex);
+  }
 
   const updated = await prisma.$transaction(async (tx) => {
     const nextRow = await tx.cattleRow.update({

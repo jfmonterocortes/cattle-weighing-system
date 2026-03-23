@@ -1,4 +1,4 @@
-﻿const { CATTLE_TYPE, CATTLE_SEX } = require('../constants/domain');
+﻿const { CATTLE_TYPE, CATTLE_SEX, CATEGORY_DISPLAY_ORDER, categoryFromTypeAndSex } = require('../constants/domain');
 
 function resolveDefaultSex(type, currentSex) {
   if (type === CATTLE_TYPE.VACA) return CATTLE_SEX.HEMBRA;
@@ -8,7 +8,7 @@ function resolveDefaultSex(type, currentSex) {
 }
 
 function buildSpecification(type, sex) {
-  return `${String(type || '').toUpperCase()} ${String(sex || '').toUpperCase()}`.trim();
+  return categoryFromTypeAndSex(type, sex);
 }
 
 function calculateSheetStats(rows, pricePerHead) {
@@ -47,6 +47,14 @@ function calculateSheetStats(rows, pricePerHead) {
     group.specification = buildSpecification(group.type, group.sex);
   });
 
+  const sortedTotalsByTypeSex = Object.values(totalsByTypeSex).sort((a, b) => {
+    const ai = CATEGORY_DISPLAY_ORDER.indexOf(a.specification);
+    const bi = CATEGORY_DISPLAY_ORDER.indexOf(b.specification);
+    const an = ai === -1 ? Infinity : ai;
+    const bn = bi === -1 ? Infinity : bi;
+    return an - bn;
+  });
+
   const totalValue = Math.trunc(Number(pricePerHead || 0)) * headCount;
 
   return {
@@ -58,7 +66,7 @@ function calculateSheetStats(rows, pricePerHead) {
     totalFemaleWeight,
     averageFemaleWeight,
     totalValue,
-    totalsByTypeSex: Object.values(totalsByTypeSex),
+    totalsByTypeSex: sortedTotalsByTypeSex,
   };
 }
 

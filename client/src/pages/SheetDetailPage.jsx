@@ -6,8 +6,25 @@ import FeedbackBanner from '../components/FeedbackBanner';
 import PersonAutocomplete from '../components/PersonAutocomplete';
 import { getSession } from '../utils/authSession';
 
-const TYPE_OPTIONS = ['VACA', 'TORO', 'BUFALO', 'NOVILLO', 'TERNERO'];
-const SEX_OPTIONS = ['MACHO', 'HEMBRA'];
+const CATEGORY_OPTIONS = ['TERNERA', 'TERNERO', 'NOVILLA', 'NOVILLO', 'BUFALA', 'BUFALO', 'VACA', 'TORO'];
+
+const CATEGORY_TO_TYPE_SEX = {
+  TERNERA: { type: 'TERNERO', sex: 'HEMBRA' },
+  TERNERO: { type: 'TERNERO', sex: 'MACHO'  },
+  NOVILLA: { type: 'NOVILLO', sex: 'HEMBRA' },
+  NOVILLO: { type: 'NOVILLO', sex: 'MACHO'  },
+  BUFALA:  { type: 'BUFALO',  sex: 'HEMBRA' },
+  BUFALO:  { type: 'BUFALO',  sex: 'MACHO'  },
+  VACA:    { type: 'VACA',    sex: 'HEMBRA' },
+  TORO:    { type: 'TORO',    sex: 'MACHO'  },
+};
+
+function categoryFromRow(row) {
+  const entry = Object.entries(CATEGORY_TO_TYPE_SEX).find(
+    ([, v]) => v.type === row.type && v.sex === row.sex,
+  );
+  return entry ? entry[0] : `${row.type} ${row.sex}`;
+}
 const inputClass =
   'w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10';
 
@@ -15,12 +32,6 @@ function canEdit(role, sheet, userId) {
   if (role === 'ADMIN') return true;
   if (role === 'LIQUIDADOR' && sheet.createdById === userId) return new Date() <= new Date(sheet.editableUntilByLiquidador);
   return false;
-}
-
-function getSexDefaultByType(type, currentSex = 'MACHO') {
-  if (type === 'VACA') return 'HEMBRA';
-  if (type === 'TORO' || type === 'NOVILLO') return 'MACHO';
-  return currentSex;
 }
 
 function toNumericOrNull(value) {
@@ -41,12 +52,6 @@ function toIsoDateTime(value) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return undefined;
   return parsed.toISOString();
-}
-
-function formatSexLabel(value) {
-  if (value === 'MACHO') return 'M';
-  if (value === 'HEMBRA') return 'H';
-  return value || '-';
 }
 
 function formatAuditAction(action) {
@@ -135,8 +140,8 @@ export default function SheetDetailPage() {
   const [savingRow, setSavingRow] = useState(false);
   const [editingHeader, setEditingHeader] = useState(false);
   const [savingHeader, setSavingHeader] = useState(false);
-  const [draftRow, setDraftRow] = useState({ type: 'TERNERO', sex: 'MACHO', weight: '', cattleNumber: '', letters: '' });
-  const [sessionDefaults, setSessionDefaults] = useState({ type: 'TERNERO', sex: 'MACHO', lastNumericCattleNumber: null });
+  const [draftRow, setDraftRow] = useState({ category: 'TERNERO', weight: '', cattleNumber: '', letters: '' });
+  const [sessionDefaults, setSessionDefaults] = useState({ category: 'TERNERO', lastNumericCattleNumber: null });
   const [headerDraft, setHeaderDraft] = useState({ seller: null, buyer: null, date: '', pricePerHead: '', liquidadorAliasSnapshot: '' });
 
   useEffect(() => {
@@ -177,8 +182,7 @@ export default function SheetDetailPage() {
     const localNext = Number.isFinite(sessionDefaults.lastNumericCattleNumber) ? String(sessionDefaults.lastNumericCattleNumber + 1) : '';
     setDraftRow((prev) => ({
       ...prev,
-      type: sessionDefaults.type,
-      sex: getSexDefaultByType(sessionDefaults.type, sessionDefaults.sex),
+      category: sessionDefaults.category,
       cattleNumber: localNext || prev.cattleNumber,
     }));
     if (localNext) return;
@@ -189,7 +193,7 @@ export default function SheetDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [sessionDefaults.lastNumericCattleNumber, sessionDefaults.sex, sessionDefaults.type, sheet?.id, sheetId]);
+  }, [sessionDefaults.lastNumericCattleNumber, sessionDefaults.category, sheet?.id, sheetId]);
 
   const reloadDetail = () => setReloadKey((value) => value + 1);
   const editable = sheet ? canEdit(role, sheet, userId) : false;
@@ -206,12 +210,12 @@ export default function SheetDetailPage() {
     event.preventDefault();
     setSavingRow(true);
     setFeedback({ type: '', message: '' });
-    const rowPayload = { type: draftRow.type, sex: draftRow.sex, weight: Math.trunc(Number(draftRow.weight || 0)), cattleNumber: draftRow.cattleNumber || '1', letters: draftRow.letters || null };
+    const rowPayload = { category: draftRow.category, weight: Math.trunc(Number(draftRow.weight || 0)), cattleNumber: draftRow.cattleNumber || '1', letters: draftRow.letters || null };
     try {
       await api.post(`/sheets/${sheetId}/rows`, rowPayload);
       const numeric = toNumericOrNull(rowPayload.cattleNumber);
-      setSessionDefaults((prev) => ({ ...prev, type: rowPayload.type, sex: rowPayload.sex, lastNumericCattleNumber: Number.isFinite(numeric) ? numeric : prev.lastNumericCattleNumber }));
-      setDraftRow({ type: rowPayload.type, sex: rowPayload.sex, weight: '', cattleNumber: Number.isFinite(numeric) ? String(numeric + 1) : '', letters: '' });
+      setSessionDefaults((prev) => ({ ...prev, category: rowPayload.category, lastNumericCattleNumber: Number.isFinite(numeric) ? numeric : prev.lastNumericCattleNumber }));
+      setDraftRow({ category: rowPayload.category, weight: '', cattleNumber: Number.isFinite(numeric) ? String(numeric + 1) : '', letters: '' });
       setFeedback({ type: 'success', message: 'Fila agregada correctamente.' });
       reloadDetail();
     } catch (error) {
@@ -473,8 +477,7 @@ export default function SheetDetailPage() {
             <thead className="bg-zinc-50/90 text-left text-zinc-500 dark:bg-zinc-950/40 dark:text-zinc-400">
               <tr>
                 <th className="px-3 py-3 font-medium">No.</th>
-                <th className="px-3 py-3 font-medium">Tipo</th>
-                <th className="px-3 py-3 font-medium">Sexo</th>
+                <th className="px-3 py-3 font-medium">Especificacion</th>
                 <th className="px-3 py-3 font-medium">Kilos</th>
                 <th className="px-3 py-3 font-medium">No. Res</th>
                 <th className="px-3 py-3 font-medium">Letras</th>
@@ -482,12 +485,11 @@ export default function SheetDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {sheet.rows.length === 0 && <tr><td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={editable ? 7 : 6}>No hay reses registradas todavía.</td></tr>}
+              {sheet.rows.length === 0 && <tr><td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={editable ? 6 : 5}>No hay reses registradas todavía.</td></tr>}
               {sheet.rows.map((row) => (
                 <tr key={row.id} draggable={editable} onDragStart={(event) => event.dataTransfer.setData('text/plain', String(row.id))} onDragOver={(event) => event.preventDefault()} onDrop={(event) => onDropRow(event, row.id)} className="border-t border-zinc-200/80 text-zinc-700 transition hover:bg-zinc-50/80 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-950/30">
                   <td className="px-3 py-3 font-medium text-zinc-900 dark:text-zinc-100">{row.rowOrder}</td>
-                  <td className="px-3 py-3">{editable ? <select className={inputClass} value={row.type} onChange={(event) => { const nextType = event.target.value; const nextSex = getSexDefaultByType(nextType, row.sex); setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type: nextType, sex: nextSex } : item)) })); }} onBlur={() => updateRowField(row.id, { type: row.type, sex: row.sex })}>{TYPE_OPTIONS.map((type) => <option key={type} value={type}>{type}</option>)}</select> : row.type}</td>
-                  <td className="px-3 py-3">{editable ? <select className={inputClass} value={row.sex} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, sex: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { sex: row.sex, type: row.type })}>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{formatSexLabel(sex)}</option>)}</select> : formatSexLabel(row.sex)}</td>
+                  <td className="px-3 py-3">{editable ? <select className={inputClass} value={categoryFromRow(row)} onChange={(event) => { const cat = event.target.value; const { type, sex } = CATEGORY_TO_TYPE_SEX[cat]; setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type, sex } : item)) })); updateRowField(row.id, { category: cat }); }}>{CATEGORY_OPTIONS.map((cat) => <option key={cat} value={cat}>{cat}</option>)}</select> : categoryFromRow(row)}</td>
                   <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.weight} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, weight: Math.trunc(Number(event.target.value || 0)) } : item)) }))} onBlur={() => updateRowField(row.id, { weight: row.weight })} /> : row.weight}</td>
                   <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.cattleNumber} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, cattleNumber: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { cattleNumber: row.cattleNumber })} /> : row.cattleNumber}</td>
                   <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.letters || ''} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, letters: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { letters: row.letters || null })} /> : row.letters || '-'}</td>
@@ -503,9 +505,8 @@ export default function SheetDetailPage() {
               <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">Nueva fila</div>
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Agrega una res y conserva los ultimos valores utiles para acelerar la captura.</p>
             </div>
-            <div className="grid items-end gap-3 md:grid-cols-6">
-              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Tipo</div><select className={inputClass} value={draftRow.type} onChange={(event) => { const nextType = event.target.value; const nextSex = getSexDefaultByType(nextType, draftRow.sex); setDraftRow((prev) => ({ ...prev, type: nextType, sex: nextSex })); setSessionDefaults((prev) => ({ ...prev, type: nextType, sex: nextSex })); }}>{TYPE_OPTIONS.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
-              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Sexo</div><select className={inputClass} value={draftRow.sex} onChange={(event) => { setDraftRow((prev) => ({ ...prev, sex: event.target.value })); setSessionDefaults((prev) => ({ ...prev, sex: event.target.value })); }}>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{formatSexLabel(sex)}</option>)}</select></label>
+            <div className="grid items-end gap-3 md:grid-cols-5">
+              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Especificacion</div><select className={inputClass} value={draftRow.category} onChange={(event) => { const cat = event.target.value; setDraftRow((prev) => ({ ...prev, category: cat })); setSessionDefaults((prev) => ({ ...prev, category: cat })); }}>{CATEGORY_OPTIONS.map((cat) => <option key={cat} value={cat}>{cat}</option>)}</select></label>
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Kilos</div><input className={inputClass} value={draftRow.weight} onChange={(event) => setDraftRow((prev) => ({ ...prev, weight: event.target.value }))} /></label>
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">No. Res</div><input className={inputClass} value={draftRow.cattleNumber} onChange={(event) => setDraftRow((prev) => ({ ...prev, cattleNumber: event.target.value }))} /></label>
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Letras</div><input className={inputClass} value={draftRow.letters} onChange={(event) => setDraftRow((prev) => ({ ...prev, letters: event.target.value }))} /></label>
