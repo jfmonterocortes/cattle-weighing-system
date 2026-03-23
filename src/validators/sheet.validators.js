@@ -37,27 +37,56 @@ const listSheetsQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
 });
 
+const customSpecField = z.string().trim().min(1).max(100).optional().nullable();
+
 const createRowSchema = z.object({
   category: cattleCategory.optional(),
   type: cattleType.optional(),
   sex: cattleSex.optional(),
+  customSpecification: customSpecField,
   weight: z.number().int().positive().max(2000),
   cattleNumber: z.string().trim().min(1).max(40),
   letters: z.string().trim().max(100).optional().nullable(),
   rowOrder: z.number().int().positive().optional(),
-}).refine(
-  (data) => data.category || data.type,
-  { message: 'Either category or type is required' },
-);
+})
+  .refine(
+    (data) => data.category || data.type,
+    { message: 'Either category or type is required' },
+  )
+  .refine(
+    (data) => data.category !== 'OTHER' || (data.customSpecification && data.customSpecification.trim().length > 0),
+    { message: 'customSpecification is required when category is OTHER', path: ['customSpecification'] },
+  )
+  .refine(
+    (data) => data.category !== 'OTHER' || !!data.sex,
+    { message: 'sex is required when category is OTHER', path: ['sex'] },
+  )
+  .refine(
+    (data) => !data.customSpecification || data.category === 'OTHER',
+    { message: 'customSpecification may only be set when category is OTHER', path: ['customSpecification'] },
+  );
 
 const updateRowSchema = z.object({
   category: cattleCategory.optional(),
   type: cattleType.optional(),
   sex: cattleSex.optional(),
+  customSpecification: customSpecField,
   weight: z.number().int().positive().max(2000).optional(),
   cattleNumber: z.string().trim().min(1).max(40).optional(),
   letters: z.string().trim().max(100).optional().nullable(),
-});
+})
+  .refine(
+    (data) => data.category !== 'OTHER' || (data.customSpecification && data.customSpecification.trim().length > 0),
+    { message: 'customSpecification is required when category is OTHER', path: ['customSpecification'] },
+  )
+  .refine(
+    (data) => data.category !== 'OTHER' || !!data.sex,
+    { message: 'sex is required when category is OTHER', path: ['sex'] },
+  )
+  .refine(
+    (data) => !data.customSpecification || data.category === 'OTHER',
+    { message: 'customSpecification may only be set when category is OTHER', path: ['customSpecification'] },
+  );
 
 const reorderRowsSchema = z.object({
   orderedRowIds: z.array(z.number().int().positive()).min(1),

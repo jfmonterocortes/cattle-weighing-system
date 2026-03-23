@@ -6,7 +6,8 @@ import FeedbackBanner from '../components/FeedbackBanner';
 import PersonAutocomplete from '../components/PersonAutocomplete';
 import { getSession } from '../utils/authSession';
 
-const CATEGORY_OPTIONS = ['TERNERA', 'TERNERO', 'NOVILLA', 'NOVILLO', 'BUFALA', 'BUFALO', 'VACA', 'TORO'];
+const CATEGORY_OPTIONS = ['TERNERA', 'TERNERO', 'NOVILLA', 'NOVILLO', 'BUFALA', 'BUFALO', 'VACA', 'TORO', 'OTHER'];
+const SEX_OPTIONS = ['MACHO', 'HEMBRA'];
 
 const CATEGORY_TO_TYPE_SEX = {
   TERNERA: { type: 'TERNERO', sex: 'HEMBRA' },
@@ -19,11 +20,19 @@ const CATEGORY_TO_TYPE_SEX = {
   TORO:    { type: 'TORO',    sex: 'MACHO'  },
 };
 
-function categoryFromRow(row) {
+// Returns the category key for the dropdown (e.g. 'NOVILLO', 'VACA', 'OTHER').
+function rowSelectCategory(row) {
+  if (row.type === 'OTHER') return 'OTHER';
   const entry = Object.entries(CATEGORY_TO_TYPE_SEX).find(
     ([, v]) => v.type === row.type && v.sex === row.sex,
   );
   return entry ? entry[0] : `${row.type} ${row.sex}`;
+}
+
+// Returns the user-facing display label for a row (custom spec text for OTHER rows).
+function rowDisplaySpec(row) {
+  if (row.type === 'OTHER') return row.customSpecification || 'OTRO';
+  return rowSelectCategory(row);
 }
 const inputClass =
   'w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10';
@@ -140,8 +149,8 @@ export default function SheetDetailPage() {
   const [savingRow, setSavingRow] = useState(false);
   const [editingHeader, setEditingHeader] = useState(false);
   const [savingHeader, setSavingHeader] = useState(false);
-  const [draftRow, setDraftRow] = useState({ category: 'TERNERO', weight: '', cattleNumber: '', letters: '' });
-  const [sessionDefaults, setSessionDefaults] = useState({ category: 'TERNERO', lastNumericCattleNumber: null });
+  const [draftRow, setDraftRow] = useState({ category: 'TERNERO', customSpecification: '', sex: 'MACHO', weight: '', cattleNumber: '', letters: '' });
+  const [sessionDefaults, setSessionDefaults] = useState({ category: 'TERNERO', customSpecification: '', sex: 'MACHO', lastNumericCattleNumber: null });
   const [headerDraft, setHeaderDraft] = useState({ seller: null, buyer: null, date: '', pricePerHead: '', liquidadorAliasSnapshot: '' });
 
   useEffect(() => {
@@ -183,6 +192,8 @@ export default function SheetDetailPage() {
     setDraftRow((prev) => ({
       ...prev,
       category: sessionDefaults.category,
+      customSpecification: sessionDefaults.customSpecification,
+      sex: sessionDefaults.sex,
       cattleNumber: localNext || prev.cattleNumber,
     }));
     if (localNext) return;
@@ -193,7 +204,7 @@ export default function SheetDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [sessionDefaults.lastNumericCattleNumber, sessionDefaults.category, sheet?.id, sheetId]);
+  }, [sessionDefaults.lastNumericCattleNumber, sessionDefaults.category, sessionDefaults.customSpecification, sessionDefaults.sex, sheet?.id, sheetId]);
 
   const reloadDetail = () => setReloadKey((value) => value + 1);
   const editable = sheet ? canEdit(role, sheet, userId) : false;
@@ -210,12 +221,15 @@ export default function SheetDetailPage() {
     event.preventDefault();
     setSavingRow(true);
     setFeedback({ type: '', message: '' });
-    const rowPayload = { category: draftRow.category, weight: Math.trunc(Number(draftRow.weight || 0)), cattleNumber: draftRow.cattleNumber || '1', letters: draftRow.letters || null };
+    const basePayload = { category: draftRow.category, weight: Math.trunc(Number(draftRow.weight || 0)), cattleNumber: draftRow.cattleNumber || '1', letters: draftRow.letters || null };
+    const rowPayload = draftRow.category === 'OTHER'
+      ? { ...basePayload, customSpecification: draftRow.customSpecification, sex: draftRow.sex }
+      : basePayload;
     try {
       await api.post(`/sheets/${sheetId}/rows`, rowPayload);
       const numeric = toNumericOrNull(rowPayload.cattleNumber);
-      setSessionDefaults((prev) => ({ ...prev, category: rowPayload.category, lastNumericCattleNumber: Number.isFinite(numeric) ? numeric : prev.lastNumericCattleNumber }));
-      setDraftRow({ category: rowPayload.category, weight: '', cattleNumber: Number.isFinite(numeric) ? String(numeric + 1) : '', letters: '' });
+      setSessionDefaults((prev) => ({ ...prev, category: rowPayload.category, customSpecification: draftRow.customSpecification, sex: draftRow.sex, lastNumericCattleNumber: Number.isFinite(numeric) ? numeric : prev.lastNumericCattleNumber }));
+      setDraftRow((prev) => ({ ...prev, category: rowPayload.category, weight: '', cattleNumber: Number.isFinite(numeric) ? String(numeric + 1) : '', letters: '' }));
       setFeedback({ type: 'success', message: 'Fila agregada correctamente.' });
       reloadDetail();
     } catch (error) {
@@ -489,7 +503,26 @@ export default function SheetDetailPage() {
               {sheet.rows.map((row) => (
                 <tr key={row.id} draggable={editable} onDragStart={(event) => event.dataTransfer.setData('text/plain', String(row.id))} onDragOver={(event) => event.preventDefault()} onDrop={(event) => onDropRow(event, row.id)} className="border-t border-zinc-200/80 text-zinc-700 transition hover:bg-zinc-50/80 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-950/30">
                   <td className="px-3 py-3 font-medium text-zinc-900 dark:text-zinc-100">{row.rowOrder}</td>
-                  <td className="px-3 py-3">{editable ? <select className={inputClass} value={categoryFromRow(row)} onChange={(event) => { const cat = event.target.value; const { type, sex } = CATEGORY_TO_TYPE_SEX[cat]; setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type, sex } : item)) })); updateRowField(row.id, { category: cat }); }}>{CATEGORY_OPTIONS.map((cat) => <option key={cat} value={cat}>{cat}</option>)}</select> : categoryFromRow(row)}</td>
+                  <td className="px-3 py-3">{editable ? (
+                    <div className="flex flex-col gap-1">
+                      <select className={inputClass} value={rowSelectCategory(row)} onChange={(event) => {
+                        const cat = event.target.value;
+                        if (cat === 'OTHER') {
+                          setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type: 'OTHER', sex: item.sex || 'MACHO', customSpecification: item.customSpecification || '' } : item)) }));
+                        } else {
+                          const { type, sex } = CATEGORY_TO_TYPE_SEX[cat];
+                          setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type, sex, customSpecification: null } : item)) }));
+                          updateRowField(row.id, { category: cat });
+                        }
+                      }}>{CATEGORY_OPTIONS.map((cat) => <option key={cat} value={cat}>{cat}</option>)}</select>
+                      {row.type === 'OTHER' && (
+                        <>
+                          <input className={inputClass} placeholder="Especificacion personalizada" value={row.customSpecification || ''} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, customSpecification: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { category: 'OTHER', customSpecification: row.customSpecification, sex: row.sex })} />
+                          <select className={inputClass} value={row.sex} onChange={(event) => { setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, sex: event.target.value } : item)) })); updateRowField(row.id, { category: 'OTHER', customSpecification: row.customSpecification, sex: event.target.value }); }}>{SEX_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                        </>
+                      )}
+                    </div>
+                  ) : rowDisplaySpec(row)}</td>
                   <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.weight} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, weight: Math.trunc(Number(event.target.value || 0)) } : item)) }))} onBlur={() => updateRowField(row.id, { weight: row.weight })} /> : row.weight}</td>
                   <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.cattleNumber} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, cattleNumber: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { cattleNumber: row.cattleNumber })} /> : row.cattleNumber}</td>
                   <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.letters || ''} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, letters: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { letters: row.letters || null })} /> : row.letters || '-'}</td>
@@ -506,7 +539,16 @@ export default function SheetDetailPage() {
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Agrega una res y conserva los ultimos valores utiles para acelerar la captura.</p>
             </div>
             <div className="grid items-end gap-3 md:grid-cols-5">
-              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Especificacion</div><select className={inputClass} value={draftRow.category} onChange={(event) => { const cat = event.target.value; setDraftRow((prev) => ({ ...prev, category: cat })); setSessionDefaults((prev) => ({ ...prev, category: cat })); }}>{CATEGORY_OPTIONS.map((cat) => <option key={cat} value={cat}>{cat}</option>)}</select></label>
+              <label>
+                <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Especificacion</div>
+                <select className={inputClass} value={draftRow.category} onChange={(event) => { const cat = event.target.value; setDraftRow((prev) => ({ ...prev, category: cat, customSpecification: cat !== 'OTHER' ? '' : prev.customSpecification })); setSessionDefaults((prev) => ({ ...prev, category: cat })); }}>{CATEGORY_OPTIONS.map((cat) => <option key={cat} value={cat}>{cat}</option>)}</select>
+                {draftRow.category === 'OTHER' && (
+                  <div className="mt-1 flex flex-col gap-1">
+                    <input className={inputClass} placeholder="Escribe la especificacion" value={draftRow.customSpecification} onChange={(event) => setDraftRow((prev) => ({ ...prev, customSpecification: event.target.value }))} />
+                    <select className={inputClass} value={draftRow.sex} onChange={(event) => { setDraftRow((prev) => ({ ...prev, sex: event.target.value })); setSessionDefaults((prev) => ({ ...prev, sex: event.target.value })); }}>{SEX_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                  </div>
+                )}
+              </label>
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Kilos</div><input className={inputClass} value={draftRow.weight} onChange={(event) => setDraftRow((prev) => ({ ...prev, weight: event.target.value }))} /></label>
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">No. Res</div><input className={inputClass} value={draftRow.cattleNumber} onChange={(event) => setDraftRow((prev) => ({ ...prev, cattleNumber: event.target.value }))} /></label>
               <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Letras</div><input className={inputClass} value={draftRow.letters} onChange={(event) => setDraftRow((prev) => ({ ...prev, letters: event.target.value }))} /></label>

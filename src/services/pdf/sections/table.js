@@ -5,9 +5,9 @@ const {
   WARM_WHITE, INK, INK_MUTED, WHITE,
   COLS,
 } = require('../theme');
-const { fmtWeight }              = require('../formatters');
-const { cellText, truncate }     = require('../layout');
-const { categoryFromTypeAndSex } = require('../../../constants/domain');
+const { fmtWeight }            = require('../formatters');
+const { cellText, truncate }   = require('../layout');
+const { resolveSpecification } = require('../../../constants/domain');
 
 /**
  * Full-width table header row with a deep-green fill and white column labels.
@@ -79,7 +79,7 @@ function drawRow(doc, row, index) {
     doc.font('Helvetica').fillColor(INK_MUTED);
     cellText(doc, String(index + 1), COLS[0], textY);
   } else {
-    const spec = categoryFromTypeAndSex(row.type, row.sex);
+    const spec = resolveSpecification(row);
 
     // Row number bold — anchors the eye at the left edge of each row
     doc.font('Helvetica-Bold').fillColor(INK);

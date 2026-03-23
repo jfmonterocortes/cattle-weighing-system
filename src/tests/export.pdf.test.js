@@ -187,6 +187,23 @@ describe('buildSheetPdf content regression', () => {
   });
 });
 
+// ── OTHER category PDF regression ─────────────────────────────────────────────
+
+describe('buildSheetPdf OTHER category', () => {
+  it('renders customSpecification text in the PDF for OTHER rows', async () => {
+    const sheet = makeSheet(0, {
+      rows: [
+        { rowOrder: 1, type: 'OTHER', sex: 'MACHO',  weight: 350, cattleNumber: '001', letters: null, customSpecification: 'BUFALO ESPECIAL' },
+        { rowOrder: 2, type: 'OTHER', sex: 'HEMBRA', weight: 280, cattleNumber: '002', letters: null, customSpecification: 'CRUCE ESPECIAL'  },
+      ],
+    });
+    const buf = await buildSheetPdf(sheet);
+    const text = pdfTextContent(buf);
+    expect(text).toMatch(/BUFALO ESPECIAL/);
+    expect(text).toMatch(/CRUCE ESPECIAL/);
+  });
+});
+
 // ── buildSheetPdf: PAGADA pill (isPaid: true) ─────────────────────────────────
 
 describe('buildSheetPdf isPaid paths', () => {

@@ -366,7 +366,14 @@ async function addRow({ user, sheetId, data }) {
 
   assertCanEditSheet(user, sheet);
 
-  const resolved = data.category ? typeAndSexFromCategory(data.category) : { type: data.type, sex: resolveDefaultSex(data.type, data.sex) };
+  let resolved;
+  if (data.category === 'OTHER') {
+    resolved = { type: 'OTHER', sex: data.sex };
+  } else if (data.category) {
+    resolved = typeAndSexFromCategory(data.category);
+  } else {
+    resolved = { type: data.type, sex: resolveDefaultSex(data.type, data.sex) };
+  }
   const nextOrder = data.rowOrder || sheet.rows.length + 1;
 
   const row = await prisma.$transaction(async (tx) => {
@@ -387,6 +394,7 @@ async function addRow({ user, sheetId, data }) {
         weight: Math.trunc(data.weight),
         cattleNumber: data.cattleNumber,
         letters: data.letters || null,
+        customSpecification: resolved.type === 'OTHER' ? (data.customSpecification || null) : null,
       },
     });
 
@@ -420,12 +428,18 @@ async function updateRow({ user, sheetId, rowId, data }) {
     throw err;
   }
 
-  let type, sex;
-  if (data.category) {
+  let type, sex, customSpecification;
+  if (data.category === 'OTHER') {
+    type = 'OTHER';
+    sex = data.sex;
+    customSpecification = data.customSpecification || null;
+  } else if (data.category) {
     ({ type, sex } = typeAndSexFromCategory(data.category));
+    customSpecification = null;
   } else {
     type = data.type || row.type;
     sex = resolveDefaultSex(type, data.sex || row.sex);
+    customSpecification = type === 'OTHER' ? (data.customSpecification !== undefined ? data.customSpecification : row.customSpecification) : null;
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -437,6 +451,7 @@ async function updateRow({ user, sheetId, rowId, data }) {
         weight: data.weight !== undefined ? Math.trunc(data.weight) : undefined,
         cattleNumber: data.cattleNumber,
         letters: data.letters,
+        customSpecification,
       },
     });
 

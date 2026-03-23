@@ -10,6 +10,7 @@ const CATTLE_TYPE = {
   BUFALO: 'BUFALO',
   NOVILLO: 'NOVILLO',
   TERNERO: 'TERNERO',
+  OTHER: 'OTHER',
 };
 
 const CATTLE_SEX = {
@@ -18,7 +19,8 @@ const CATTLE_SEX = {
 };
 
 // Visible cattle categories shown to users in UI and PDF.
-// Each category maps to the underlying type + sex stored in the database.
+// Each built-in category maps to the underlying type + sex stored in the database.
+// OTHER is a special category: type='OTHER', sex is user-specified, spec is user-typed.
 const CATTLE_CATEGORY = {
   TERNERA:  { type: 'TERNERO', sex: 'HEMBRA' },
   TERNERO:  { type: 'TERNERO', sex: 'MACHO'  },
@@ -28,27 +30,45 @@ const CATTLE_CATEGORY = {
   BUFALO:   { type: 'BUFALO',  sex: 'MACHO'  },
   VACA:     { type: 'VACA',    sex: 'HEMBRA' },
   TORO:     { type: 'TORO',    sex: 'MACHO'  },
+  OTHER:    { type: 'OTHER',   sex: null      },  // sex + customSpecification supplied at request time
 };
 
 // Display order for UI dropdowns and summary tables.
-const CATEGORY_DISPLAY_ORDER = ['TERNERA', 'TERNERO', 'NOVILLA', 'NOVILLO', 'BUFALA', 'BUFALO', 'VACA', 'TORO'];
+// Built-in categories come first in fixed order; OTHER always last.
+const CATEGORY_DISPLAY_ORDER = ['TERNERA', 'TERNERO', 'NOVILLA', 'NOVILLO', 'BUFALA', 'BUFALO', 'VACA', 'TORO', 'OTHER'];
 
 /**
- * Returns the visible category name for a given type+sex pair stored in the DB.
+ * Returns the built-in category name for a given type+sex pair stored in the DB.
+ * For OTHER rows use resolveSpecification(row) instead.
  * Falls back to "TYPE SEX" if no matching category exists.
  */
 function categoryFromTypeAndSex(type, sex) {
   const entry = Object.entries(CATTLE_CATEGORY).find(
-    ([, v]) => v.type === type && v.sex === sex,
+    ([k, v]) => k !== 'OTHER' && v.type === type && v.sex === sex,
   );
   return entry ? entry[0] : `${String(type || '').toUpperCase()} ${String(sex || '').toUpperCase()}`.trim();
 }
 
 /**
- * Returns { type, sex } for a given category name.
- * Throws if the category is unknown.
+ * Returns the user-facing specification label for a row stored in the DB.
+ * For OTHER rows this is the typed customSpecification value.
+ * For built-in categories this delegates to categoryFromTypeAndSex.
+ *
+ * @param {{ type: string, sex: string, customSpecification?: string|null }} row
+ */
+function resolveSpecification(row) {
+  if (row.type === 'OTHER') return String(row.customSpecification || 'OTRO').toUpperCase();
+  return categoryFromTypeAndSex(row.type, row.sex);
+}
+
+/**
+ * Returns { type, sex } for a given built-in category name.
+ * Throws if the category is unknown or is OTHER (handled separately by the service layer).
  */
 function typeAndSexFromCategory(category) {
+  if (String(category).toUpperCase() === 'OTHER') {
+    throw new Error('OTHER category requires explicit sex and customSpecification — handle in service layer');
+  }
   const entry = CATTLE_CATEGORY[String(category).toUpperCase()];
   if (!entry) throw new Error(`Unknown cattle category: ${category}`);
   return entry;
@@ -88,6 +108,7 @@ module.exports = {
   CATTLE_CATEGORY,
   CATEGORY_DISPLAY_ORDER,
   categoryFromTypeAndSex,
+  resolveSpecification,
   typeAndSexFromCategory,
   LINK_REQUEST_STATUS,
   SHEET_AUDIT_ACTION,

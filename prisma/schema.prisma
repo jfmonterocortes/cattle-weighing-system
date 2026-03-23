@@ -97,16 +97,17 @@ model WeighingSheet {
 }
 
 model CattleRow {
-  id              Int        @id @default(autoincrement())
-  weighingSheetId Int
-  rowOrder        Int
-  type            CattleType
-  sex             CattleSex
-  weight          Int
-  cattleNumber    String
-  letters         String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id                   Int        @id @default(autoincrement())
+  weighingSheetId      Int
+  rowOrder             Int
+  type                 CattleType
+  sex                  CattleSex
+  weight               Int
+  cattleNumber         String
+  letters              String?
+  customSpecification  String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
 
   weighingSheet WeighingSheet @relation(fields: [weighingSheetId], references: [id])
 
@@ -188,6 +189,7 @@ enum CattleType {
   BUFALO
   NOVILLO
   TERNERO
+  OTHER
 }
 
 enum CattleSex {
