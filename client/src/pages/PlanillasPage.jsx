@@ -73,23 +73,25 @@ function ActionStateBadge({ role, userId, sheet }) {
     );
   }
 
-  const editableUntil = sheet.editableUntilByLiquidador ? new Date(sheet.editableUntilByLiquidador) : null;
-  const isOwnEditableSheet =
-    role === 'LIQUIDADOR' &&
-    sheet.createdById === userId &&
-    editableUntil instanceof Date &&
-    !Number.isNaN(editableUntil.getTime()) &&
-    new Date() <= editableUntil;
+  let isEditable = false;
+  if (role === 'LIQUIDADOR') {
+    if (!sheet.lockedByLiquidador) {
+      isEditable = true;
+    } else if (sheet.createdById === userId && sheet.editableUntilByLiquidador) {
+      const editableUntil = new Date(sheet.editableUntilByLiquidador);
+      isEditable = !Number.isNaN(editableUntil.getTime()) && new Date() <= editableUntil;
+    }
+  }
 
   return (
     <span
       className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-        isOwnEditableSheet
+        isEditable
           ? 'bg-violet-100 text-violet-900 dark:bg-violet-500/15 dark:text-violet-100'
           : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
       }`}
     >
-      {isOwnEditableSheet ? 'Edición abierta' : 'Solo lectura'}
+      {isEditable ? 'Edición abierta' : 'Solo lectura'}
     </span>
   );
 }

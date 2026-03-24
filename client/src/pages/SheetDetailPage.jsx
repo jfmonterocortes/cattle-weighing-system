@@ -1,6 +1,6 @@
 import { ArrowLeft, ChevronDown, Download, GripVertical, History, PencilLine, Save, UserRound, Wallet, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import FeedbackBanner from '../components/FeedbackBanner';
 import PersonAutocomplete from '../components/PersonAutocomplete';
@@ -37,9 +37,23 @@ function rowDisplaySpec(row) {
 const inputClass =
   'w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10';
 
+const GRACE_MS = 15 * 60 * 1000;
+
+function graceRemainingMs(sheet) {
+  // Prefer finalizedAt; fall back to the PLANILLA_LOCKED audit entry for sheets
+  // locked before the finalizedAt column was added.
+  const ts = sheet?.finalizedAt
+    ?? sheet?.auditLogs?.find((l) => l.action === 'PLANILLA_LOCKED')?.changedAt;
+  if (!ts) return 0;
+  return Math.max(0, GRACE_MS - (Date.now() - new Date(ts).getTime()));
+}
+
 function canEdit(role, sheet, userId) {
   if (role === 'ADMIN') return true;
-  if (role === 'LIQUIDADOR' && sheet.createdById === userId && !sheet.lockedByLiquidador) return true;
+  if (role === 'LIQUIDADOR') {
+    if (!sheet.lockedByLiquidador) return true; // any liquidador can edit an open sheet
+    if (sheet.createdById === userId && graceRemainingMs(sheet) > 0) return true; // only creator during grace
+  }
   return false;
 }
 
@@ -137,6 +151,7 @@ function PaymentChip({ isPaid }) {
 export default function SheetDetailPage() {
   const { id } = useParams();
   const sheetId = Number(id);
+  const navigate = useNavigate();
   const { user, activeRole } = getSession();
   const role = activeRole;
   const userId = user?.userId;
@@ -157,6 +172,16 @@ export default function SheetDetailPage() {
   const [headerDraft, setHeaderDraft] = useState({ seller: null, buyer: null, date: '', pricePerHead: '', liquidadorAliasSnapshot: '' });
   const [lockingSheet, setLockingSheet] = useState(false);
   const [lockConfirm, setLockConfirm] = useState(false);
+  const [navConfirm, setNavConfirm] = useState(null); // destination path when user wants to leave
+
+  // Tick counter — changes every 30s to keep the grace-period badge/banner re-evaluated.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!sheet?.finalizedAt) return;
+    const interval = setInterval(() => setTick((t) => t + 1), 30_000);
+    return () => clearInterval(interval);
+  }, [sheet?.finalizedAt]);
+
 
   useEffect(() => {
     if (!Number.isFinite(sheetId)) return;
@@ -221,9 +246,35 @@ export default function SheetDetailPage() {
     setLockingSheet(true);
     setFeedback({ type: '', message: '' });
     try {
-      await api.post(`/sheets/${sheetId}/lock`);
+      const { data } = await api.post(`/sheets/${sheetId}/lock`);
       setLockConfirm(false);
+      // Immediately apply lockedByLiquidador + finalizedAt from the response so the
+      // grace-period countdown is visible before the full reload completes.
+      setSheet((prev) => prev ? { ...prev, lockedByLiquidador: data.lockedByLiquidador, finalizedAt: data.finalizedAt } : prev);
       reloadDetail();
+    } catch (error) {
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo cerrar la planilla.' });
+    } finally {
+      setLockingSheet(false);
+    }
+  };
+
+  // Called by navigation buttons. If the sheet is editable, show the leave dialog first.
+  const handleNavigate = (destination) => {
+    if (editable) {
+      setNavConfirm(destination);
+    } else {
+      navigate(destination);
+    }
+  };
+
+  const handleLockAndLeave = async () => {
+    const destination = navConfirm;
+    setNavConfirm(null);
+    setLockingSheet(true);
+    try {
+      await api.post(`/sheets/${sheetId}/lock`);
+      navigate(destination);
     } catch (error) {
       setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo cerrar la planilla.' });
     } finally {
@@ -237,7 +288,18 @@ export default function SheetDetailPage() {
     ? 'Consulta el estado actual de esta planilla.'
     : `Creada por: ${sheet?.createdBy?.email || 'Sin dato'}`;
 
-  const headerStateLabel = role === 'ADMIN' ? 'Control admin' : editable ? 'Edición abierta' : role === 'CLIENT' ? '' : 'Solo lectura';
+  const graceMs = graceRemainingMs(sheet);
+  const inGrace = graceMs > 0;
+  const graceMinutes = Math.ceil(graceMs / 60_000);
+  const headerStateLabel = role === 'ADMIN'
+    ? 'Control admin'
+    : inGrace
+      ? `Cierre en ${graceMinutes} min`
+      : editable
+        ? 'Edición abierta'
+        : role === 'CLIENT'
+          ? ''
+          : 'Solo lectura';
 
   const addRow = async (event) => {
     event.preventDefault();
@@ -392,6 +454,41 @@ export default function SheetDetailPage() {
 
   return (
     <div className="space-y-6 stagger">
+      {navConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xl dark:border-zinc-700/60 dark:bg-zinc-900">
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">¿Qué quieres hacer antes de salir?</h2>
+            <p className="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+              La planilla sigue abierta para edición. Puedes cerrarla ahora, seguir editando, o salir sin cambios.
+            </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                type="button"
+                disabled={lockingSheet}
+                onClick={handleLockAndLeave}
+                className="inline-flex items-center justify-center rounded-2xl bg-[#1C3A22] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#162d1b] disabled:opacity-60 dark:bg-amber-500 dark:text-zinc-950 dark:hover:bg-amber-400"
+              >
+                {lockingSheet ? 'Cerrando...' : 'Cerrar planilla y salir'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setNavConfirm(null)}
+                className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Continuar editando
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(navConfirm)}
+                className="inline-flex items-center justify-center rounded-2xl px-4 py-2.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+              >
+                Descartar y salir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <section className="overflow-hidden rounded-2xl bg-[#1C3A22] p-6 shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
@@ -400,17 +497,17 @@ export default function SheetDetailPage() {
               Planilla operativa
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Link to="/planillas" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/8 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/15">
+              <button type="button" onClick={() => handleNavigate('/planillas')} className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/8 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/15">
                 <ArrowLeft size={16} aria-hidden="true" />
                 Volver a planillas
-              </Link>
+              </button>
               <PaymentChip isPaid={sheet.isPaid} />
               {!isClient && (
                 <span className="inline-flex rounded-full border border-white/15 bg-white/8 px-3 py-1 text-xs font-semibold text-white/70">
                   {headerStateLabel}
                 </span>
               )}
-              {role === 'LIQUIDADOR' && editable && (
+              {role === 'LIQUIDADOR' && editable && !sheet.lockedByLiquidador && (
                 lockConfirm ? (
                   <div className="inline-flex items-center gap-2">
                     <span className="text-xs font-medium text-white/70">¿Cerrar definitivamente?</span>
@@ -455,6 +552,13 @@ export default function SheetDetailPage() {
       </section>
 
       <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
+
+      {inGrace && role === 'LIQUIDADOR' && (
+        <FeedbackBanner
+          type="warning"
+          message={`Planilla cerrada. Puedes seguir editando por ${graceMinutes} min más. Después quedará bloqueada.`}
+        />
+      )}
 
       <Shell
         eyebrow="Encabezado de planilla"

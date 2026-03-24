@@ -27,9 +27,25 @@ function toSafePageSize(value) {
   return Math.min(parsed, MAX_PAGE_SIZE);
 }
 
-function assertCanEditSheet(user, sheet) {
+const GRACE_PERIOD_MS = 15 * 60 * 1000; // 15 minutes after finalizing
+
+async function assertCanEditSheet(user, sheet) {
   if (user.role === ROLE.ADMIN) return;
-  if (user.role === ROLE.LIQUIDADOR && sheet.createdById === user.userId && !sheet.lockedByLiquidador) return;
+  if (user.role === ROLE.LIQUIDADOR) {
+    if (!sheet.lockedByLiquidador) return; // any liquidador can edit an open sheet
+    if (sheet.createdById === user.userId) {
+      // Resolve finalizedAt — fall back to audit log for sheets locked before the column existed.
+      let finalizedAt = sheet.finalizedAt;
+      if (!finalizedAt) {
+        const lockEntry = await prisma.sheetAuditLog.findFirst({
+          where: { weighingSheetId: sheet.id, action: 'PLANILLA_LOCKED' },
+          orderBy: { changedAt: 'desc' },
+        });
+        finalizedAt = lockEntry?.changedAt ?? null;
+      }
+      if (finalizedAt && Date.now() - new Date(finalizedAt).getTime() < GRACE_PERIOD_MS) return;
+    }
+  }
 
   const err = new Error('Sheet is closed for your role');
   err.statusCode = 403;
@@ -180,7 +196,7 @@ async function listSheets({ user, filters }) {
   const pageSize = toSafePageSize(filters.pageSize);
   const skip = (page - 1) * pageSize;
 
-  const [items, total] = await Promise.all([
+  const [rawItems, total] = await Promise.all([
     prisma.weighingSheet.findMany({
       where,
       orderBy: { date: 'desc' },
@@ -189,10 +205,28 @@ async function listSheets({ user, filters }) {
       include: {
         seller: { select: { id: true, name: true, phone: true } },
         buyer: { select: { id: true, name: true, phone: true } },
+        auditLogs: {
+          where: { action: 'PLANILLA_LOCKED' },
+          orderBy: { changedAt: 'desc' },
+          take: 1,
+          select: { changedAt: true },
+        },
       },
     }),
     prisma.weighingSheet.count({ where }),
   ]);
+
+  const items = rawItems.map((sheet) => {
+    let finalizedAt = sheet.finalizedAt;
+    if (!finalizedAt && sheet.lockedByLiquidador && sheet.auditLogs.length > 0) {
+      finalizedAt = sheet.auditLogs[0].changedAt;
+    }
+    const editableUntil = finalizedAt
+      ? new Date(new Date(finalizedAt).getTime() + GRACE_PERIOD_MS)
+      : null;
+    const { auditLogs: _logs, ...rest } = sheet;
+    return { ...rest, finalizedAt, editableUntilByLiquidador: editableUntil };
+  });
 
   return {
     items,
@@ -231,10 +265,18 @@ async function getSheetById({ user, sheetId }) {
 
   assertCanViewSheet(user, sheet);
 
+  // Back-fill finalizedAt from audit log for sheets locked before the column was added.
+  let finalizedAt = sheet.finalizedAt;
+  if (!finalizedAt && sheet.lockedByLiquidador) {
+    const lockEntry = sheet.auditLogs.find((l) => l.action === 'PLANILLA_LOCKED');
+    if (lockEntry) finalizedAt = lockEntry.changedAt;
+  }
+
   const stats = calculateSheetStats(sheet.rows, sheet.pricePerHead);
 
   return {
     ...sheet,
+    finalizedAt,
     computed: {
       totalsByTypeSex: stats.totalsByTypeSex,
     },
@@ -249,7 +291,7 @@ async function updateSheet({ user, sheetId, data }) {
     throw err;
   }
 
-  assertCanEditSheet(user, sheet);
+  await assertCanEditSheet(user, sheet);
 
   const before = {
     sellerId: sheet.sellerId,
@@ -361,7 +403,7 @@ async function addRow({ user, sheetId, data }) {
     throw err;
   }
 
-  assertCanEditSheet(user, sheet);
+  await assertCanEditSheet(user, sheet);
 
   let resolved;
   if (data.category === 'OTHER') {
@@ -416,7 +458,7 @@ async function updateRow({ user, sheetId, rowId, data }) {
     err.statusCode = 404;
     throw err;
   }
-  assertCanEditSheet(user, sheet);
+  await assertCanEditSheet(user, sheet);
 
   const row = await prisma.cattleRow.findFirst({ where: { id: rowId, weighingSheetId: sheetId } });
   if (!row) {
@@ -474,7 +516,7 @@ async function deleteRow({ user, sheetId, rowId }) {
     throw err;
   }
 
-  assertCanEditSheet(user, sheet);
+  await assertCanEditSheet(user, sheet);
 
   const row = await prisma.cattleRow.findFirst({ where: { id: rowId, weighingSheetId: sheetId } });
   if (!row) {
@@ -514,7 +556,7 @@ async function reorderRows({ user, sheetId, orderedRowIds }) {
     throw err;
   }
 
-  assertCanEditSheet(user, sheet);
+  await assertCanEditSheet(user, sheet);
 
   const sheetRowIds = sheet.rows.map((row) => row.id).sort((a, b) => a - b);
   const incoming = [...orderedRowIds].sort((a, b) => a - b);
@@ -635,7 +677,7 @@ async function lockSheet({ user, sheetId }) {
 
   const updated = await prisma.weighingSheet.update({
     where: { id: sheetId },
-    data: { lockedByLiquidador: true },
+    data: { lockedByLiquidador: true, finalizedAt: new Date() },
     include: {
       seller: true,
       buyer: true,

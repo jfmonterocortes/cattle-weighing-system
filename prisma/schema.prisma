@@ -74,8 +74,9 @@ model WeighingSheet {
   isPaid                    Boolean  @default(false)
   paidAt                    DateTime?
   paidById                  Int?
-  lockedByLiquidador        Boolean  @default(false)
-  createdAt                 DateTime @default(now())
+  lockedByLiquidador        Boolean   @default(false)
+  finalizedAt               DateTime?
+  createdAt                 DateTime  @default(now())
   updatedAt                 DateTime @updatedAt
 
   seller    Person @relation("SellerSheets", fields: [sellerId], references: [id])
@@ -211,4 +212,5 @@ enum SheetAuditAction {
   LIQUIDADOR_ALIAS_CHANGED
   LINK_REQUEST_APPROVED
   LINK_REQUEST_REJECTED
+  PLANILLA_LOCKED
 }

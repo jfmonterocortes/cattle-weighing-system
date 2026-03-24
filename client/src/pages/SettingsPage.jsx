@@ -201,40 +201,67 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 stagger">
-      <section className="overflow-hidden rounded-2xl bg-[#1C3A22] shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
-        <div className="p-6 xl:p-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">
-                <Sparkles size={13} />
+      <section className="relative overflow-hidden rounded-2xl bg-[#1C3A22] shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
+        {/* Amber left accent bar */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-amber-400/70 via-amber-500/50 to-transparent" />
+
+        {/* Background decorations */}
+        <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-amber-500/6 blur-[60px]" />
+        <svg className="pointer-events-none absolute right-0 top-0 h-full w-56 opacity-[0.025]" aria-hidden="true">
+          <defs>
+            <pattern id="dots-account" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+              <circle cx="1.5" cy="1.5" r="1.5" fill="white" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#dots-account)" />
+        </svg>
+
+        {/* Top: monogram + content + button */}
+        <div className="relative flex flex-col gap-5 p-6 sm:flex-row sm:items-center xl:p-8">
+          {/* Monogram */}
+          <div className="shrink-0">
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-amber-500/70 bg-white/4">
+              <span className="font-display text-2xl font-bold text-amber-400">
+                {(settings?.profile?.person?.name || settings?.profile?.email || 'C')[0].toUpperCase()}
+              </span>
+              <div className={`absolute -bottom-1.5 -right-1.5 h-5 w-5 rounded-full border-2 border-[#1C3A22] ${settings?.profile?.isActive !== false ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+            </div>
+          </div>
+
+          {/* Identity text */}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/6 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.26em] text-white/45">
+                <Sparkles size={10} />
                 Mi cuenta
               </div>
-              <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Mi cuenta</h1>
-              <p className="mt-3 text-sm leading-7 text-white/55">
-                Actualiza tu contraseña, datos de contacto y vinculación.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {!isClient && <StatusChip tone="info">Rol: {formatRole(settings?.profile?.role || user?.role)}</StatusChip>}
-                <StatusChip tone={linkedTone}>{linkedLabel}</StatusChip>
-                <StatusChip tone={settings?.profile?.isActive === false ? 'warning' : 'success'}>
-                  {settings?.profile?.isActive === false ? 'Cuenta inactiva' : 'Cuenta activa'}
-                </StatusChip>
-              </div>
+              {!isClient && <StatusChip tone="info">{formatRole(settings?.profile?.role || user?.role)}</StatusChip>}
             </div>
-            {isClient && (
-              <Link
-                to="/planillas"
-                className="inline-flex shrink-0 items-center gap-2 self-start rounded-xl border border-white/20 bg-white/8 px-4 py-2.5 text-sm font-medium text-white/80 transition hover:bg-white/15"
-              >
-                Volver a mis planillas
-                <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-            )}
+            <h1 className="mt-2.5 font-display text-3xl font-semibold tracking-tight text-white xl:text-4xl">Mi cuenta</h1>
+            <p className="mt-1 text-sm text-white/50">Actualiza tu contraseña, datos de contacto y vinculación.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusChip tone={linkedTone}>{linkedLabel}</StatusChip>
+              <StatusChip tone={settings?.profile?.isActive === false ? 'warning' : 'success'}>
+                {settings?.profile?.isActive === false ? 'Cuenta inactiva' : 'Cuenta activa'}
+              </StatusChip>
+            </div>
           </div>
+
+          {/* Back button */}
+          {isClient && (
+            <Link
+              to="/planillas"
+              className="inline-flex shrink-0 items-center gap-2 self-start rounded-xl border border-white/15 bg-white/6 px-4 py-2.5 text-sm font-medium text-white/70 transition hover:bg-white/12 hover:text-white/90"
+            >
+              Volver a mis planillas
+              <ArrowRight size={15} aria-hidden="true" />
+            </Link>
+          )}
         </div>
 
+        {/* Bottom strip */}
         {settings?.profile && (
-          <div className={`grid divide-y divide-white/10 border-t border-white/10 sm:divide-x sm:divide-y-0 ${!isClient ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
+          <div className={`relative grid divide-y divide-white/10 border-t border-white/10 bg-black/25 sm:divide-x sm:divide-y-0 ${!isClient ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
             <div className="px-6 py-4 xl:px-8">
               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Correo</div>
               <div className="mt-1.5 truncate text-sm font-semibold text-white">{settings.profile.email}</div>
