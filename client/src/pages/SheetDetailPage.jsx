@@ -172,7 +172,6 @@ export default function SheetDetailPage() {
   const [headerDraft, setHeaderDraft] = useState({ seller: null, buyer: null, date: '', pricePerHead: '', liquidadorAliasSnapshot: '' });
   const [lockingSheet, setLockingSheet] = useState(false);
   const [lockConfirm, setLockConfirm] = useState(false);
-  const [navConfirm, setNavConfirm] = useState(null); // destination path when user wants to leave
 
   // Tick counter — changes every 30s to keep the grace-period badge/banner re-evaluated.
   const [, setTick] = useState(0);
@@ -181,6 +180,18 @@ export default function SheetDetailPage() {
     const interval = setInterval(() => setTick((t) => t + 1), 30_000);
     return () => clearInterval(interval);
   }, [sheet?.finalizedAt]);
+
+  // Precise grace-expiry timer: fires exactly when the 15-min window closes.
+  useEffect(() => {
+    if (!sheet?.lockedByLiquidador || sheet.createdById !== userId) return;
+    const remaining = graceRemainingMs(sheet);
+    if (remaining <= 0) return;
+    const timer = setTimeout(() => {
+      setTick((t) => t + 1);
+      setFeedback({ type: 'info', message: 'El período de edición ha terminado. La planilla está en solo lectura.' });
+    }, remaining);
+    return () => clearTimeout(timer);
+  }, [sheet?.finalizedAt, sheet?.lockedByLiquidador, sheet?.createdById, userId]);
 
 
   useEffect(() => {
@@ -259,27 +270,13 @@ export default function SheetDetailPage() {
     }
   };
 
-  // Called by navigation buttons. If the sheet is editable, show the leave dialog first.
+  // Auto-lock on navigate: if the sheet is unlocked and editable, fire-and-forget the lock
+  // request, then navigate immediately without waiting or showing a dialog.
   const handleNavigate = (destination) => {
-    if (editable) {
-      setNavConfirm(destination);
-    } else {
-      navigate(destination);
+    if (role === 'LIQUIDADOR' && editable && !sheet.lockedByLiquidador) {
+      api.post(`/sheets/${sheetId}/lock`).catch(() => {});
     }
-  };
-
-  const handleLockAndLeave = async () => {
-    const destination = navConfirm;
-    setNavConfirm(null);
-    setLockingSheet(true);
-    try {
-      await api.post(`/sheets/${sheetId}/lock`);
-      navigate(destination);
-    } catch (error) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo cerrar la planilla.' });
-    } finally {
-      setLockingSheet(false);
-    }
+    navigate(destination);
   };
   const groupedStats = useMemo(() => sheet?.computed?.totalsByTypeSex || [], [sheet]);
   const paymentLogs = sheet?.paymentLogs || [];
@@ -454,41 +451,6 @@ export default function SheetDetailPage() {
 
   return (
     <div className="space-y-6 stagger">
-      {navConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-sm rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xl dark:border-zinc-700/60 dark:bg-zinc-900">
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">¿Qué quieres hacer antes de salir?</h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              La planilla sigue abierta para edición. Puedes cerrarla ahora, seguir editando, o salir sin cambios.
-            </p>
-            <div className="mt-5 flex flex-col gap-2">
-              <button
-                type="button"
-                disabled={lockingSheet}
-                onClick={handleLockAndLeave}
-                className="inline-flex items-center justify-center rounded-2xl bg-[#1C3A22] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#162d1b] disabled:opacity-60 dark:bg-amber-500 dark:text-zinc-950 dark:hover:bg-amber-400"
-              >
-                {lockingSheet ? 'Cerrando...' : 'Cerrar planilla y salir'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setNavConfirm(null)}
-                className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-              >
-                Continuar editando
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate(navConfirm)}
-                className="inline-flex items-center justify-center rounded-2xl px-4 py-2.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-              >
-                Descartar y salir
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <section className="overflow-hidden rounded-2xl bg-[#1C3A22] p-6 shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
