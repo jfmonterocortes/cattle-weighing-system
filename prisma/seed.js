@@ -77,6 +77,7 @@ async function main() {
   });
 
   // --- Personas ---
+  const admin_person = await upsertPerson('Juan Pablo Montero Novoa', '3112236187', '7721432');
   const p1  = await upsertPerson('Carlos Montero',     '3001112233', '10990010');
   const p2  = await upsertPerson('Ana Vargas',         '3157890011', '10990020');  // liquidador
   const p3  = await upsertPerson('Rosa Martinez',      '3204561122', '10990030');  // client
@@ -95,8 +96,8 @@ async function main() {
     email: 'admin@bascula.com',
     password: 'Admin123!',
     role: ROLE.ADMIN,
-    personId: null,
-    alias: 'ADM',
+    personId: admin_person.id,
+    alias: 'JPM',
   });
 
   const liquidador = await ensureUser({

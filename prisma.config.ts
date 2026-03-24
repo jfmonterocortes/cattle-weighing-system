@@ -6,6 +6,7 @@ export default defineConfig({
   migrations: { path: "prisma/migrations", seed: "node ./prisma/seed.js" },
 
   datasource: {
-    url: process.env.DATABASE_URL,
+    // Prisma CLI commands like migrate work best against a direct Neon URL.
+    url: process.env.DIRECT_URL || process.env.DATABASE_URL,
   },
 });
