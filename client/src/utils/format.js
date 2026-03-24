@@ -29,3 +29,10 @@ export function fmtNumber(value) {
   if (n === null) return '-';
   return Math.round(n).toLocaleString('es-CO');
 }
+
+const ROLE_LABELS = { ADMIN: 'Administrador', LIQUIDADOR: 'Liquidador', CLIENT: 'Cliente' };
+
+/** Return a human-readable Spanish label for a role enum value. */
+export function formatRole(role) {
+  return ROLE_LABELS[role] ?? role ?? '-';
+}

@@ -1,6 +1,6 @@
 import { ArrowRight, ClipboardList, KeyRound, Scale, Wallet } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import FeedbackBanner from '../components/FeedbackBanner';
 
@@ -35,6 +35,7 @@ export default function Login({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const resetSuccess = searchParams.get('reset') === 'success';
+  const justRegistered = searchParams.get('registered') === '1';
 
   const submit = async (event) => {
     event.preventDefault();
@@ -82,13 +83,13 @@ export default function Login({ onLogin }) {
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-white/35">Bascula La Esperanza</p>
                     <h1 className="mt-3 font-display text-4xl font-light leading-[1.2] tracking-tight text-white sm:text-5xl">
-                      Tu reporte de ganado, más claro y más fácil de seguir.
+                      Consulta tus planillas, pesos y pagos en un solo lugar.
                     </h1>
                   </div>
                 </div>
 
                 <p className="max-w-2xl text-sm leading-7 text-white/55">
-                  Entra para revisar planillas, pesos, movimientos y pagos desde una vista pensada para consultar tu información sin complicaciones.
+                  Ingresa para revisar tus planillas, movimientos y pagos.
                 </p>
               </div>
 
@@ -119,10 +120,7 @@ export default function Login({ onLogin }) {
           <section className="rounded-[1.75rem] border border-stone-300/60 bg-[#F5EDD6] p-6 shadow-[0_18px_50px_rgba(28,58,34,0.10)] dark:border-white/6 dark:bg-[#162d1b]">
             <div className="mb-6">
               <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-stone-500 dark:text-white/35">Inicio de sesión</p>
-              <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight">Ingresa para ver tu información</h2>
-              <p className="mt-2 text-sm leading-6 text-stone-600 dark:text-white/50">
-                Usa tu correo y tu contraseña para revisar tus reportes, movimientos y pagos registrados.
-              </p>
+              <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight">Iniciar sesión</h2>
             </div>
 
             <div className="mb-5 rounded-xl border border-stone-300/70 bg-stone-200/50 p-4 text-[13px] leading-6 text-stone-700 dark:border-white/8 dark:bg-white/5 dark:text-white/50">
@@ -130,7 +128,13 @@ export default function Login({ onLogin }) {
             </div>
 
             <FeedbackBanner
-              message={resetSuccess ? 'Contraseña restablecida correctamente. Ya puedes iniciar sesión.' : ''}
+              message={
+                justRegistered
+                  ? 'Cuenta creada correctamente. Ya puedes iniciar sesión.'
+                  : resetSuccess
+                  ? 'Contraseña restablecida correctamente. Ya puedes iniciar sesión.'
+                  : ''
+              }
               type="success"
               className="mb-4"
             />
@@ -167,12 +171,19 @@ export default function Login({ onLogin }) {
                 disabled={loading}
               >
                 <span>{loading ? 'Ingresando...' : 'Ingresar'}</span>
-                {!loading && <ArrowRight size={16} />}
+                {!loading && <ArrowRight size={16} aria-hidden="true" />}
               </button>
             </form>
 
-            <div className="mt-6 rounded-xl border border-dashed border-stone-300/80 bg-stone-100/50 p-4 text-[13px] leading-6 text-stone-500 dark:border-white/8 dark:bg-white/4 dark:text-white/35">
-              Si ya recibiste un enlace de restablecimiento, ábrelo desde tu correo para cambiar la contraseña sin entrar primero al sistema.
+            <div className="mt-5 text-center text-sm text-stone-500 dark:text-white/40">
+              ¿No tienes cuenta?{' '}
+              <Link to="/register" className="font-semibold text-[#1C3A22] transition hover:underline dark:text-amber-400">
+                Regístrate aquí
+              </Link>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-dashed border-stone-300/80 bg-stone-100/50 p-4 text-[13px] leading-6 text-stone-500 dark:border-white/8 dark:bg-white/4 dark:text-white/35">
+              ¿Olvidaste tu contraseña? Abre el enlace de restablecimiento que te enviamos al correo.
             </div>
           </section>
         </div>

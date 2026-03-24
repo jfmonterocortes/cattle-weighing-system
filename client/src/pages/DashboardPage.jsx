@@ -78,7 +78,7 @@ function QuickAction({ to, label, caption, primary = false }) {
           <div className={`text-sm font-semibold ${primary ? 'text-white dark:text-[#1C3A22]' : 'text-zinc-900 dark:text-zinc-100'}`}>{label}</div>
           <div className={`mt-1 text-sm ${primary ? 'text-white/70 dark:text-[#1C3A22]/70' : 'text-stone-600 dark:text-white/45'}`}>{caption}</div>
         </div>
-        <ArrowRight size={16} className={primary ? 'text-white/80 dark:text-[#1C3A22]' : 'text-stone-400 dark:text-white/35'} />
+        <ArrowRight size={16} aria-hidden="true" className={primary ? 'text-white/80 dark:text-[#1C3A22]' : 'text-stone-400 dark:text-white/35'} />
       </div>
     </Link>
   );
@@ -118,7 +118,7 @@ function RecentSheetItem({ sheet }) {
           to={`/planillas/${sheet.id}`}
         >
           Ver detalle
-          <ArrowRight size={15} />
+          <ArrowRight size={15} aria-hidden="true" />
         </Link>
       </div>
     </div>
@@ -126,8 +126,8 @@ function RecentSheetItem({ sheet }) {
 }
 
 export default function DashboardPage() {
-  const { user } = getSession();
-  const isAdmin = user?.role === 'ADMIN';
+  const { user, activeRole } = getSession();
+  const isAdmin = activeRole === 'ADMIN';
 
   const [state, setState] = useState({
     loading: true,
@@ -194,14 +194,9 @@ export default function DashboardPage() {
   }, [isAdmin]);
 
   const editableNowCount = useMemo(() => {
-    if (user?.role !== 'LIQUIDADOR') return 0;
-
-    return state.recent.filter((sheet) => {
-      if (sheet.createdById !== user.userId || !sheet.editableUntilByLiquidador) return false;
-      const editableUntil = new Date(sheet.editableUntilByLiquidador);
-      return !Number.isNaN(editableUntil.getTime()) && new Date() <= editableUntil;
-    }).length;
-  }, [state.recent, user?.role, user?.userId]);
+    if (activeRole !== 'LIQUIDADOR') return 0;
+    return state.recent.filter((sheet) => sheet.createdById === user?.userId && !sheet.lockedByLiquidador).length;
+  }, [state.recent, activeRole, user?.userId]);
 
   const overviewCards = isAdmin
     ? [
@@ -209,28 +204,28 @@ export default function DashboardPage() {
           icon: Link2,
           label: 'Solicitudes pendientes',
           value: state.pendingLinks.length,
-          caption: 'Vinculaciones en cola para revisión.',
+          caption: 'Vinculaciones por aprobar.',
           tone: state.pendingLinks.length ? 'amber' : 'neutral',
         },
         {
           icon: Wallet,
           label: 'Pendientes de pago',
           value: state.unpaid,
-          caption: 'Planillas que requieren seguimiento.',
+          caption: 'Sin pago registrado.',
           tone: state.unpaid ? 'amber' : 'neutral',
         },
         {
           icon: BadgeDollarSign,
           label: 'Pagadas',
           value: state.paid,
-          caption: 'Planillas ya cerradas por pago.',
+          caption: 'Con pago confirmado.',
           tone: 'emerald',
         },
         {
           icon: FileStack,
           label: 'Planillas registradas',
           value: state.total,
-          caption: 'Volumen total disponible en el sistema.',
+          caption: 'Total en el sistema.',
           tone: 'blue',
         },
       ]
@@ -239,28 +234,28 @@ export default function DashboardPage() {
           icon: Wallet,
           label: 'Pendientes de pago',
           value: state.unpaid,
-          caption: 'Registros que todavía necesitan cierre.',
+          caption: 'Sin pago registrado.',
           tone: state.unpaid ? 'amber' : 'neutral',
         },
         {
           icon: Tractor,
           label: 'Edición abierta',
           value: editableNowCount,
-          caption: 'Planillas recientes que aún puedes corregir.',
+          caption: 'Sin cerrar.',
           tone: editableNowCount ? 'blue' : 'neutral',
         },
         {
           icon: ClipboardList,
           label: 'Planillas recientes',
           value: state.recent.length,
-          caption: 'Trabajo visible para retomar rápido.',
+          caption: 'Cargadas en esta vista.',
           tone: 'neutral',
         },
         {
           icon: BadgeDollarSign,
           label: 'Pagadas',
           value: state.paid,
-          caption: 'Planillas ya liquidadas en la operación.',
+          caption: 'Con pago confirmado.',
           tone: 'emerald',
         },
       ];
@@ -275,12 +270,12 @@ export default function DashboardPage() {
               Centro operativo
             </div>
             <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">
-              {isAdmin ? 'Supervisa colas, pagos y vinculaciones sin perder el contexto.' : 'Retoma las planillas que importan y sigue con la captura.'}
+              {isAdmin ? 'Planillas, pagos y solicitudes de vinculación.' : 'Planillas abiertas y estado de pagos.'}
             </h1>
             <p className="mt-3 text-sm leading-7 text-white/55">
               {isAdmin
-                ? 'Prioriza solicitudes pendientes, observa la carga de pago y entra rápido a las pantallas donde se destraba la operación.'
-                : 'Usa esta vista como punto de arranque para registrar nuevas planillas, revisar las que siguen abiertas y volver a los detalles que aún requieren acción.'}
+                ? 'Revisa las solicitudes pendientes, el estado de pagos y entra rápido a lo que requiere atención.'
+                : 'Registra nuevas planillas, revisa las que siguen abiertas y retoma el trabajo pendiente.'}
             </p>
           </div>
 
@@ -296,20 +291,15 @@ export default function DashboardPage() {
 
       <SectionCard
         eyebrow="Acciones principales"
-        title={isAdmin ? 'Supervisión y atención inmediata' : 'Operación del día'}
-        description={
-          isAdmin
-            ? 'Abre primero las colas con impacto directo en clientes y pagos, y después entra al mantenimiento de cuentas.'
-            : 'Empieza por registrar una nueva planilla o retoma el trabajo reciente antes de que cierre la ventana de edición.'
-        }
+        title="Acciones rápidas"
       >
         <div className="grid gap-3 lg:grid-cols-3">
-          <QuickAction to="/planillas/new" label="Registrar planilla" caption="Inicia una nueva pesada con vendedor y comprador." primary />
-          <QuickAction to="/planillas" label="Revisar planillas" caption="Filtra, revisa pagos y entra a los detalles operativos." />
+          <QuickAction to="/planillas/new" label="Registrar planilla" caption="Nueva pesada con vendedor y comprador." primary />
+          <QuickAction to="/planillas" label="Ver planillas" caption="Filtra, busca y revisa pagos." />
           {isAdmin ? (
-            <QuickAction to="/usuarios" label="Cuentas y vinculaciones" caption="Atiende solicitudes pendientes y administra accesos." />
+            <QuickAction to="/usuarios" label="Cuentas y vinculaciones" caption="Gestiona cuentas y solicitudes." />
           ) : (
-            <QuickAction to="/personas" label="Personas" caption="Consulta el directorio operativo de vendedores y compradores." />
+            <QuickAction to="/personas" label="Personas" caption="Vendedores y compradores." />
           )}
         </div>
       </SectionCard>
@@ -317,22 +307,21 @@ export default function DashboardPage() {
       {isAdmin && (
         <SectionCard
           eyebrow="Cola de vinculaciones"
-          title="Solicitudes que requieren revisión"
-          description="Este es el primer cuello de botella de la experiencia cliente. Resuelvelo antes de pasar a tareas de mantenimiento."
+          title="Solicitudes de vinculación pendientes"
           actions={
             <Link
               to="/usuarios"
               className="inline-flex items-center gap-2 rounded-xl border border-stone-300/70 bg-white/60 px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:border-stone-400/60 hover:bg-white/90 dark:border-white/8 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10"
             >
-              Abrir cuentas y vinculaciones
-              <ArrowRight size={16} />
+              Ver cuentas
+              <ArrowRight size={16} aria-hidden="true" />
             </Link>
           }
         >
           <div className="space-y-3">
             {!state.loading && state.pendingLinks.length === 0 && (
               <div className="rounded-xl border border-dashed border-stone-300/80 bg-stone-100/50 px-4 py-5 text-sm text-stone-600 dark:border-white/8 dark:bg-white/3 dark:text-white/40">
-                No hay solicitudes pendientes en este momento.
+                Sin solicitudes pendientes.
               </div>
             )}
 
@@ -360,17 +349,12 @@ export default function DashboardPage() {
 
       <SectionCard
         eyebrow="Actividad reciente"
-        title={isAdmin ? 'Planillas con contexto operativo inmediato' : 'Planillas recientes para retomar rápido'}
-        description={
-          isAdmin
-            ? 'Usa esta lista para detectar pagos pendientes y entrar a las planillas más recientes sin perder tiempo en filtros.'
-            : 'Aquí quedan las últimas planillas visibles para seguir con filas, revisar pagos o exportar el documento final.'
-        }
+        title="Planillas recientes"
       >
         <div className="space-y-3">
           {!state.loading && state.recent.length === 0 && (
             <div className="rounded-xl border border-dashed border-stone-300/80 bg-stone-100/50 px-4 py-5 text-sm text-stone-600 dark:border-white/8 dark:bg-white/3 dark:text-white/40">
-              Aún no hay planillas recientes para mostrar.
+              Sin planillas registradas.
             </div>
           )}
 

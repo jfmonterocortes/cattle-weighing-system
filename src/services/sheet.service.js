@@ -29,9 +29,7 @@ function toSafePageSize(value) {
 
 function assertCanEditSheet(user, sheet) {
   if (user.role === ROLE.ADMIN) return;
-  if (user.role === ROLE.LIQUIDADOR && sheet.createdById === user.userId) {
-    if (new Date() <= new Date(sheet.editableUntilByLiquidador)) return;
-  }
+  if (user.role === ROLE.LIQUIDADOR && sheet.createdById === user.userId && !sheet.lockedByLiquidador) return;
 
   const err = new Error('Sheet is closed for your role');
   err.statusCode = 403;
@@ -113,7 +111,6 @@ async function createSheet({ user, data }) {
         createdById: user.userId,
         liquidadorAliasSnapshot: alias,
         pricePerHead,
-        editableUntilByLiquidador: new Date(date.getTime() + 10 * 60 * 1000),
       },
       include: {
         seller: true,
@@ -622,6 +619,41 @@ async function suggestNextCattleNumber(sheetId) {
   return String(Math.max(...numeric) + 1);
 }
 
+async function lockSheet({ user, sheetId }) {
+  const sheet = await prisma.weighingSheet.findUnique({ where: { id: sheetId } });
+  if (!sheet) {
+    const err = new Error('Sheet not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (user.role === ROLE.LIQUIDADOR && sheet.createdById !== user.userId) {
+    const err = new Error('Forbidden');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const updated = await prisma.weighingSheet.update({
+    where: { id: sheetId },
+    data: { lockedByLiquidador: true },
+    include: {
+      seller: true,
+      buyer: true,
+      createdBy: { select: { id: true, email: true, role: true, liquidadorAlias: true } },
+      rows: { orderBy: { rowOrder: 'asc' } },
+    },
+  });
+
+  await addSheetAuditBestEffort({
+    weighingSheetId: sheetId,
+    action: SHEET_AUDIT_ACTION.PLANILLA_LOCKED,
+    actorUserId: user.userId,
+    metadata: {},
+  });
+
+  return updated;
+}
+
 module.exports = {
   assertCanEditSheet,
   assertCanViewSheet,
@@ -634,6 +666,7 @@ module.exports = {
   updateRow,
   deleteRow,
   reorderRows,
+  lockSheet,
   updatePaymentStatus,
   suggestNextCattleNumber,
   recalculateAndPersistSheet,

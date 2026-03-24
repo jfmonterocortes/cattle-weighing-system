@@ -8,6 +8,7 @@ const {
   updateRow,
   deleteRow,
   reorderRows,
+  lockSheet,
   updatePaymentStatus,
   suggestNextCattleNumber,
 } = require('../services/sheet.service');
@@ -123,6 +124,15 @@ async function nextCattleNumberController(req, res, next) {
   }
 }
 
+async function lockSheetController(req, res, next) {
+  try {
+    const sheet = await lockSheet({ user: req.user, sheetId: Number(req.params.sheetId) });
+    return res.json(sheet);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function paymentStatusController(req, res, next) {
   try {
     const sheet = await updatePaymentStatus({
@@ -148,5 +158,6 @@ module.exports = {
   deleteRowController,
   reorderRowsController,
   nextCattleNumberController,
+  lockSheetController,
   paymentStatusController,
 };

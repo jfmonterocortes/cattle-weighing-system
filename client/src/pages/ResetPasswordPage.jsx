@@ -5,8 +5,8 @@ import { api } from '../api';
 import FeedbackBanner from '../components/FeedbackBanner';
 
 const securityNotes = [
-  'El token solo se usa para esta solicitud y no se guarda en el navegador.',
-  'Al terminar, volverás a login para entrar con tu nueva contraseña.',
+  'El enlace solo funciona una vez.',
+  'Al confirmar, podrás iniciar sesión con la nueva contraseña.',
 ];
 
 export default function ResetPasswordPage() {
@@ -55,9 +55,9 @@ export default function ResetPasswordPage() {
               Restablecimiento seguro
             </div>
 
-            <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight">Define una nueva contraseña con tranquilidad.</h1>
+            <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight">Crea una nueva contraseña</h1>
             <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-              Este flujo está pensado para abrirse desde el enlace recibido por correo, aún si todavía no has iniciado sesión.
+              Abre esta página desde el enlace que recibiste en tu correo.
             </p>
 
             <div className="mt-6 space-y-3">
@@ -78,10 +78,10 @@ export default function ResetPasswordPage() {
           <section className="rounded-[2rem] border border-stone-200/60 bg-white/85 p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] backdrop-blur dark:border-zinc-800/60 dark:bg-zinc-900/70 dark:shadow-[0_24px_72px_rgba(0,0,0,0.35)]">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">Nueva credencial</p>
+                <p className="text-sm font-medium uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">Seguridad</p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight">Restablecer contraseña</h2>
                 <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-                  Ingresa una contraseña nueva para recuperar el acceso y continuar normalmente.
+                  Ingresa tu nueva contraseña para recuperar el acceso.
                 </p>
               </div>
 
@@ -99,7 +99,7 @@ export default function ResetPasswordPage() {
                   className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-950/80"
                   to="/login"
                 >
-                  <ArrowLeft size={16} />
+                  <ArrowLeft size={16} aria-hidden="true" />
                   Volver a iniciar sesión
                 </Link>
               </div>
@@ -124,15 +124,15 @@ export default function ResetPasswordPage() {
                     type="submit"
                   >
                     <span>{loading ? 'Actualizando...' : 'Actualizar contraseña'}</span>
-                    {!loading && <CheckCircle2 size={16} />}
+                    {!loading && <CheckCircle2 size={16} aria-hidden="true" />}
                   </button>
 
                   <Link
                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-950/80"
                     to="/login"
                   >
-                    <ArrowLeft size={16} />
-                    Volver a login
+                    <ArrowLeft size={16} aria-hidden="true" />
+                    Volver al inicio de sesión
                   </Link>
                 </div>
               </form>

@@ -1,5 +1,6 @@
 ﻿import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import Login from './pages/Login';
+import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import PlanillasPage from './pages/PlanillasPage';
 import NewSheetPage from './pages/NewSheetPage';
@@ -45,6 +46,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route element={<RequireAuth />}>

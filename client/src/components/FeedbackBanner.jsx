@@ -29,14 +29,16 @@ export default function FeedbackBanner({ message, type = 'info', className = '' 
   const preset = STYLE_BY_TYPE[type] || STYLE_BY_TYPE.info;
   const Icon = preset.icon;
 
+  const isError = type === 'error';
+
   return (
     <div
       className={`animate-fade-up rounded-xl border px-3 py-2 text-sm ${preset.className} ${className}`}
-      role="status"
-      aria-live="polite"
+      role={isError ? 'alert' : 'status'}
+      aria-live={isError ? 'assertive' : 'polite'}
     >
       <div className="flex items-start gap-2">
-        <Icon size={16} className="mt-0.5 shrink-0" />
+        <Icon size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
         <span>{message}</span>
       </div>
     </div>

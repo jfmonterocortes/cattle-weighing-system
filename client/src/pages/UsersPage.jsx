@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api';
 import FeedbackBanner from '../components/FeedbackBanner';
 import PersonAutocomplete from '../components/PersonAutocomplete';
+import { formatRole } from '../utils/format';
+import { getSession } from '../utils/authSession';
 
 function SectionShell({ eyebrow, title, description, children, actions }) {
   return (
@@ -42,6 +44,8 @@ const inputClass =
   'w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10';
 
 export default function UsersPage() {
+  const { activeRole } = getSession();
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState('');
@@ -51,6 +55,7 @@ export default function UsersPage() {
   const [usersReloadKey, setUsersReloadKey] = useState(0);
   const [linkRequestsReloadKey, setLinkRequestsReloadKey] = useState(0);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
+  const [confirmSuspendId, setConfirmSuspendId] = useState(null);
 
   const [editingUserId, setEditingUserId] = useState(null);
   const [editingUserDraft, setEditingUserDraft] = useState({ email: '', role: 'CLIENT', isActive: true, liquidadorAlias: '' });
@@ -131,8 +136,9 @@ export default function UsersPage() {
   };
 
   const startEdit = (user) => {
+    if (user.role === 'ADMIN') return;
     setEditingUserId(user.id);
-    setEditingUserDraft({ email: user.email || '', role: user.role === 'ADMIN' ? 'CLIENT' : user.role, isActive: Boolean(user.isActive), liquidadorAlias: user.liquidadorAlias || '' });
+    setEditingUserDraft({ email: user.email || '', role: user.role, isActive: Boolean(user.isActive), liquidadorAlias: user.liquidadorAlias || '' });
   };
 
   const saveEdit = async (userId) => {
@@ -148,6 +154,37 @@ export default function UsersPage() {
       reloadUsers();
     } catch (error) {
       setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar la cuenta.' });
+    }
+  };
+
+  const toggleSuspend = async (userId, isActive) => {
+    try {
+      await api.patch(`/users/${userId}`, { isActive });
+      setConfirmSuspendId(null);
+      setFeedback({ type: 'success', message: isActive ? 'Cuenta activada.' : 'Cuenta suspendida.' });
+      reloadUsers();
+    } catch (error) {
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar la cuenta.' });
+    }
+  };
+
+  const promoteToLiquidador = async (userId) => {
+    try {
+      await api.patch(`/users/${userId}`, { role: 'LIQUIDADOR' });
+      setFeedback({ type: 'success', message: 'Cuenta promovida a Liquidador.' });
+      reloadUsers();
+    } catch (error) {
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo promover la cuenta.' });
+    }
+  };
+
+  const demoteToClient = async (userId) => {
+    try {
+      await api.patch(`/users/${userId}`, { role: 'CLIENT' });
+      setFeedback({ type: 'success', message: 'Cuenta convertida a Cliente.' });
+      reloadUsers();
+    } catch (error) {
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo convertir la cuenta.' });
     }
   };
 
@@ -169,9 +206,10 @@ export default function UsersPage() {
   const requestResetLink = async (userId) => {
     try {
       const res = await api.post(`/users/${userId}/password-reset-link`);
-      setFeedback({ type: 'success', message: `Link de reset generado: ${res.data.resetLink}` });
+      navigator.clipboard.writeText(res.data.resetLink).catch(() => {});
+      setFeedback({ type: 'success', message: 'Enlace de restablecimiento copiado al portapapeles.' });
     } catch (error) {
-      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo generar el link de reset.' });
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo generar el enlace de restablecimiento.' });
     }
   };
 
@@ -204,6 +242,14 @@ export default function UsersPage() {
   const clientCount = users.filter((user) => user.role === 'CLIENT').length;
   const operatorCount = users.filter((user) => user.role === 'LIQUIDADOR').length;
 
+  if (activeRole !== 'ADMIN') {
+    return (
+      <div className="rounded-[1.5rem] border border-zinc-200/80 bg-white/90 p-5 text-sm text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-300">
+        Tu rol actual no tiene acceso a esta sección.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 stagger">
       <section className="overflow-hidden rounded-2xl bg-[#1C3A22] p-6 shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
@@ -213,32 +259,32 @@ export default function UsersPage() {
               <Users2 size={13} />
               Cuentas y vinculaciones
             </div>
-            <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Atiende primero la cola de vinculaciones y después el mantenimiento de cuentas.</h1>
+            <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Cuentas y vinculaciones</h1>
             <p className="mt-3 text-sm leading-7 text-white/55">
-              Esta pantalla agrupa la supervisión de cuentas, la aprobación de solicitudes y las herramientas de soporte sin darle el mismo peso a todo.
+              Aprueba solicitudes, gestiona cuentas y usa las herramientas de soporte.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[500px]">
-            <StatCard icon={ShieldCheck} label="Pendientes" value={pendingRequests.length} caption="Solicitudes esperando revisión." />
-            <StatCard icon={Users2} label="Cuentas" value={users.length} caption={loading ? 'Actualizando listado...' : 'Cuentas visibles con los filtros actuales.'} />
-            <StatCard icon={UserRound} label="Clientes" value={clientCount} caption="Cuentas CLIENT disponibles." />
-            <StatCard icon={Link2} label="Liquidadores" value={operatorCount} caption="Cuentas LIQUIDADOR activas." />
+            <StatCard icon={ShieldCheck} label="Pendientes" value={pendingRequests.length} caption="Solicitudes por revisar." />
+            <StatCard icon={Users2} label="Cuentas" value={users.length} caption={loading ? 'Cargando...' : 'Con los filtros actuales.'} />
+            <StatCard icon={UserRound} label="Clientes" value={clientCount} caption="Cuentas de cliente." />
+            <StatCard icon={Link2} label="Liquidadores" value={operatorCount} caption="Cuentas de liquidador." />
           </div>
         </div>
       </section>
 
       <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
 
-      <SectionShell eyebrow="Cola principal" title="Solicitudes de vinculación pendientes" description="Resuelve primero esta cola porque desbloquea la experiencia del cliente y reduce consultas de soporte.">
+      <SectionShell eyebrow="Vinculaciones" title="Solicitudes pendientes">
         <div className="space-y-3">
-          {pendingRequests.length === 0 && <div className="rounded-xl border border-dashed border-stone-300/80 bg-stone-100/50 px-4 py-5 text-sm text-stone-600 dark:border-white/8 dark:bg-white/3 dark:text-white/40">No hay solicitudes pendientes en este momento.</div>}
+          {pendingRequests.length === 0 && <div className="rounded-xl border border-dashed border-stone-300/80 bg-stone-100/50 px-4 py-5 text-sm text-stone-600 dark:border-white/8 dark:bg-white/3 dark:text-white/40">Sin solicitudes pendientes.</div>}
           {pendingRequests.map((item) => (
             <div key={item.id} className="rounded-xl border border-stone-300/50 bg-white/60 px-4 py-4 dark:border-white/6 dark:bg-white/3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{item.user?.email || 'Cuenta'} {'->'} {item.person?.name || 'Persona'}</div>
-                  <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{item.notes || 'Sin notas adicionales.'}</div>
+                  <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{item.notes || 'Sin notas.'}</div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => reviewRequest(item.id, 'APPROVED')} className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500">Aprobar</button>
@@ -250,14 +296,14 @@ export default function UsersPage() {
         </div>
       </SectionShell>
 
-      <SectionShell eyebrow="Gestión de cuentas" title="Crear cuentas y revisar acceso operativo" description="Despues de la cola principal, crea o ajusta cuentas CLIENT y LIQUIDADOR sin tocar privilegios ADMIN.">
+      <SectionShell eyebrow="Cuentas" title="Gestión de cuentas">
         <form onSubmit={createUser} className="grid gap-4 rounded-xl border border-stone-300/50 bg-white/50 p-4 dark:border-white/6 dark:bg-white/3">
           <div className="grid gap-4 md:grid-cols-2">
             <input className={inputClass} placeholder="Correo" value={createForm.email} onChange={(event) => setCreateForm((prev) => ({ ...prev, email: event.target.value }))} />
             <input className={inputClass} type="password" placeholder="Contraseña" value={createForm.password} onChange={(event) => setCreateForm((prev) => ({ ...prev, password: event.target.value }))} />
             <select className={inputClass} value={createForm.role} onChange={(event) => setCreateForm((prev) => ({ ...prev, role: event.target.value }))}>
-              <option value="CLIENT">CLIENT</option>
-              <option value="LIQUIDADOR">LIQUIDADOR</option>
+              <option value="CLIENT">Cliente</option>
+              <option value="LIQUIDADOR">Liquidador</option>
             </select>
             {createForm.role === 'LIQUIDADOR' && <input className={inputClass} placeholder="Alias liquidador" value={createForm.liquidadorAlias} onChange={(event) => setCreateForm((prev) => ({ ...prev, liquidadorAlias: event.target.value }))} />}
           </div>
@@ -268,7 +314,7 @@ export default function UsersPage() {
 
           <div className="flex justify-end">
             <button className="inline-flex items-center gap-2 rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400" disabled={createLoading}>
-              <PlusCircle size={16} />
+              <PlusCircle size={16} aria-hidden="true" />
               {createLoading ? 'Creando...' : 'Crear cuenta'}
             </button>
           </div>
@@ -279,8 +325,8 @@ export default function UsersPage() {
             <input className={inputClass} placeholder="Buscar email o nombre" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
             <select className={inputClass} value={roleInput} onChange={(event) => setRoleInput(event.target.value)}>
               <option value="">Todos los roles</option>
-              <option value="LIQUIDADOR">LIQUIDADOR</option>
-              <option value="CLIENT">CLIENT</option>
+              <option value="LIQUIDADOR">Liquidador</option>
+              <option value="CLIENT">Cliente</option>
             </select>
           </div>
           <button type="button" onClick={applyFilters} className="rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70">Buscar cuentas</button>
@@ -290,13 +336,13 @@ export default function UsersPage() {
           <table className="w-full text-sm">
             <thead className="bg-zinc-50/90 text-left text-zinc-500 dark:bg-zinc-950/40 dark:text-zinc-400">
               <tr>
-                <th className="px-3 py-3 font-medium">Cuenta</th>
-                <th className="px-3 py-3 font-medium">Rol</th>
-                <th className="px-3 py-3 font-medium">Activa</th>
-                <th className="px-3 py-3 font-medium">Persona</th>
-                <th className="px-3 py-3 font-medium">Contacto</th>
-                <th className="px-3 py-3 font-medium">Alias</th>
-                <th className="px-3 py-3" />
+                <th scope="col" className="px-3 py-3 font-medium">Cuenta</th>
+                <th scope="col" className="px-3 py-3 font-medium">Rol</th>
+                <th scope="col" className="px-3 py-3 font-medium">Activa</th>
+                <th scope="col" className="px-3 py-3 font-medium">Persona</th>
+                <th scope="col" className="px-3 py-3 font-medium">Contacto</th>
+                <th scope="col" className="px-3 py-3 font-medium">Alias</th>
+                <th scope="col" className="sr-only px-3 py-3">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -304,12 +350,12 @@ export default function UsersPage() {
                 const editing = editingUserId === currentUser.id;
                 return (
                   <tr key={currentUser.id} className="border-t border-zinc-200/80 text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
-                    <td className="px-3 py-3">{editing ? <input className={inputClass} value={editingUserDraft.email} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, email: event.target.value }))} /> : currentUser.email}</td>
-                    <td className="px-3 py-3">{currentUser.role === 'ADMIN' ? 'ADMIN' : editing ? <select className={inputClass} value={editingUserDraft.role} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, role: event.target.value }))}><option value="CLIENT">CLIENT</option><option value="LIQUIDADOR">LIQUIDADOR</option></select> : currentUser.role}</td>
-                    <td className="px-3 py-3">{editing ? <input type="checkbox" checked={editingUserDraft.isActive} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, isActive: event.target.checked }))} /> : currentUser.isActive ? 'Si' : 'No'}</td>
+                    <td className="px-3 py-3">{editing ? <input aria-label={`Email de ${currentUser.email}`} className={inputClass} value={editingUserDraft.email} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, email: event.target.value }))} /> : currentUser.email}</td>
+                    <td className="px-3 py-3">{currentUser.role === 'ADMIN' ? formatRole('ADMIN') : editing ? <select aria-label={`Rol de ${currentUser.email}`} className={inputClass} value={editingUserDraft.role} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, role: event.target.value }))}><option value="CLIENT">Cliente</option><option value="LIQUIDADOR">Liquidador</option></select> : formatRole(currentUser.role)}</td>
+                    <td className="px-3 py-3">{editing ? <input type="checkbox" aria-label={`Cuenta activa: ${currentUser.email}`} checked={editingUserDraft.isActive} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, isActive: event.target.checked }))} /> : currentUser.isActive ? 'Si' : 'No'}</td>
                     <td className="px-3 py-3">{currentUser.person?.name || '-'}</td>
                     <td className="px-3 py-3">{currentUser.person?.phone || currentUser.person?.cedula || '-'}</td>
-                    <td className="px-3 py-3">{editing ? <input className={inputClass} disabled={editingUserDraft.role !== 'LIQUIDADOR'} value={editingUserDraft.liquidadorAlias} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, liquidadorAlias: event.target.value }))} /> : currentUser.liquidadorAlias || '-'}</td>
+                    <td className="px-3 py-3">{editing ? <input aria-label={`Alias liquidador de ${currentUser.email}`} className={inputClass} disabled={editingUserDraft.role !== 'LIQUIDADOR'} value={editingUserDraft.liquidadorAlias} onChange={(event) => setEditingUserDraft((prev) => ({ ...prev, liquidadorAlias: event.target.value }))} /> : currentUser.liquidadorAlias || '-'}</td>
                     <td className="px-3 py-3 text-right">
                       {currentUser.role === 'ADMIN' ? (
                         <span className="text-xs text-zinc-500">Protegido</span>
@@ -318,8 +364,27 @@ export default function UsersPage() {
                           <button className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" onClick={() => setEditingUserId(null)} type="button">Cancelar</button>
                           <button className="rounded-xl bg-emerald-900 px-3 py-2 text-xs font-semibold text-white shadow-sm shadow-emerald-900/15 transition hover:bg-emerald-800 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/10 dark:hover:bg-amber-400" onClick={() => saveEdit(currentUser.id)} type="button">Guardar</button>
                         </div>
+                      ) : confirmSuspendId === currentUser.id ? (
+                        <div className="flex justify-end items-center gap-2">
+                          <span className="text-xs text-zinc-500">¿Confirmar?</span>
+                          <button type="button" onClick={() => toggleSuspend(currentUser.id, false)} className="rounded-2xl bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-700">Sí, suspender</button>
+                          <button type="button" onClick={() => setConfirmSuspendId(null)} className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70">Cancelar</button>
+                        </div>
                       ) : (
-                        <button className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" onClick={() => startEdit(currentUser)} type="button">Editar</button>
+                        <div className="flex justify-end gap-2">
+                          {currentUser.role === 'CLIENT' && (
+                            <button type="button" onClick={() => promoteToLiquidador(currentUser.id)} className="rounded-2xl border border-amber-300 px-3 py-2 text-xs font-medium text-amber-700 transition hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-400 dark:hover:bg-amber-500/10">Promover</button>
+                          )}
+                          {currentUser.role === 'LIQUIDADOR' && (
+                            <button type="button" onClick={() => demoteToClient(currentUser.id)} className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/70">Degradar</button>
+                          )}
+                          {currentUser.isActive ? (
+                            <button type="button" onClick={() => setConfirmSuspendId(currentUser.id)} className="rounded-2xl border border-red-200 px-3 py-2 text-xs font-medium text-red-700 transition hover:bg-red-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10">Suspender</button>
+                          ) : (
+                            <button type="button" onClick={() => toggleSuspend(currentUser.id, true)} className="rounded-2xl border border-emerald-300 px-3 py-2 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-400 dark:hover:bg-emerald-500/10">Activar</button>
+                          )}
+                          <button className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" onClick={() => startEdit(currentUser)} type="button">Editar</button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -331,21 +396,21 @@ export default function UsersPage() {
       </SectionShell>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <SectionShell eyebrow="Herramienta secundaria" title="Vinculación manual" description="Usala cuando necesites corregir o completar una relación cuenta-persona fuera de la cola principal.">
+        <SectionShell eyebrow="Herramientas" title="Vinculación manual">
           <div className="grid gap-4">
             <select className={inputClass} value={linking.userId} onChange={(event) => setLinking((prev) => ({ ...prev, userId: event.target.value }))}>
               <option value="">Seleccionar cuenta</option>
-              {users.filter((currentUser) => currentUser.role !== 'ADMIN').map((currentUser) => <option key={currentUser.id} value={currentUser.id}>{currentUser.email} ({currentUser.role})</option>)}
+              {users.filter((currentUser) => currentUser.role !== 'ADMIN').map((currentUser) => <option key={currentUser.id} value={currentUser.id}>{currentUser.email} ({formatRole(currentUser.role)})</option>)}
             </select>
             <PersonAutocomplete label="Persona" value={linking.person} onSelect={(person) => setLinking((prev) => ({ ...prev, person }))} />
             <button className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" type="button" onClick={linkUser}>
-              <Link2 size={16} />
+              <Link2 size={16} aria-hidden="true" />
               Vincular cuenta
             </button>
           </div>
         </SectionShell>
 
-        <SectionShell eyebrow="Herramienta secundaria" title="Soporte de contraseñas" description="Mantiene disponibles el cambio manual y la generacion de enlaces, pero con menos peso visual que la cola principal.">
+        <SectionShell eyebrow="Herramientas" title="Soporte de contraseñas">
           <div className="space-y-4">
             <div className="grid gap-4">
               <select className={inputClass} value={manualPassword.userId} onChange={(event) => setManualPassword((prev) => ({ ...prev, userId: event.target.value }))}>
@@ -354,7 +419,7 @@ export default function UsersPage() {
               </select>
               <input className={inputClass} type="password" placeholder="Nueva contraseña manual" value={manualPassword.newPassword} onChange={(event) => setManualPassword((prev) => ({ ...prev, newPassword: event.target.value }))} />
               <button className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" type="button" onClick={submitManualPassword}>
-                <KeyRound size={16} />
+                <KeyRound size={16} aria-hidden="true" />
                 Cambiar contraseña
               </button>
             </div>
@@ -362,7 +427,7 @@ export default function UsersPage() {
             <div className="flex flex-wrap gap-2">
               {users.map((currentUser) => (
                 <button key={currentUser.id} className="rounded-2xl border border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70" type="button" onClick={() => requestResetLink(currentUser.id)}>
-                  Generar link: {currentUser.email}
+                  Enlace de reset: {currentUser.email}
                 </button>
               ))}
             </div>

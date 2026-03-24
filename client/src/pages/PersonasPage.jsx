@@ -21,9 +21,9 @@ const inputClass =
   'w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10';
 
 export default function PersonasPage() {
-  const { user } = getSession();
-  const isAdmin = user?.role === 'ADMIN';
-  const isLiquidador = user?.role === 'LIQUIDADOR';
+  const { user, activeRole } = getSession();
+  const isAdmin = activeRole === 'ADMIN';
+  const isLiquidador = activeRole === 'LIQUIDADOR';
   const canAccess = isAdmin || isLiquidador;
 
   const [q, setQ] = useState('');
@@ -56,7 +56,7 @@ export default function PersonasPage() {
           if (cancelled) return;
           setState({ loading: false, error: error.response?.data?.message || 'No se pudieron cargar personas.', items: [], total: 0, totalPages: 1 });
         });
-    }, 0);
+    }, 250);
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -114,9 +114,9 @@ export default function PersonasPage() {
               <Users2 size={13} />
               Directorio operativo
             </div>
-            <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Gestiona el directorio de vendedores y compradores con la vinculación a la vista.</h1>
+            <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Directorio de personas</h1>
             <p className="mt-3 text-sm leading-7 text-white/55">
-              Las personas son la base de las planillas y de la visibilidad para clientes. Mantener este directorio claro evita errores de captura y problemas de enlace.
+              Vendedores y compradores disponibles para usar en planillas.
             </p>
           </div>
 
@@ -136,7 +136,7 @@ export default function PersonasPage() {
       <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
       <FeedbackBanner message={state.error} type="error" />
 
-      <SectionShell eyebrow="Búsqueda y permisos" title="Busca rápido y edita según tu rol" description={isAdmin ? 'Como ADMIN puedes crear personas y editar nombre, teléfono y cédula.' : 'Como LIQUIDADOR puedes usar el directorio y corregir contacto o cédula sin cambiar el nombre base.'}>
+      <SectionShell eyebrow="Búsqueda" title="Buscar persona">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
           <div className="flex gap-3">
             <div className="relative w-full">
@@ -150,7 +150,7 @@ export default function PersonasPage() {
         </div>
       </SectionShell>
 
-      <SectionShell eyebrow="Alta de persona" title="Agregar un nuevo actor al directorio" description="Crea rápidamente la persona cuando no exista todavía en el flujo operativo.">
+      <SectionShell eyebrow="Nueva persona" title="Agregar persona">
         <form onSubmit={createPerson} className="grid gap-4 md:grid-cols-4">
           <input className={inputClass} placeholder="Nombre" value={createForm.name} onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))} />
           <input className={inputClass} placeholder="Teléfono" value={createForm.phone} onChange={(event) => setCreateForm((prev) => ({ ...prev, phone: event.target.value }))} />
@@ -159,16 +159,16 @@ export default function PersonasPage() {
         </form>
       </SectionShell>
 
-      <SectionShell eyebrow="Listado" title="Personas del directorio" description="Consulta vínculos, contacto y datos base sin perder la vista de las personas más importantes para las planillas.">
+      <SectionShell eyebrow="Listado" title="Personas del directorio">
         <div className="overflow-x-auto rounded-[1.5rem] border border-zinc-200/80 dark:border-zinc-800">
           <table className="w-full text-sm">
             <thead className="bg-zinc-50/90 text-left text-zinc-500 dark:bg-zinc-950/40 dark:text-zinc-400">
               <tr>
-                <th className="px-3 py-3 font-medium">Nombre</th>
-                <th className="px-3 py-3 font-medium">Teléfono</th>
-                <th className="px-3 py-3 font-medium">Cédula</th>
-                <th className="px-3 py-3 font-medium">Vinculación</th>
-                <th className="px-3 py-3" />
+                <th scope="col" className="px-3 py-3 font-medium">Nombre</th>
+                <th scope="col" className="px-3 py-3 font-medium">Teléfono</th>
+                <th scope="col" className="px-3 py-3 font-medium">Cédula</th>
+                <th scope="col" className="px-3 py-3 font-medium">Vinculación</th>
+                <th scope="col" className="sr-only px-3 py-3">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -176,10 +176,10 @@ export default function PersonasPage() {
               {!state.loading && state.items.map((person) => {
                 const editing = editingId === person.id;
                 return (
-                  <tr key={person.id} className="border-t border-zinc-200/80 text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
-                    <td className="px-3 py-3">{editing ? <input className={inputClass} value={draft.name} disabled={!isAdmin} onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))} /> : person.name}</td>
-                    <td className="px-3 py-3">{editing ? <input className={inputClass} value={draft.phone} onChange={(event) => setDraft((prev) => ({ ...prev, phone: event.target.value }))} /> : person.phone || '-'}</td>
-                    <td className="px-3 py-3">{editing ? <input className={inputClass} value={draft.cedula} onChange={(event) => setDraft((prev) => ({ ...prev, cedula: event.target.value }))} /> : person.cedula || '-'}</td>
+                  <tr key={person.id} className={`border-t border-zinc-200/80 text-zinc-700 dark:border-zinc-800 dark:text-zinc-200 ${editing ? 'bg-amber-50/60 dark:bg-amber-500/5' : ''}`}>
+                    <td className="px-3 py-3">{editing ? <input aria-label={`Nombre de ${person.name}`} className={inputClass} value={draft.name} disabled={!isAdmin} onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))} /> : person.name}</td>
+                    <td className="px-3 py-3">{editing ? <input aria-label={`Teléfono de ${person.name}`} className={inputClass} value={draft.phone} onChange={(event) => setDraft((prev) => ({ ...prev, phone: event.target.value }))} /> : person.phone || '-'}</td>
+                    <td className="px-3 py-3">{editing ? <input aria-label={`Cédula de ${person.name}`} className={inputClass} value={draft.cedula} onChange={(event) => setDraft((prev) => ({ ...prev, cedula: event.target.value }))} /> : person.cedula || '-'}</td>
                     <td className="px-3 py-3">
                       <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${person.user ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-100' : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'}`}>
                         {person.user ? 'Vinculada' : 'Sin vinculo'}
@@ -205,8 +205,8 @@ export default function PersonasPage() {
         <div className="mt-4 flex items-center justify-between text-sm text-zinc-500 dark:text-zinc-400">
           <div>{state.total} personas totales</div>
           <div className="flex gap-2">
-            <button type="button" className="rounded-2xl border border-zinc-300 px-3 py-2 disabled:opacity-50 dark:border-zinc-700" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>Anterior</button>
-            <button type="button" className="rounded-2xl border border-zinc-300 px-3 py-2 disabled:opacity-50 dark:border-zinc-700" disabled={page >= state.totalPages} onClick={() => setPage((value) => value + 1)}>Siguiente</button>
+            <button type="button" aria-label={`Página anterior (página ${page - 1} de ${state.totalPages})`} className="rounded-2xl border border-zinc-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>Anterior</button>
+            <button type="button" aria-label={`Página siguiente (página ${page + 1} de ${state.totalPages})`} className="rounded-2xl border border-zinc-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700" disabled={page >= state.totalPages} onClick={() => setPage((value) => value + 1)}>Siguiente</button>
           </div>
         </div>
       </SectionShell>

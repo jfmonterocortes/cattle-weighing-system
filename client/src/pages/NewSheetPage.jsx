@@ -26,13 +26,16 @@ function SummaryCard({ icon, label, value }) {
 
 function toIsoDateTime(value) {
   if (!value) return undefined;
+  // datetime-local values are parsed as local time by the browser; correct for
+  // the timezone offset so the UTC ISO string represents the intended local time.
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return undefined;
-  return parsed.toISOString();
+  const offsetMs = parsed.getTimezoneOffset() * 60000;
+  return new Date(parsed.getTime() - offsetMs).toISOString();
 }
 
 export default function NewSheetPage() {
-  const { user } = getSession();
+  const { user, activeRole } = getSession();
   const navigate = useNavigate();
 
   const [seller, setSeller] = useState(null);
@@ -46,7 +49,7 @@ export default function NewSheetPage() {
   const [creatingSheet, setCreatingSheet] = useState(false);
   const [sheetFeedback, setSheetFeedback] = useState({ type: '', message: '' });
 
-  const isOperator = user?.role === 'ADMIN' || user?.role === 'LIQUIDADOR';
+  const isOperator = activeRole === 'ADMIN' || activeRole === 'LIQUIDADOR';
 
   if (!isOperator) {
     return (
@@ -112,9 +115,9 @@ export default function NewSheetPage() {
               <ClipboardPenLine size={13} />
               Registrar planilla
             </div>
-            <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Empieza por vendedor y comprador, y sigue al detalle sin perder tiempo.</h1>
+            <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Selecciona vendedor y comprador para crear la planilla.</h1>
             <p className="mt-3 text-sm leading-7 text-white/55">
-              La captura principal se resuelve aqui. Los ajustes opcionales quedan disponibles si necesitas registrar una fecha puntual, un precio distinto o un alias de liquidador.
+              Completa los datos principales abajo. Si necesitas fecha, precio o alias distinto al predeterminado, están en los ajustes opcionales.
             </p>
           </div>
 
@@ -131,9 +134,9 @@ export default function NewSheetPage() {
           <section className="rounded-xl border border-emerald-200/70 bg-emerald-50/60 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/8">
             <div className="mb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-800 dark:text-emerald-200">Parte vendedora</p>
-              <h2 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Selecciona o crea el vendedor</h2>
+              <h2 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Vendedor</h2>
               <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-                Busca una persona existente o crea el registro minimo sin salir del flujo de captura.
+                Busca una persona existente o crea una nueva.
               </p>
             </div>
 
@@ -147,7 +150,7 @@ export default function NewSheetPage() {
 
             {seller?.id && (
               <div className="mt-4 rounded-lg border border-stone-300/60 bg-white/70 px-4 py-3 text-sm text-stone-700 dark:border-white/8 dark:bg-white/5 dark:text-white/60">
-                Seleccionado: <span className="font-semibold">{seller.name}</span> (ID {seller.id})
+                Seleccionado: <span className="font-semibold">{seller.name}</span>
               </div>
             )}
           </section>
@@ -155,9 +158,9 @@ export default function NewSheetPage() {
           <section className="rounded-xl border border-amber-200/70 bg-amber-50/60 p-5 dark:border-amber-500/20 dark:bg-amber-500/8">
             <div className="mb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-800 dark:text-amber-200">Parte compradora</p>
-              <h2 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Selecciona o crea el comprador</h2>
+              <h2 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Comprador</h2>
               <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-                Mantiene el mismo flujo para que la planilla salga lista para continuar con las reses.
+                Busca una persona existente o crea una nueva.
               </p>
             </div>
 
@@ -171,7 +174,7 @@ export default function NewSheetPage() {
 
             {buyer?.id && (
               <div className="mt-4 rounded-lg border border-stone-300/60 bg-white/70 px-4 py-3 text-sm text-stone-700 dark:border-white/8 dark:bg-white/5 dark:text-white/60">
-                Seleccionado: <span className="font-semibold">{buyer.name}</span> (ID {buyer.id})
+                Seleccionado: <span className="font-semibold">{buyer.name}</span>
               </div>
             )}
           </section>
@@ -180,6 +183,9 @@ export default function NewSheetPage() {
         <section className="mt-6 rounded-[1.5rem] border border-zinc-200/80 bg-zinc-50/90 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
           <button
             type="button"
+            id="advanced-toggle"
+            aria-expanded={advancedOpen}
+            aria-controls="advanced-fields"
             onClick={() => setAdvancedOpen((value) => !value)}
             className="flex w-full items-center justify-between gap-3 text-left"
           >
@@ -188,20 +194,21 @@ export default function NewSheetPage() {
                 <Settings2 size={18} />
               </div>
               <div>
-                <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Ajustes de captura opcionales</div>
+                <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Opciones avanzadas</div>
                 <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                  Solo abre esta sección si necesitas registrar una fecha puntual, un precio distinto o un alias operativo.
+                  Fecha, precio o alias diferentes al predeterminado.
                 </div>
               </div>
             </div>
             <ChevronDown
               size={18}
+              aria-hidden="true"
               className={`text-zinc-500 transition ${advancedOpen ? 'rotate-180' : ''}`}
             />
           </button>
 
           {advancedOpen && (
-            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            <div id="advanced-fields" className="mt-5 grid gap-4 lg:grid-cols-3">
               <label>
                 <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Fecha y hora</div>
                 <input
@@ -238,7 +245,7 @@ export default function NewSheetPage() {
         </section>
 
         <div className="mt-6 rounded-[1.5rem] border border-dashed border-zinc-300/90 bg-zinc-50/90 p-4 text-sm leading-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/50 dark:text-zinc-400">
-          Al guardar, se crea la planilla con estado inicial pendiente y se abre el detalle para continuar con las reses, el pago y la exportacion.
+          Al guardar se abre el detalle de la planilla para continuar con las reses, el pago y la exportación.
         </div>
 
         <div className="mt-5 flex flex-col gap-4 border-t border-zinc-200/80 pt-5 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
@@ -251,7 +258,7 @@ export default function NewSheetPage() {
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400"
           >
             <span>{creatingSheet ? 'Creando...' : 'Registrar planilla'}</span>
-            {!creatingSheet && <ArrowRight size={16} />}
+            {!creatingSheet && <ArrowRight size={16} aria-hidden="true" />}
           </button>
         </div>
       </form>

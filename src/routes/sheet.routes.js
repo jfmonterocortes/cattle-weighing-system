@@ -10,6 +10,7 @@ const {
   deleteRowController,
   reorderRowsController,
   nextCattleNumberController,
+  lockSheetController,
   paymentStatusController,
 } = require('../controllers/sheet.controller');
 const { authMiddleware } = require('../middlewares/auth.middleware');
@@ -39,6 +40,7 @@ router.post('/:sheetId/rows/reorder', authMiddleware, requireRoles('ADMIN', 'LIQ
 router.patch('/:sheetId/rows/:rowId', authMiddleware, requireRoles('ADMIN', 'LIQUIDADOR'), validate(updateRowSchema), updateRowController);
 router.delete('/:sheetId/rows/:rowId', authMiddleware, requireRoles('ADMIN', 'LIQUIDADOR'), deleteRowController);
 
+router.post('/:sheetId/lock', authMiddleware, requireRoles('ADMIN', 'LIQUIDADOR'), lockSheetController);
 router.post('/:sheetId/payment-status', authMiddleware, requireRoles('ADMIN', 'LIQUIDADOR'), validate(paymentStatusSchema), paymentStatusController);
 
 module.exports = router;

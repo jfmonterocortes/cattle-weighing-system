@@ -1,4 +1,5 @@
 import {
+  ChevronDown,
   ClipboardList,
   FilePlus2,
   LayoutDashboard,
@@ -11,11 +12,13 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { parseJwt } from '../utils/jwt';
 import { applyTheme, initTheme } from '../utils/theme';
+import { formatRole } from '../utils/format';
+import { getAvailableRoles, setActiveRole } from '../utils/authSession';
 
 const navigationByRole = {
   ADMIN: [
@@ -113,7 +116,7 @@ function Sidebar({ role, onNavigate }) {
       <nav className="mt-3 flex-1 space-y-4 nav-stagger">
         {sections.map((section) => (
           <div key={section.section}>
-            <div className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.28em] text-white/35">
+            <div className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.28em] text-white/55">
               {section.section}
             </div>
             <div className="space-y-0.5">
@@ -154,15 +157,29 @@ export default function AppLayout() {
 
   const token = localStorage.getItem('token');
   const user = useMemo(() => (token ? parseJwt(token) : null), [token]);
-  const currentItem = useMemo(() => findCurrentItem(user?.role, location.pathname), [location.pathname, user?.role]);
+
+  const [activeRole, setActiveRoleState] = useState(() => {
+    if (!token) return null;
+    const u = parseJwt(token);
+    if (!u) return null;
+    const stored = localStorage.getItem('activeRole');
+    const available = getAvailableRoles(u.role);
+    return stored && available.includes(stored) ? stored : u.role;
+  });
+
+  const availableRoles = useMemo(() => (user ? getAvailableRoles(user.role) : []), [user]);
+  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+  const roleMenuRef = useRef(null);
+
+  const currentItem = useMemo(() => findCurrentItem(activeRole, location.pathname), [location.pathname, activeRole]);
 
   const headerContext = useMemo(() => {
     if (!profile) return '';
-    if (profile.role === 'CLIENT' && profile.person?.name) return `Persona vinculada: ${profile.person.name}`;
-    if (profile.role === 'LIQUIDADOR' && profile.liquidadorAlias) return `Alias operativo: ${profile.liquidadorAlias}`;
-    if (profile.role === 'ADMIN') return 'Supervisión operativa y control';
+    if (activeRole === 'CLIENT' && profile.person?.name) return `Persona vinculada: ${profile.person.name}`;
+    if (activeRole === 'LIQUIDADOR' && profile.liquidadorAlias) return `Alias operativo: ${profile.liquidadorAlias}`;
+    if (activeRole === 'ADMIN') return 'Supervisión operativa y control';
     return profile.email || '';
-  }, [profile]);
+  }, [profile, activeRole]);
 
   useEffect(() => {
     document.title = 'BASCULA LA ESPERANZA';
@@ -197,8 +214,29 @@ export default function AppLayout() {
     setMobileOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (roleMenuRef.current && !roleMenuRef.current.contains(e.target)) setRoleMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+
+  const switchRole = (newRole) => {
+    setActiveRole(newRole);
+    setActiveRoleState(newRole);
+    setRoleMenuOpen(false);
+    window.location.href = newRole === 'CLIENT' ? '/planillas' : '/dashboard';
+  };
+
   return (
     <div className="min-h-screen bg-[#EDE4CA] text-zinc-900 dark:bg-[#0D1810] dark:text-zinc-100">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-[#1C3A22] focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:bg-amber-500 dark:focus:text-[#1C3A22]"
+      >
+        Saltar al contenido principal
+      </a>
       <header className="sticky top-0 z-30 border-b border-stone-300/50 bg-[#EDE4CA]/92 backdrop-blur-xl dark:border-white/5 dark:bg-[#0D1810]/92">
         <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-4 py-2.5">
           <button
@@ -219,9 +257,46 @@ export default function AppLayout() {
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="hidden rounded-full bg-[#1C3A22]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1C3A22] sm:inline-flex dark:bg-amber-500/10 dark:text-amber-400">
-              {profile?.role || user?.role || '-'}
-            </span>
+            {availableRoles.length > 1 ? (
+              <div ref={roleMenuRef} className="relative hidden sm:block">
+                <button
+                  type="button"
+                  onClick={() => setRoleMenuOpen((v) => !v)}
+                  aria-expanded={roleMenuOpen}
+                  aria-haspopup="listbox"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#1C3A22]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1C3A22] transition hover:bg-[#1C3A22]/20 dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20"
+                >
+                  {formatRole(activeRole)}
+                  <ChevronDown size={11} aria-hidden="true" className={`transition-transform ${roleMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {roleMenuOpen && (
+                  <div
+                    role="listbox"
+                    aria-label="Cambiar rol activo"
+                    className="absolute right-0 top-full z-50 mt-2 min-w-[160px] overflow-hidden rounded-xl border border-stone-200/80 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
+                  >
+                    {availableRoles.map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        role="option"
+                        aria-selected={r === activeRole}
+                        onMouseDown={(e) => { e.preventDefault(); switchRole(r); }}
+                        className={`w-full px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider transition ${r === activeRole ? 'bg-[#1C3A22]/8 text-[#1C3A22] dark:bg-amber-500/10 dark:text-amber-400' : 'text-zinc-600 hover:bg-stone-50 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}
+                      >
+                        {formatRole(r)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              activeRole !== 'CLIENT' && (
+                <span className="hidden rounded-full bg-[#1C3A22]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1C3A22] sm:inline-flex dark:bg-amber-500/10 dark:text-amber-400">
+                  {formatRole(activeRole)}
+                </span>
+              )
+            )}
             <button
               className="rounded-lg p-2 text-zinc-500 transition hover:bg-stone-300/50 hover:text-zinc-800 dark:text-zinc-500 dark:hover:bg-white/8 dark:hover:text-zinc-300"
               onClick={() => {
@@ -271,7 +346,7 @@ export default function AppLayout() {
               <X size={18} />
             </button>
           </div>
-          <Sidebar role={user?.role} onNavigate={() => setMobileOpen(false)} />
+          <Sidebar role={activeRole} onNavigate={() => setMobileOpen(false)} />
         </aside>
       )}
 
@@ -280,10 +355,10 @@ export default function AppLayout() {
           className="hidden self-start rounded-2xl bg-[#1C3A22] p-3.5 shadow-[0_8px_40px_rgba(28,58,34,0.28)] lg:block dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]"
           style={{ position: 'sticky', top: '3.75rem' }}
         >
-          <Sidebar role={user?.role} />
+          <Sidebar role={activeRole} />
         </aside>
 
-        <main className="min-w-0">
+        <main id="main-content" className="min-w-0">
           <Outlet />
         </main>
       </div>

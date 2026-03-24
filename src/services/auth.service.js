@@ -18,10 +18,12 @@ function buildPasswordVersion(passwordHash) {
 
 async function loginWithPassword({ email, password }) {
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !user.isActive) return null;
+  if (!user) return { reason: 'invalid' };
 
   const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) return null;
+  if (!valid) return { reason: 'invalid' };
+
+  if (!user.isActive) return { reason: 'suspended' };
 
   return {
     token: createToken(user),

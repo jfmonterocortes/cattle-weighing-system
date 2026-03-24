@@ -74,7 +74,7 @@ model WeighingSheet {
   isPaid                    Boolean  @default(false)
   paidAt                    DateTime?
   paidById                  Int?
-  editableUntilByLiquidador DateTime
+  lockedByLiquidador        Boolean  @default(false)
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
 
@@ -93,7 +93,6 @@ model WeighingSheet {
   @@index([createdById])
   @@index([date])
   @@index([isPaid, paidAt])
-  @@index([editableUntilByLiquidador])
 }
 
 model CattleRow {

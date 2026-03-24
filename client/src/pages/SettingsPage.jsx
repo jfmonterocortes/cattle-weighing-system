@@ -5,6 +5,7 @@ import { api } from '../api';
 import PersonAutocomplete from '../components/PersonAutocomplete';
 import FeedbackBanner from '../components/FeedbackBanner';
 import { getSession } from '../utils/authSession';
+import { formatRole } from '../utils/format';
 
 const ONE_TIME_MSG =
   'Tu solicitud de vinculación ya fue utilizada. Si necesitas hacer una corrección, por favor comunícate con atención al cliente o con el administrador.';
@@ -86,8 +87,9 @@ export default function SettingsPage() {
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
 
-  const isAdmin = user?.role === 'ADMIN';
-  const isClient = user?.role === 'CLIENT';
+  const { activeRole } = getSession();
+  const isAdmin = activeRole === 'ADMIN';
+  const isClient = activeRole === 'CLIENT';
 
   useEffect(() => {
     let cancelled = false;
@@ -199,49 +201,63 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 stagger">
-      <section className="overflow-hidden rounded-2xl bg-[#1C3A22] p-6 shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">
-              <Sparkles size={13} />
-              Mi cuenta
+      <section className="overflow-hidden rounded-2xl bg-[#1C3A22] shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
+        <div className="p-6 xl:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">
+                <Sparkles size={13} />
+                Mi cuenta
+              </div>
+              <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Mi cuenta</h1>
+              <p className="mt-3 text-sm leading-7 text-white/55">
+                Actualiza tu contraseña, datos de contacto y vinculación.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {!isClient && <StatusChip tone="info">Rol: {formatRole(settings?.profile?.role || user?.role)}</StatusChip>}
+                <StatusChip tone={linkedTone}>{linkedLabel}</StatusChip>
+                <StatusChip tone={settings?.profile?.isActive === false ? 'warning' : 'success'}>
+                  {settings?.profile?.isActive === false ? 'Cuenta inactiva' : 'Cuenta activa'}
+                </StatusChip>
+              </div>
             </div>
-            <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Administra tu cuenta sin perder el contexto operativo.</h1>
-            <p className="mt-3 text-sm leading-7 text-white/55">
-              Este espacio queda para mantenimiento de cuenta, seguridad y vinculación. El seguimiento diario de planillas sigue concentrado en la vista principal.
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              <StatusChip tone="info">Rol: {settings?.profile?.role || user?.role || '-'}</StatusChip>
-              <StatusChip tone={linkedTone}>{linkedLabel}</StatusChip>
-              <StatusChip tone={settings?.profile?.isActive === false ? 'warning' : 'success'}>
-                {settings?.profile?.isActive === false ? 'Cuenta inactiva' : 'Cuenta activa'}
-              </StatusChip>
-            </div>
+            {isClient && (
+              <Link
+                to="/planillas"
+                className="inline-flex shrink-0 items-center gap-2 self-start rounded-xl border border-white/20 bg-white/8 px-4 py-2.5 text-sm font-medium text-white/80 transition hover:bg-white/15"
+              >
+                Volver a mis planillas
+                <ArrowRight size={16} aria-hidden="true" />
+              </Link>
+            )}
           </div>
+        </div>
 
-            {settings?.profile && (
-              <div className="grid gap-3 sm:grid-cols-2 xl:w-[430px]">
-                <DetailCard label="Correo" value={settings.profile.email} />
-                <DetailCard label="Persona vinculada" value={settings.profile.person ? settings.profile.person.name : 'Sin vinculo'} />
-                <DetailCard label="Estado" value={settings.profile.isActive ? 'Activo' : 'Inactivo'} />
-                <DetailCard label="Rol operativo" value={settings.profile.role} />
+        {settings?.profile && (
+          <div className={`grid divide-y divide-white/10 border-t border-white/10 sm:divide-x sm:divide-y-0 ${!isClient ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
+            <div className="px-6 py-4 xl:px-8">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Correo</div>
+              <div className="mt-1.5 truncate text-sm font-semibold text-white">{settings.profile.email}</div>
+            </div>
+            <div className="px-6 py-4 xl:px-8">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Persona vinculada</div>
+              <div className="mt-1.5 text-sm font-semibold text-white">{settings.profile.person ? settings.profile.person.name : 'Sin vínculo'}</div>
+            </div>
+            <div className="px-6 py-4 xl:px-8">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Estado</div>
+              <div className={`mt-1.5 text-sm font-semibold ${settings.profile.isActive ? 'text-emerald-300' : 'text-amber-300'}`}>
+                {settings.profile.isActive ? 'Activo' : 'Inactivo'}
+              </div>
+            </div>
+            {!isClient && (
+              <div className="px-6 py-4 xl:px-8">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Rol operativo</div>
+                <div className="mt-1.5 text-sm font-semibold text-white">{formatRole(settings.profile.role)}</div>
               </div>
             )}
           </div>
-
-          {isClient && (
-            <div className="mt-4 flex xl:mt-0 xl:justify-end">
-              <Link
-                to="/planillas"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/8 px-4 py-3 text-sm font-medium text-white/80 transition hover:bg-white/15"
-              >
-                Volver a mis planillas
-                <ArrowRight size={16} />
-              </Link>
-            </div>
-          )}
-        </section>
+        )}
+      </section>
 
       <FeedbackBanner message={loadError} type="error" />
       <FeedbackBanner message={feedback.message} type={feedback.type || 'info'} />
@@ -249,9 +265,8 @@ export default function SettingsPage() {
       {isAdmin && (
         <SectionCard
           icon={SlidersHorizontal}
-          eyebrow="Parámetros globales"
-          title="Configuración del sistema"
-          description="Ajusta el precio base por cabeza sin salir del panel de administración."
+          eyebrow="Configuración"
+          title="Precio base por cabeza"
           tone="amber"
         >
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
@@ -284,7 +299,7 @@ export default function SettingsPage() {
             icon={Phone}
             eyebrow="Datos personales"
             title="Datos de contacto"
-            description="Actualiza teléfono y cédula cuando tu cuenta ya esté correctamente vinculada."
+            description="Solo disponible cuando la cuenta esté vinculada."
             tone="emerald"
           >
             {!clientLinked && (
@@ -326,7 +341,7 @@ export default function SettingsPage() {
             icon={KeyRound}
             eyebrow="Seguridad"
             title="Cambiar contraseña"
-            description="Actualiza tu acceso con una nueva contraseña manteniendo la validación de la contraseña actual."
+            description="Ingresa la contraseña actual y la nueva para actualizarla."
             tone="blue"
           >
             <div className="grid gap-3 md:grid-cols-2">
@@ -359,9 +374,9 @@ export default function SettingsPage() {
 
           <SectionCard
             icon={Link2}
-            eyebrow="Relacion con tu persona"
-            title="Vinculación de cuenta"
-            description="Busca una persona existente, revisa el estado de tu solicitud y mantén el proceso claro en todo momento."
+            eyebrow="Vinculación"
+            title="Vincular cuenta"
+            description="Busca tu nombre en el directorio y solicita la vinculación."
             tone="amber"
             className="xl:col-span-2"
           >
@@ -373,7 +388,7 @@ export default function SettingsPage() {
                       <ShieldCheck size={18} />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">Cuenta vinculada con exito</p>
+                      <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">Cuenta vinculada</p>
                       <p className="mt-1 text-sm text-emerald-800 dark:text-emerald-200">{clientLink.linkedPerson.name}</p>
                     </div>
                   </div>
@@ -388,7 +403,7 @@ export default function SettingsPage() {
                     <PersonAutocomplete label="Buscar persona existente" value={selectedPerson} onSelect={setSelectedPerson} minQueryLength={3} />
                     {selectedPerson?.id && (
                       <div className="rounded-[1.25rem] border border-zinc-200 bg-white/80 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200">
-                        Seleccionada: <span className="font-semibold">{selectedPerson.name}</span> (ID {selectedPerson.id})
+                        Seleccionada: <span className="font-semibold">{selectedPerson.name}</span>
                       </div>
                     )}
                   </div>
@@ -405,7 +420,7 @@ export default function SettingsPage() {
 
               {clientLink?.latestRequest && (
                 <div className="rounded-[1.25rem] border border-zinc-200 bg-white/80 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200">
-                  Estado actual: <span className="font-semibold">{clientLink.latestRequest.status}</span>
+                  Estado actual: <span className="font-semibold">{{ PENDING: 'Pendiente de revisión', APPROVED: 'Aprobada', REJECTED: 'Rechazada' }[clientLink.latestRequest.status] ?? clientLink.latestRequest.status}</span>
                 </div>
               )}
             </div>
@@ -416,14 +431,13 @@ export default function SettingsPage() {
       {!isAdmin && !isClient && settings?.profile && (
         <SectionCard
           icon={UserRound}
-          eyebrow="Perfil operativo"
+          eyebrow="Mi cuenta"
           title="Resumen de cuenta"
-          description="Tu panel ya muestra el estado principal de tu cuenta. Aquí mantendremos futuras opciones específicas de este rol."
           tone="blue"
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <DetailCard label="Correo" value={settings.profile.email} />
-            <DetailCard label="Rol" value={settings.profile.role} />
+            {!isClient && <DetailCard label="Rol" value={formatRole(settings.profile.role)} />}
           </div>
         </SectionCard>
       )}

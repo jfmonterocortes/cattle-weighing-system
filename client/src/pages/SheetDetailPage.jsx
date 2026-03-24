@@ -35,11 +35,11 @@ function rowDisplaySpec(row) {
   return rowSelectCategory(row);
 }
 const inputClass =
-  'w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10';
+  'w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-zinc-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10';
 
 function canEdit(role, sheet, userId) {
   if (role === 'ADMIN') return true;
-  if (role === 'LIQUIDADOR' && sheet.createdById === userId) return new Date() <= new Date(sheet.editableUntilByLiquidador);
+  if (role === 'LIQUIDADOR' && sheet.createdById === userId && !sheet.lockedByLiquidador) return true;
   return false;
 }
 
@@ -97,12 +97,13 @@ function Shell({ eyebrow, title, description, actions, className = '', children 
   );
 }
 
-function Stat({ label, value, caption }) {
+function Stat({ label, value, caption, variant = 'glass' }) {
+  const isGlass = variant === 'glass';
   return (
-    <div className="rounded-xl border border-white/12 bg-white/8 p-4">
-      <div className="text-xs font-medium uppercase tracking-[0.18em] text-white/50">{label}</div>
-      <div className="mt-2 font-mono text-xl font-semibold text-white">{value}</div>
-      {caption && <div className="mt-2 text-sm text-white/45">{caption}</div>}
+    <div className={`rounded-xl border p-4 ${isGlass ? 'border-white/12 bg-white/8' : 'border-stone-300/50 bg-white/70 shadow-sm dark:border-white/8 dark:bg-white/5'}`}>
+      <div className={`text-xs font-medium uppercase tracking-[0.18em] ${isGlass ? 'text-white/55' : 'text-zinc-500 dark:text-zinc-400'}`}>{label}</div>
+      <div className={`mt-2 font-mono text-xl font-semibold ${isGlass ? 'text-white' : 'text-zinc-900 dark:text-zinc-100'}`}>{value}</div>
+      {caption && <div className={`mt-2 text-sm ${isGlass ? 'text-white/50' : 'text-zinc-500 dark:text-zinc-400'}`}>{caption}</div>}
     </div>
   );
 }
@@ -136,8 +137,8 @@ function PaymentChip({ isPaid }) {
 export default function SheetDetailPage() {
   const { id } = useParams();
   const sheetId = Number(id);
-  const { user } = getSession();
-  const role = user?.role;
+  const { user, activeRole } = getSession();
+  const role = activeRole;
   const userId = user?.userId;
   const isClient = role === 'CLIENT';
 
@@ -147,12 +148,15 @@ export default function SheetDetailPage() {
   const [feedback, setFeedback] = useState({ type: '', message: '' });
   const [reloadKey, setReloadKey] = useState(0);
   const [savingRow, setSavingRow] = useState(false);
+  const [savingRowIds, setSavingRowIds] = useState(new Set());
   const [editingHeader, setEditingHeader] = useState(false);
   const [savingHeader, setSavingHeader] = useState(false);
   const [metricsOpen, setMetricsOpen] = useState(false);
   const [draftRow, setDraftRow] = useState({ category: 'TERNERO', customSpecification: '', sex: 'MACHO', weight: '', cattleNumber: '', letters: '' });
   const [sessionDefaults, setSessionDefaults] = useState({ category: 'TERNERO', customSpecification: '', sex: 'MACHO', lastNumericCattleNumber: null });
   const [headerDraft, setHeaderDraft] = useState({ seller: null, buyer: null, date: '', pricePerHead: '', liquidadorAliasSnapshot: '' });
+  const [lockingSheet, setLockingSheet] = useState(false);
+  const [lockConfirm, setLockConfirm] = useState(false);
 
   useEffect(() => {
     if (!Number.isFinite(sheetId)) return;
@@ -190,14 +194,17 @@ export default function SheetDetailPage() {
   useEffect(() => {
     if (!sheet?.id) return;
     const localNext = Number.isFinite(sessionDefaults.lastNumericCattleNumber) ? String(sessionDefaults.lastNumericCattleNumber + 1) : '';
+    // Only apply category/spec/sex defaults; never overwrite cattleNumber mid-edit.
     setDraftRow((prev) => ({
       ...prev,
       category: sessionDefaults.category,
       customSpecification: sessionDefaults.customSpecification,
       sex: sessionDefaults.sex,
-      cattleNumber: localNext || prev.cattleNumber,
     }));
-    if (localNext) return;
+    if (localNext) {
+      setDraftRow((prev) => ({ ...prev, cattleNumber: localNext }));
+      return;
+    }
     let cancelled = false;
     fetchNextCattleNumber(sheetId).then((cattleNumber) => {
       if (!cancelled) setDraftRow((prev) => ({ ...prev, cattleNumber }));
@@ -205,10 +212,24 @@ export default function SheetDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [sessionDefaults.lastNumericCattleNumber, sessionDefaults.category, sessionDefaults.customSpecification, sessionDefaults.sex, sheet?.id, sheetId]);
+  }, [sessionDefaults.lastNumericCattleNumber, sheet?.id, sheetId]); // category/spec/sex intentionally excluded to avoid mid-edit clobber
 
   const reloadDetail = () => setReloadKey((value) => value + 1);
   const editable = sheet ? canEdit(role, sheet, userId) : false;
+
+  const handleLockSheet = async () => {
+    setLockingSheet(true);
+    setFeedback({ type: '', message: '' });
+    try {
+      await api.post(`/sheets/${sheetId}/lock`);
+      setLockConfirm(false);
+      reloadDetail();
+    } catch (error) {
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo cerrar la planilla.' });
+    } finally {
+      setLockingSheet(false);
+    }
+  };
   const groupedStats = useMemo(() => sheet?.computed?.totalsByTypeSex || [], [sheet]);
   const paymentLogs = sheet?.paymentLogs || [];
   const auditLogs = sheet?.auditLogs || [];
@@ -216,7 +237,7 @@ export default function SheetDetailPage() {
     ? 'Consulta el estado actual de esta planilla.'
     : `Creada por: ${sheet?.createdBy?.email || 'Sin dato'}`;
 
-  const headerStateLabel = role === 'ADMIN' ? 'Control admin' : editable && sheet?.editableUntilByLiquidador ? `Edición abierta hasta ${new Date(sheet.editableUntilByLiquidador).toLocaleTimeString()}` : role === 'CLIENT' ? '' : 'Solo lectura';
+  const headerStateLabel = role === 'ADMIN' ? 'Control admin' : editable ? 'Edición abierta' : role === 'CLIENT' ? '' : 'Solo lectura';
 
   const addRow = async (event) => {
     event.preventDefault();
@@ -241,11 +262,14 @@ export default function SheetDetailPage() {
   };
 
   const updateRowField = async (rowId, patch) => {
+    setSavingRowIds((prev) => new Set([...prev, rowId]));
     try {
       await api.patch(`/sheets/${sheetId}/rows/${rowId}`, patch);
       reloadDetail();
     } catch (error) {
       setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudo actualizar la fila.' });
+    } finally {
+      setSavingRowIds((prev) => { const next = new Set(prev); next.delete(rowId); return next; });
     }
   };
 
@@ -272,6 +296,22 @@ export default function SheetDetailPage() {
     try {
       await api.post(`/sheets/${sheetId}/rows/reorder`, { orderedRowIds: ids });
       setFeedback({ type: 'success', message: 'Filas reordenadas.' });
+      reloadDetail();
+    } catch (error) {
+      setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudieron reordenar las filas.' });
+    }
+  };
+
+  const moveRow = async (rowId, direction) => {
+    const ids = sheet.rows.map((row) => row.id);
+    const index = ids.indexOf(rowId);
+    const next = index + direction;
+    if (next < 0 || next >= ids.length) return;
+    ids.splice(index, 1);
+    ids.splice(next, 0, rowId);
+    try {
+      await api.post(`/sheets/${sheetId}/rows/reorder`, { orderedRowIds: ids });
+      setFeedback({ type: 'success', message: `Fila movida ${direction === -1 ? 'arriba' : 'abajo'}.` });
       reloadDetail();
     } catch (error) {
       setFeedback({ type: 'error', message: error.response?.data?.message || 'No se pudieron reordenar las filas.' });
@@ -361,7 +401,7 @@ export default function SheetDetailPage() {
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Link to="/planillas" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/8 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/15">
-                <ArrowLeft size={16} />
+                <ArrowLeft size={16} aria-hidden="true" />
                 Volver a planillas
               </Link>
               <PaymentChip isPaid={sheet.isPaid} />
@@ -370,16 +410,46 @@ export default function SheetDetailPage() {
                   {headerStateLabel}
                 </span>
               )}
+              {role === 'LIQUIDADOR' && editable && (
+                lockConfirm ? (
+                  <div className="inline-flex items-center gap-2">
+                    <span className="text-xs font-medium text-white/70">¿Cerrar definitivamente?</span>
+                    <button
+                      type="button"
+                      disabled={lockingSheet}
+                      onClick={handleLockSheet}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-red-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:opacity-60"
+                    >
+                      {lockingSheet ? 'Cerrando...' : 'Confirmar cierre'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLockConfirm(false)}
+                      className="inline-flex items-center rounded-xl border border-white/20 bg-white/8 px-3 py-1.5 text-xs font-medium text-white/80 transition hover:bg-white/15"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setLockConfirm(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/8 px-3 py-1.5 text-xs font-medium text-white/80 transition hover:bg-white/15"
+                  >
+                    Cerrar planilla
+                  </button>
+                )
+              )}
             </div>
             <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Planilla {sheet.visibleNumber}</h1>
-            <p className="mt-3 text-sm leading-7 text-white/55">{new Date(sheet.date).toLocaleString()} · Revisa encabezado, resumen, reses y pago en el orden operativo del trabajo diario.</p>
+            <p className="mt-3 text-sm leading-7 text-white/55">{new Date(sheet.date).toLocaleString()}</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[480px]">
-            <Stat label="Cabezas" value={sheet.headCount} caption="Total de reses registradas." />
-            <Stat label="Valor total" value={sheet.totalValue} caption="Lectura rápida del cierre económico." />
-            {!isClient && <Stat label="Precio/cabeza" value={sheet.pricePerHead} caption="Referencia activa para esta planilla." />}
-            <Stat label="Liquidador" value={sheet.liquidadorAliasSnapshot || 'Sin alias'} caption="Alias guardado en el encabezado." />
+            <Stat label="Cabezas" value={sheet.headCount} caption="Total registradas." />
+            <Stat label="Valor total" value={sheet.totalValue} caption="Total de la planilla." />
+            {!isClient && <Stat label="Precio/cabeza" value={sheet.pricePerHead} caption="Precio de esta planilla." />}
+            <Stat label="Liquidador" value={sheet.liquidadorAliasSnapshot || 'Sin alias'} caption="Alias en el encabezado." />
           </div>
         </div>
       </section>
@@ -388,8 +458,8 @@ export default function SheetDetailPage() {
 
       <Shell
         eyebrow="Encabezado de planilla"
-        title="Contrapartes y parametros operativos"
-        description={editable ? 'Valida vendedor, comprador, fecha, alias y precio antes de seguir con las reses.' : 'Este bloque resume el encabezado principal con el que se construyo la planilla.'}
+        title="Encabezado"
+        description={editable ? 'Revisa vendedor, comprador, fecha, precio y alias antes de continuar.' : null}
         actions={
           editable && (
             <button type="button" onClick={() => setEditingHeader((value) => !value)} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70">
@@ -405,9 +475,9 @@ export default function SheetDetailPage() {
           <PartyCard icon={Wallet} label="Pago" name={sheet.isPaid ? 'Pagada' : 'Pendiente'} detail={paymentHeaderDetail} />
         </div>
         <div className={`mt-4 grid gap-3 ${isClient ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
-          <Stat label="Fecha operativa" value={new Date(sheet.date).toLocaleString()} />
-          {!isClient && <Stat label="Precio por cabeza" value={sheet.pricePerHead} />}
-          <Stat label="Liquidador" value={sheet.liquidadorAliasSnapshot || 'Sin dato'} />
+          <Stat variant="light" label="Fecha operativa" value={new Date(sheet.date).toLocaleString()} />
+          {!isClient && <Stat variant="light" label="Precio por cabeza" value={sheet.pricePerHead} />}
+          <Stat variant="light" label="Liquidador" value={sheet.liquidadorAliasSnapshot || 'Sin dato'} />
         </div>
 
         {editingHeader && (
@@ -448,14 +518,14 @@ export default function SheetDetailPage() {
 
       <Shell eyebrow="Resumen" title="Lectura rápida de volumen y mezcla" description="Primero valida las métricas generales. Debajo queda el desglose técnico por especificación para confirmar promedios y distribución.">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Stat label="Cabezas" value={sheet.headCount} />
-          <Stat label="Peso total" value={sheet.totalWeight} />
-          <Stat label="Promedio general" value={sheet.averageWeight} />
-          <Stat label="Valor total" value={sheet.totalValue} />
-          <Stat label="Total machos" value={sheet.totalMaleWeight} />
-          <Stat label="Promedio machos" value={sheet.averageMaleWeight} />
-          <Stat label="Total hembras" value={sheet.totalFemaleWeight} />
-          <Stat label="Promedio hembras" value={sheet.averageFemaleWeight} />
+          <Stat variant="light" label="Cabezas" value={sheet.headCount} />
+          <Stat variant="light" label="Peso total" value={sheet.totalWeight} />
+          <Stat variant="light" label="Promedio general" value={sheet.averageWeight} />
+          <Stat variant="light" label="Valor total" value={sheet.totalValue} />
+          <Stat variant="light" label="Total machos" value={sheet.totalMaleWeight} />
+          <Stat variant="light" label="Promedio machos" value={sheet.averageMaleWeight} />
+          <Stat variant="light" label="Total hembras" value={sheet.totalFemaleWeight} />
+          <Stat variant="light" label="Promedio hembras" value={sheet.averageFemaleWeight} />
         </div>
         <div className="mt-5">
           <button
@@ -508,75 +578,255 @@ export default function SheetDetailPage() {
       <Shell eyebrow="Reses" title="Filas, orden y captura" description={editable ? 'Mientras la edición siga abierta puedes corregir filas, reordenarlas y continuar la captura.' : 'Esta vista queda en lectura para consultar las reses registradas y exportar la planilla final.'} actions={<button type="button" onClick={exportPdf} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"><Download size={16} />Exportar PDF</button>}>
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[1.4rem] border border-zinc-200/80 bg-zinc-50/80 px-4 py-3 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
           <span>{sheet.rows.length} filas registradas</span>
-          {editable && <span className="inline-flex items-center gap-1"><GripVertical size={14} />Arrastra una fila sobre otra para reordenar.</span>}
+          {editable && <span className="inline-flex items-center gap-1"><GripVertical size={14} aria-hidden="true" />Arrastra una fila sobre otra para reordenar. Los botones Subir/Bajar también están disponibles para teclado.</span>}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-sm">
+        <div className="overflow-x-auto rounded-xl">
+          <table className="w-full min-w-[600px] text-sm" aria-label="Filas de ganado">
             <thead className="bg-zinc-50/90 text-left text-zinc-500 dark:bg-zinc-950/40 dark:text-zinc-400">
               <tr>
-                <th className="px-3 py-3 font-medium">No.</th>
-                <th className="px-3 py-3 font-medium">Especificacion</th>
-                <th className="px-3 py-3 font-medium">Kilos</th>
-                <th className="px-3 py-3 font-medium">No. Res</th>
-                <th className="px-3 py-3 font-medium">Letras</th>
-                {editable && <th className="px-3 py-3" />}
+                <th scope="col" className="px-3 py-3 font-medium">No.</th>
+                <th scope="col" className="px-3 py-3 font-medium">Especificacion</th>
+                <th scope="col" className="px-3 py-3 font-medium">Kilos</th>
+                <th scope="col" className="px-3 py-3 font-medium">No. Res</th>
+                <th scope="col" className="px-3 py-3 font-medium">Letras</th>
+                {editable && <th scope="col" className="px-3 py-3 sr-only">Acciones</th>}
               </tr>
             </thead>
             <tbody>
-              {sheet.rows.length === 0 && <tr><td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={editable ? 6 : 5}>No hay reses registradas todavía.</td></tr>}
-              {sheet.rows.map((row) => (
-                <tr key={row.id} draggable={editable} onDragStart={(event) => event.dataTransfer.setData('text/plain', String(row.id))} onDragOver={(event) => event.preventDefault()} onDrop={(event) => onDropRow(event, row.id)} className="border-t border-zinc-200/80 text-zinc-700 transition hover:bg-zinc-50/80 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-950/30">
-                  <td className="px-3 py-3 font-medium text-zinc-900 dark:text-zinc-100">{row.rowOrder}</td>
-                  <td className="px-3 py-3">{editable ? (
-                    <div className="flex flex-col gap-1">
-                      <select className={inputClass} value={rowSelectCategory(row)} onChange={(event) => {
-                        const cat = event.target.value;
-                        if (cat === 'OTHER') {
-                          setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type: 'OTHER', sex: item.sex || 'MACHO', customSpecification: item.customSpecification || '' } : item)) }));
-                        } else {
-                          const { type, sex } = CATEGORY_TO_TYPE_SEX[cat];
-                          setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type, sex, customSpecification: null } : item)) }));
-                          updateRowField(row.id, { category: cat });
-                        }
-                      }}>{CATEGORY_OPTIONS.map((cat) => <option key={cat} value={cat}>{cat}</option>)}</select>
-                      {row.type === 'OTHER' && (
-                        <>
-                          <input className={inputClass} placeholder="Especificacion personalizada" value={row.customSpecification || ''} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, customSpecification: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { category: 'OTHER', customSpecification: row.customSpecification, sex: row.sex })} />
-                          <select className={inputClass} value={row.sex} onChange={(event) => { setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, sex: event.target.value } : item)) })); updateRowField(row.id, { category: 'OTHER', customSpecification: row.customSpecification, sex: event.target.value }); }}>{SEX_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-                        </>
-                      )}
-                    </div>
-                  ) : rowDisplaySpec(row)}</td>
-                  <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.weight} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, weight: Math.trunc(Number(event.target.value || 0)) } : item)) }))} onBlur={() => updateRowField(row.id, { weight: row.weight })} /> : row.weight}</td>
-                  <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.cattleNumber} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, cattleNumber: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { cattleNumber: row.cattleNumber })} /> : row.cattleNumber}</td>
-                  <td className="px-3 py-3">{editable ? <input className={inputClass} value={row.letters || ''} onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, letters: event.target.value } : item)) }))} onBlur={() => updateRowField(row.id, { letters: row.letters || null })} /> : row.letters || '-'}</td>
-                  {editable && <td className="px-3 py-3 text-right"><button type="button" className="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50 dark:border-red-500/30 dark:text-red-200 dark:hover:bg-red-500/10" onClick={() => deleteRow(row.id)}>Eliminar</button></td>}
+              {sheet.rows.length === 0 && (
+                <tr>
+                  <td className="px-3 py-6 text-zinc-500 dark:text-zinc-400" colSpan={editable ? 6 : 5}>
+                    No hay reses registradas todavía.
+                  </td>
                 </tr>
-              ))}
+              )}
+              {sheet.rows.map((row) => {
+                const rowSaving = savingRowIds.has(row.id);
+                return (
+                <tr
+                  key={row.id}
+                  aria-busy={rowSaving}
+                  draggable={editable && !rowSaving}
+                  onDragStart={(event) => event.dataTransfer.setData('text/plain', String(row.id))}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => onDropRow(event, row.id)}
+                  className={`border-t border-zinc-200/80 text-zinc-700 transition hover:bg-zinc-50/80 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-950/30 ${rowSaving ? 'opacity-60' : ''}`}
+                >
+                  <td className="px-3 py-3 font-medium text-zinc-900 dark:text-zinc-100">{row.rowOrder}</td>
+                  <td className="px-3 py-3">
+                    {editable ? (
+                      <div className="flex min-w-[130px] flex-col gap-1">
+                        <select
+                          aria-label={`Especificación de res ${row.rowOrder}`}
+                          className={inputClass}
+                          disabled={rowSaving}
+                          value={rowSelectCategory(row)}
+                          onChange={(event) => {
+                            const cat = event.target.value;
+                            if (cat === 'OTHER') {
+                              setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type: 'OTHER', sex: item.sex || 'MACHO', customSpecification: item.customSpecification || '' } : item)) }));
+                            } else {
+                              const { type, sex } = CATEGORY_TO_TYPE_SEX[cat];
+                              setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, type, sex, customSpecification: null } : item)) }));
+                              updateRowField(row.id, { category: cat });
+                            }
+                          }}
+                        >
+                          {CATEGORY_OPTIONS.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                        </select>
+                        {row.type === 'OTHER' && (
+                          <>
+                            <input
+                              aria-label={`Especificación personalizada de res ${row.rowOrder}`}
+                              className={inputClass}
+                              disabled={rowSaving}
+                              placeholder="Especificación personalizada"
+                              value={row.customSpecification || ''}
+                              onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, customSpecification: event.target.value } : item)) }))}
+                              onBlur={() => updateRowField(row.id, { category: 'OTHER', customSpecification: row.customSpecification, sex: row.sex })}
+                            />
+                            <select
+                              aria-label={`Sexo de res ${row.rowOrder}`}
+                              className={inputClass}
+                              disabled={rowSaving}
+                              value={row.sex}
+                              onChange={(event) => {
+                                setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, sex: event.target.value } : item)) }));
+                                updateRowField(row.id, { category: 'OTHER', customSpecification: row.customSpecification, sex: event.target.value });
+                              }}
+                            >
+                              {SEX_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </>
+                        )}
+                      </div>
+                    ) : rowDisplaySpec(row)}
+                  </td>
+                  <td className="px-3 py-3">
+                    {editable ? (
+                      <input
+                        aria-label={`Kilos de res ${row.rowOrder}`}
+                        className={`${inputClass} min-w-[80px]`}
+                        type="number"
+                        min="0"
+                        max="2000"
+                        disabled={rowSaving}
+                        value={row.weight}
+                        onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, weight: Math.trunc(Number(event.target.value || 0)) } : item)) }))}
+                        onBlur={() => updateRowField(row.id, { weight: row.weight })}
+                      />
+                    ) : row.weight}
+                  </td>
+                  <td className="px-3 py-3">
+                    {editable ? (
+                      <input
+                        aria-label={`Número de res ${row.rowOrder}`}
+                        className={`${inputClass} min-w-[80px]`}
+                        disabled={rowSaving}
+                        value={row.cattleNumber}
+                        onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, cattleNumber: event.target.value } : item)) }))}
+                        onBlur={() => updateRowField(row.id, { cattleNumber: row.cattleNumber })}
+                      />
+                    ) : row.cattleNumber}
+                  </td>
+                  <td className="px-3 py-3">
+                    {editable ? (
+                      <input
+                        aria-label={`Letras de res ${row.rowOrder}`}
+                        className={`${inputClass} min-w-[80px]`}
+                        disabled={rowSaving}
+                        value={row.letters || ''}
+                        onChange={(event) => setSheet((prev) => ({ ...prev, rows: prev.rows.map((item) => (item.id === row.id ? { ...item, letters: event.target.value } : item)) }))}
+                        onBlur={() => updateRowField(row.id, { letters: row.letters || null })}
+                      />
+                    ) : (row.letters || '-')}
+                  </td>
+                  {editable && (
+                    <td className="px-3 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          aria-label={`Subir res ${row.rowOrder}`}
+                          className="sr-only focus:not-sr-only focus:rounded-xl focus:border focus:border-zinc-300 focus:px-2 focus:py-1 focus:text-xs focus:font-medium focus:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-amber-500/40 dark:focus:border-zinc-700 dark:focus:text-zinc-300"
+                          onClick={() => moveRow(row.id, -1)}
+                          disabled={row.rowOrder === 1 || rowSaving}
+                        >
+                          Subir
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Bajar res ${row.rowOrder}`}
+                          className="sr-only focus:not-sr-only focus:rounded-xl focus:border focus:border-zinc-300 focus:px-2 focus:py-1 focus:text-xs focus:font-medium focus:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-amber-500/40 dark:focus:border-zinc-700 dark:focus:text-zinc-300"
+                          onClick={() => moveRow(row.id, 1)}
+                          disabled={row.rowOrder === sheet.rows.length || rowSaving}
+                        >
+                          Bajar
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Eliminar res ${row.rowOrder}`}
+                          className="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50 dark:border-red-500/30 dark:text-red-200 dark:hover:bg-red-500/10"
+                          onClick={() => deleteRow(row.id)}
+                          disabled={rowSaving}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              );
+              })}
             </tbody>
           </table>
         </div>
+
         {editable && (
-          <form onSubmit={addRow} className="mt-5 rounded-[1.5rem] border border-zinc-200/80 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+          <form onSubmit={addRow} className="mt-5 rounded-xl border border-zinc-200/80 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
             <div className="mb-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">Nueva fila</div>
-              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Agrega una res y conserva los ultimos valores utiles para acelerar la captura.</p>
+              <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Agregar res</p>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Los últimos valores se conservan para acelerar la captura en serie.</p>
             </div>
-            <div className="grid items-end gap-3 md:grid-cols-5">
-              <label>
-                <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Especificacion</div>
-                <select className={inputClass} value={draftRow.category} onChange={(event) => { const cat = event.target.value; setDraftRow((prev) => ({ ...prev, category: cat, customSpecification: cat !== 'OTHER' ? '' : prev.customSpecification })); setSessionDefaults((prev) => ({ ...prev, category: cat })); }}>{CATEGORY_OPTIONS.map((cat) => <option key={cat} value={cat}>{cat}</option>)}</select>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label htmlFor="draft-category" className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Especificación</label>
+                <select
+                  id="draft-category"
+                  className={inputClass}
+                  value={draftRow.category}
+                  onChange={(event) => {
+                    const cat = event.target.value;
+                    setDraftRow((prev) => ({ ...prev, category: cat, customSpecification: cat !== 'OTHER' ? '' : prev.customSpecification }));
+                    setSessionDefaults((prev) => ({ ...prev, category: cat }));
+                  }}
+                >
+                  {CATEGORY_OPTIONS.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
                 {draftRow.category === 'OTHER' && (
-                  <div className="mt-1 flex flex-col gap-1">
-                    <input className={inputClass} placeholder="Escribe la especificacion" value={draftRow.customSpecification} onChange={(event) => setDraftRow((prev) => ({ ...prev, customSpecification: event.target.value }))} />
-                    <select className={inputClass} value={draftRow.sex} onChange={(event) => { setDraftRow((prev) => ({ ...prev, sex: event.target.value })); setSessionDefaults((prev) => ({ ...prev, sex: event.target.value })); }}>{SEX_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                  <div aria-live="polite" className="mt-2 flex flex-col gap-2">
+                    <label htmlFor="draft-custom-spec" className="sr-only">Especificación personalizada</label>
+                    <input
+                      id="draft-custom-spec"
+                      className={inputClass}
+                      placeholder="Escribe la especificación"
+                      value={draftRow.customSpecification}
+                      onChange={(event) => setDraftRow((prev) => ({ ...prev, customSpecification: event.target.value }))}
+                    />
+                    <label htmlFor="draft-sex" className="sr-only">Sexo</label>
+                    <select
+                      id="draft-sex"
+                      aria-label="Sexo"
+                      className={inputClass}
+                      value={draftRow.sex}
+                      onChange={(event) => {
+                        setDraftRow((prev) => ({ ...prev, sex: event.target.value }));
+                        setSessionDefaults((prev) => ({ ...prev, sex: event.target.value }));
+                      }}
+                    >
+                      {SEX_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
                 )}
-              </label>
-              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Kilos</div><input className={inputClass} value={draftRow.weight} onChange={(event) => setDraftRow((prev) => ({ ...prev, weight: event.target.value }))} /></label>
-              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">No. Res</div><input className={inputClass} value={draftRow.cattleNumber} onChange={(event) => setDraftRow((prev) => ({ ...prev, cattleNumber: event.target.value }))} /></label>
-              <label><div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Letras</div><input className={inputClass} value={draftRow.letters} onChange={(event) => setDraftRow((prev) => ({ ...prev, letters: event.target.value }))} /></label>
-              <button disabled={savingRow} className="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400">{savingRow ? 'Guardando...' : 'Agregar'}</button>
+              </div>
+              <div>
+                <label htmlFor="draft-weight" className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Kilos</label>
+                <input
+                  id="draft-weight"
+                  className={inputClass}
+                  type="number"
+                  min="1"
+                  max="2000"
+                  value={draftRow.weight}
+                  onChange={(event) => setDraftRow((prev) => ({ ...prev, weight: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label htmlFor="draft-cattle-number" className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">No. Res</label>
+                <input
+                  id="draft-cattle-number"
+                  className={inputClass}
+                  value={draftRow.cattleNumber}
+                  onChange={(event) => setDraftRow((prev) => ({ ...prev, cattleNumber: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label htmlFor="draft-letters" className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Letras</label>
+                <input
+                  id="draft-letters"
+                  className={inputClass}
+                  value={draftRow.letters}
+                  onChange={(event) => setDraftRow((prev) => ({ ...prev, letters: event.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="mt-4">
+              <button
+                type="submit"
+                disabled={savingRow}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400"
+              >
+                {savingRow ? 'Guardando...' : 'Agregar res'}
+              </button>
             </div>
           </form>
         )}

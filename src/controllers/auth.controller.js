@@ -3,7 +3,8 @@
 async function login(req, res, next) {
   try {
     const result = await loginWithPassword(req.body);
-    if (!result) return res.status(401).json({ message: 'Invalid credentials' });
+    if (result?.reason === 'suspended') return res.status(403).json({ message: 'Tu cuenta ha sido suspendida. Contacta al administrador.' });
+    if (!result?.token) return res.status(401).json({ message: 'Correo o contraseña incorrectos.' });
 
     return res.json({ token: result.token, user: result.user });
   } catch (error) {
