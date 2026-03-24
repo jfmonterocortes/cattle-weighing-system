@@ -1,12 +1,63 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@300;400;500;600&display=swap');
 
 /* Tailwind v4: class-based dark variant via .dark */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Theme: custom font families and colors */
+/* ─── Theme: Ledger & Land ─────────────────────────────────────────────────── */
+/* Override Tailwind's default color scales so every existing utility class    */
+/* (bg-emerald-900, text-amber-500, etc.) automatically picks up brand colors. */
+
 @theme {
-  --font-display: 'Cormorant Garamond', Georgia, serif;
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  /* ── Forest green (replaces Tailwind emerald) */
+  --color-emerald-50:  #f1f7f2;
+  --color-emerald-100: #d8ecdb;
+  --color-emerald-200: #b0d9b6;
+  --color-emerald-300: #7ebf88;
+  --color-emerald-400: #4da05b;
+  --color-emerald-500: #2f8240;
+  --color-emerald-600: #21662f;
+  --color-emerald-700: #1a5226;
+  --color-emerald-800: #163f1e;
+  --color-emerald-900: #1C3A22;
+  --color-emerald-950: #0d1f12;
+
+  /* ── Warm gold (replaces Tailwind amber) */
+  --color-amber-50:  #fdf8ec;
+  --color-amber-100: #faefcb;
+  --color-amber-200: #f4d98f;
+  --color-amber-300: #ecbe56;
+  --color-amber-400: #e2a82e;
+  --color-amber-500: #D4961A;
+  --color-amber-600: #b07912;
+  --color-amber-700: #8d5e0f;
+  --color-amber-800: #734b12;
+  --color-amber-900: #5e3d13;
+  --color-amber-950: #351f07;
+
+  /* ── Parchment (replaces Tailwind stone)
+     Body bg = #EDE4CA — sits between stone-200 and stone-300 so:
+       stone-100/200 → lighter than body  → card face tones
+       stone-300/400 → darker than body   → border/muted tones      */
+  --color-stone-50:  #fdfaf5;
+  --color-stone-100: #f8f2e6;
+  --color-stone-200: #f0e8d5;
+  --color-stone-300: #d6c9ae;
+  --color-stone-400: #b5a58a;
+  --color-stone-500: #978970;
+  --color-stone-600: #7a6e57;
+  --color-stone-700: #625647;
+  --color-stone-800: #4d4238;
+  --color-stone-900: #3c342c;
+  --color-stone-950: #1f1c17;
+
+  /* ── Forest-tinted zinc (dark mode surfaces) */
+  --color-zinc-900: #141c16;
+  --color-zinc-950: #0d1310;
 }
 
 html.dark {
@@ -25,22 +76,22 @@ body,
 
 body {
   margin: 0;
-  background-color: #FAF6F0;
-  color: #18181b;
+  background-color: #EDE4CA;
+  color: #1a160e;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 html.dark body {
-  background-color: #0C0A09;
-  color: #f4f4f5;
+  background-color: #0D1810;
+  color: #f0ede8;
 }
 
 /* ─── Animations ─── */
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(14px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -54,30 +105,35 @@ html.dark body {
   to   { opacity: 1; }
 }
 
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 /* Staggered page section entrance */
 .stagger > * {
   animation: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.stagger > *:nth-child(1) { animation-delay: 0ms; }
-.stagger > *:nth-child(2) { animation-delay: 60ms; }
-.stagger > *:nth-child(3) { animation-delay: 120ms; }
-.stagger > *:nth-child(4) { animation-delay: 180ms; }
-.stagger > *:nth-child(5) { animation-delay: 240ms; }
-.stagger > *:nth-child(6) { animation-delay: 300ms; }
-.stagger > *:nth-child(7) { animation-delay: 360ms; }
-.stagger > *:nth-child(8) { animation-delay: 420ms; }
-.stagger > *:nth-child(9) { animation-delay: 480ms; }
-.stagger > *:nth-child(10) { animation-delay: 540ms; }
+.stagger > *:nth-child(1)  { animation-delay: 0ms;   }
+.stagger > *:nth-child(2)  { animation-delay: 55ms;  }
+.stagger > *:nth-child(3)  { animation-delay: 110ms; }
+.stagger > *:nth-child(4)  { animation-delay: 165ms; }
+.stagger > *:nth-child(5)  { animation-delay: 220ms; }
+.stagger > *:nth-child(6)  { animation-delay: 275ms; }
+.stagger > *:nth-child(7)  { animation-delay: 330ms; }
+.stagger > *:nth-child(8)  { animation-delay: 385ms; }
+.stagger > *:nth-child(9)  { animation-delay: 440ms; }
+.stagger > *:nth-child(10) { animation-delay: 495ms; }
 
 /* Sidebar nav stagger */
 .nav-stagger > * {
-  animation: slide-in-left 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: slide-in-left 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.nav-stagger > *:nth-child(1) { animation-delay: 80ms; }
-.nav-stagger > *:nth-child(2) { animation-delay: 140ms; }
-.nav-stagger > *:nth-child(3) { animation-delay: 200ms; }
-.nav-stagger > *:nth-child(4) { animation-delay: 260ms; }
-.nav-stagger > *:nth-child(5) { animation-delay: 320ms; }
+.nav-stagger > *:nth-child(1) { animation-delay: 80ms;  }
+.nav-stagger > *:nth-child(2) { animation-delay: 135ms; }
+.nav-stagger > *:nth-child(3) { animation-delay: 190ms; }
+.nav-stagger > *:nth-child(4) { animation-delay: 245ms; }
+.nav-stagger > *:nth-child(5) { animation-delay: 300ms; }
 
 /* One-shot utilities */
 .animate-fade-up {
@@ -86,24 +142,31 @@ html.dark body {
 .animate-fade-in {
   animation: fade-in 0.3s ease-out both;
 }
+.animate-scale-in {
+  animation: scale-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 
 /* ─── Custom scrollbar ─── */
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
-html.dark ::-webkit-scrollbar-thumb { background: #3f3f46; }
-html.dark ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+::-webkit-scrollbar-thumb { background: #c4b9ad; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #9a8c70; }
+html.dark ::-webkit-scrollbar-thumb { background: #2a3d2e; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #3a5040; }
 
 /* ─── Selection ─── */
 
-::selection { background: rgba(198, 149, 59, 0.25); }
-html.dark ::selection { background: rgba(198, 149, 59, 0.2); }
+::selection { background: rgba(212, 150, 26, 0.28); }
+html.dark ::selection { background: rgba(212, 150, 26, 0.22); }
 
 /* ─── Focus ring ─── */
 
 :focus-visible {
-  outline: 2px solid rgba(198, 149, 59, 0.55);
+  outline: 2px solid rgba(212, 150, 26, 0.6);
   outline-offset: 2px;
 }
+
+/* ─── Number / tabular figures ─── */
+
+.tabular { font-family: var(--font-mono); font-feature-settings: 'tnum'; }

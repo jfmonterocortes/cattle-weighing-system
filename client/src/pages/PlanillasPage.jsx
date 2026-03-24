@@ -24,14 +24,14 @@ function SummaryCard({ icon, label, value, caption }) {
   const CardIcon = icon;
 
   return (
-    <div className="rounded-2xl border border-zinc-200/60 bg-gradient-to-br from-white/95 to-zinc-50/80 p-4 shadow-sm dark:border-zinc-700/50 dark:from-zinc-800/70 dark:to-zinc-900/50">
+    <div className="rounded-2xl border border-white/12 bg-white/8 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">{label}</div>
-          <div className="mt-3 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{value}</div>
-          <div className="mt-2 text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">{caption}</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">{label}</div>
+          <div className="mt-3 font-mono text-2xl font-semibold tracking-tight text-white">{value}</div>
+          <div className="mt-2 text-[13px] leading-5 text-white/50">{caption}</div>
         </div>
-        <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-600/90 text-white shadow-sm dark:bg-amber-500/90 dark:text-zinc-950">
+        <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-[#1C3A22]">
           <CardIcon size={17} />
         </div>
       </div>
@@ -278,17 +278,17 @@ export default function PlanillasPage() {
 
   return (
     <div className="space-y-6 stagger">
-      <section className="overflow-hidden rounded-[2rem] border border-stone-200/60 bg-gradient-to-br from-amber-50/80 via-white to-emerald-50/60 p-6 shadow-[0_22px_65px_rgba(120,53,15,0.06)] dark:border-zinc-800/60 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0d1812] dark:shadow-[0_28px_75px_rgba(0,0,0,0.35)]">
+      <section className="overflow-hidden rounded-2xl bg-[#1C3A22] p-6 shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-stone-500 dark:border-zinc-700/60 dark:bg-zinc-950/50 dark:text-zinc-400">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">
               <FileStack size={13} />
               Centro de planillas
             </div>
-            <h2 className="mt-4 font-display text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+            <h2 className="mt-4 font-display text-4xl font-light tracking-tight text-white">
               {isClient ? 'Mis planillas con lectura más clara.' : 'Planillas listas para filtrar, revisar y exportar.'}
             </h2>
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+            <p className="mt-3 text-sm leading-7 text-white/55">
               {isClient
                 ? 'Consulta tu historial, revisa pagos pendientes y entra rápido al detalle de cada movimiento.'
                 : 'Cruza vendedor, comprador, teléfono, fechas y estado de pago desde una sola vista con contexto inmediato.'}

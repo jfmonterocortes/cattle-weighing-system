@@ -46,7 +46,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FAF6F0] via-[#FDF8F0] to-[#F0F7F2] px-4 py-8 text-zinc-900 dark:from-[#0C0A09] dark:via-[#0A0908] dark:to-[#0C0E0A] dark:text-zinc-100">
+    <div className="min-h-screen bg-[#EDE4CA] px-4 py-8 text-zinc-900 dark:bg-[#0D1810] dark:text-zinc-100">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center">
         <div className="stagger grid w-full gap-6 lg:grid-cols-[0.95fr_1.05fr]">
           <section className="rounded-[2rem] border border-emerald-200/50 bg-white/75 p-6 shadow-[0_18px_60px_rgba(16,185,129,0.08)] backdrop-blur dark:border-zinc-800/60 dark:bg-zinc-900/60 dark:shadow-[0_24px_72px_rgba(0,0,0,0.35)]">

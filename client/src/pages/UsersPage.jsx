@@ -6,12 +6,12 @@ import PersonAutocomplete from '../components/PersonAutocomplete';
 
 function SectionShell({ eyebrow, title, description, children, actions }) {
   return (
-    <section className="rounded-[1.9rem] border border-zinc-200/80 bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.42)]">
+    <section className="rounded-2xl border border-stone-300/50 bg-stone-100/60 p-5 shadow-sm dark:border-white/6 dark:bg-white/3 dark:shadow-[0_4px_24px_rgba(0,0,0,0.25)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">{eyebrow}</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500 dark:text-white/35">{eyebrow}</div>
           <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
-          {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">{description}</p>}
+          {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600 dark:text-white/45">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
       </div>
@@ -23,14 +23,14 @@ function SectionShell({ eyebrow, title, description, children, actions }) {
 function StatCard({ icon, label, value, caption }) {
   const CardIcon = icon;
   return (
-    <div className="rounded-[1.45rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
+    <div className="rounded-xl border border-white/12 bg-white/8 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
-          <div className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
-          <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{caption}</div>
+          <div className="text-xs font-medium uppercase tracking-[0.18em] text-white/50">{label}</div>
+          <div className="mt-3 font-mono text-2xl font-semibold tracking-tight text-white">{value}</div>
+          <div className="mt-2 text-sm text-white/50">{caption}</div>
         </div>
-        <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-900 text-white dark:bg-amber-500 dark:text-zinc-950">
+        <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500 text-[#1C3A22]">
           <CardIcon size={18} />
         </div>
       </div>
@@ -206,15 +206,15 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6 stagger">
-      <section className="overflow-hidden rounded-[2rem] border border-stone-200/60 bg-gradient-to-br from-sky-50/70 via-white to-amber-50/60 p-6 shadow-[0_22px_65px_rgba(15,23,42,0.06)] dark:border-zinc-800/60 dark:from-[#0c1620] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.35)]">
+      <section className="overflow-hidden rounded-2xl bg-[#1C3A22] p-6 shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-stone-500 dark:border-zinc-700/60 dark:bg-zinc-950/50 dark:text-zinc-400">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">
               <Users2 size={13} />
               Cuentas y vinculaciones
             </div>
-            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Atiende primero la cola de vinculaciones y después el mantenimiento de cuentas.</h1>
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+            <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Atiende primero la cola de vinculaciones y después el mantenimiento de cuentas.</h1>
+            <p className="mt-3 text-sm leading-7 text-white/55">
               Esta pantalla agrupa la supervisión de cuentas, la aprobación de solicitudes y las herramientas de soporte sin darle el mismo peso a todo.
             </p>
           </div>
@@ -232,9 +232,9 @@ export default function UsersPage() {
 
       <SectionShell eyebrow="Cola principal" title="Solicitudes de vinculación pendientes" description="Resuelve primero esta cola porque desbloquea la experiencia del cliente y reduce consultas de soporte.">
         <div className="space-y-3">
-          {pendingRequests.length === 0 && <div className="rounded-[1.35rem] border border-dashed border-zinc-300/90 bg-zinc-50/80 px-4 py-5 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">No hay solicitudes pendientes en este momento.</div>}
+          {pendingRequests.length === 0 && <div className="rounded-xl border border-dashed border-stone-300/80 bg-stone-100/50 px-4 py-5 text-sm text-stone-600 dark:border-white/8 dark:bg-white/3 dark:text-white/40">No hay solicitudes pendientes en este momento.</div>}
           {pendingRequests.map((item) => (
-            <div key={item.id} className="rounded-[1.35rem] border border-zinc-200/80 bg-white/80 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950/50">
+            <div key={item.id} className="rounded-xl border border-stone-300/50 bg-white/60 px-4 py-4 dark:border-white/6 dark:bg-white/3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{item.user?.email || 'Cuenta'} {'->'} {item.person?.name || 'Persona'}</div>
@@ -251,7 +251,7 @@ export default function UsersPage() {
       </SectionShell>
 
       <SectionShell eyebrow="Gestión de cuentas" title="Crear cuentas y revisar acceso operativo" description="Despues de la cola principal, crea o ajusta cuentas CLIENT y LIQUIDADOR sin tocar privilegios ADMIN.">
-        <form onSubmit={createUser} className="grid gap-4 rounded-[1.5rem] border border-zinc-200/80 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+        <form onSubmit={createUser} className="grid gap-4 rounded-xl border border-stone-300/50 bg-white/50 p-4 dark:border-white/6 dark:bg-white/3">
           <div className="grid gap-4 md:grid-cols-2">
             <input className={inputClass} placeholder="Correo" value={createForm.email} onChange={(event) => setCreateForm((prev) => ({ ...prev, email: event.target.value }))} />
             <input className={inputClass} type="password" placeholder="Contraseña" value={createForm.password} onChange={(event) => setCreateForm((prev) => ({ ...prev, password: event.target.value }))} />

@@ -86,7 +86,7 @@ function UserAvatar({ email }) {
 
   return (
     <div
-      className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-900 text-[11px] font-bold tracking-wide text-white ring-2 ring-emerald-900/20 dark:bg-amber-500 dark:text-zinc-950 dark:ring-amber-500/20"
+      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1C3A22] text-[11px] font-bold tracking-wide text-white ring-2 ring-[#1C3A22]/15 dark:bg-amber-500 dark:text-[#1C3A22] dark:ring-amber-500/20"
       title={email}
     >
       {initials}
@@ -104,16 +104,16 @@ function Sidebar({ role, onNavigate }) {
           <img
             src="/logo-bascula-la-esperanza.png"
             alt="BASCULA LA ESPERANZA"
-            className="h-full w-auto object-contain drop-shadow-sm"
+            className="h-full w-auto object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
           />
         </div>
-        <div className="mt-1 h-px w-4/5 bg-gradient-to-r from-transparent via-stone-300/80 to-transparent dark:via-zinc-700/60" />
+        <div className="mt-1 h-px w-4/5 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
       </div>
 
       <nav className="mt-3 flex-1 space-y-4 nav-stagger">
         {sections.map((section) => (
           <div key={section.section}>
-            <div className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.28em] text-stone-400 dark:text-zinc-600">
+            <div className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.28em] text-white/35">
               {section.section}
             </div>
             <div className="space-y-0.5">
@@ -127,8 +127,8 @@ function Sidebar({ role, onNavigate }) {
                     className={({ isActive }) =>
                       `group flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 ${
                         isActive
-                          ? 'bg-emerald-900 text-white shadow-md shadow-emerald-900/20 dark:bg-amber-500/90 dark:text-zinc-950 dark:shadow-amber-500/15'
-                          : 'text-zinc-600 hover:bg-stone-200/50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'
+                          ? 'bg-amber-500 text-[#1C3A22] shadow-md shadow-amber-500/20 font-semibold'
+                          : 'text-white/60 hover:bg-white/8 hover:text-white/90'
                       }`
                     }
                   >
@@ -198,11 +198,11 @@ export default function AppLayout() {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FAF6F0] via-[#FDF8F0] to-[#F0F7F2] text-zinc-900 dark:from-[#0C0A09] dark:via-[#0C0A09] dark:to-[#0C0A09] dark:text-zinc-100">
-      <header className="sticky top-0 z-30 border-b border-stone-200/60 bg-[#FAF6F0]/92 backdrop-blur-xl dark:border-zinc-800/60 dark:bg-[#0C0A09]/92">
+    <div className="min-h-screen bg-[#EDE4CA] text-zinc-900 dark:bg-[#0D1810] dark:text-zinc-100">
+      <header className="sticky top-0 z-30 border-b border-stone-300/50 bg-[#EDE4CA]/92 backdrop-blur-xl dark:border-white/5 dark:bg-[#0D1810]/92">
         <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-4 py-2.5">
           <button
-            className="rounded-lg border border-stone-300/80 bg-white/70 p-1.5 text-zinc-600 shadow-sm transition hover:bg-stone-100 lg:hidden dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="rounded-lg border border-stone-300/70 bg-stone-100/80 p-1.5 text-zinc-600 shadow-sm transition hover:bg-stone-200/80 lg:hidden dark:border-white/8 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
             onClick={() => setMobileOpen((value) => !value)}
             aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
           >
@@ -219,11 +219,11 @@ export default function AppLayout() {
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="hidden rounded-full bg-emerald-900/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-900 sm:inline-flex dark:bg-amber-500/10 dark:text-amber-400">
+            <span className="hidden rounded-full bg-[#1C3A22]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1C3A22] sm:inline-flex dark:bg-amber-500/10 dark:text-amber-400">
               {profile?.role || user?.role || '-'}
             </span>
             <button
-              className="rounded-lg p-2 text-zinc-400 transition hover:bg-stone-200/60 hover:text-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+              className="rounded-lg p-2 text-zinc-500 transition hover:bg-stone-300/50 hover:text-zinc-800 dark:text-zinc-500 dark:hover:bg-white/8 dark:hover:text-zinc-300"
               onClick={() => {
                 const next = theme === 'dark' ? 'light' : 'dark';
                 applyTheme(next);
@@ -235,7 +235,7 @@ export default function AppLayout() {
               {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
             <button
-              className="rounded-lg p-2 text-zinc-400 transition hover:bg-stone-200/60 hover:text-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+              className="rounded-lg p-2 text-zinc-500 transition hover:bg-stone-300/50 hover:text-zinc-800 dark:text-zinc-500 dark:hover:bg-white/8 dark:hover:text-zinc-300"
               onClick={() => {
                 localStorage.removeItem('token');
                 navigate('/login', { replace: true });
@@ -259,12 +259,12 @@ export default function AppLayout() {
 
       {mobileOpen && (
         <aside
-          className="fixed left-0 top-0 z-50 h-full w-72 overflow-y-auto border-r border-stone-200/80 bg-[#FAF6F0] p-4 shadow-2xl lg:hidden dark:border-zinc-800 dark:bg-[#0C0A09]"
+          className="fixed left-0 top-0 z-50 h-full w-72 overflow-y-auto bg-[#1C3A22] p-4 shadow-2xl lg:hidden"
           style={{ animation: 'slide-in-left 0.2s cubic-bezier(0.22, 1, 0.36, 1)' }}
         >
           <div className="mb-3 flex justify-end">
             <button
-              className="rounded-lg p-1.5 text-zinc-500 transition hover:bg-stone-200/60 dark:hover:bg-zinc-800"
+              className="rounded-lg p-1.5 text-white/50 transition hover:bg-white/10"
               onClick={() => setMobileOpen(false)}
               aria-label="Cerrar menú lateral"
             >
@@ -277,7 +277,7 @@ export default function AppLayout() {
 
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-4 px-4 py-4 lg:grid-cols-[260px_1fr]">
         <aside
-          className="hidden self-start rounded-2xl border border-stone-200/60 bg-white/65 p-3.5 shadow-[0_8px_30px_rgba(120,113,108,0.08)] backdrop-blur-sm lg:block dark:border-zinc-800/60 dark:bg-zinc-900/40 dark:shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+          className="hidden self-start rounded-2xl bg-[#1C3A22] p-3.5 shadow-[0_8px_40px_rgba(28,58,34,0.28)] lg:block dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]"
           style={{ position: 'sticky', top: '3.75rem' }}
         >
           <Sidebar role={user?.role} />

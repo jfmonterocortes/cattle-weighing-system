@@ -83,7 +83,7 @@ async function fetchNextCattleNumber(sheetId) {
 
 function Shell({ eyebrow, title, description, actions, className = '', children }) {
   return (
-    <section className={`rounded-[1.9rem] border border-zinc-200/80 bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.42)] ${className}`}>
+    <section className={`rounded-2xl border border-stone-300/50 bg-stone-100/60 p-5 shadow-sm dark:border-white/6 dark:bg-white/3 dark:shadow-[0_4px_24px_rgba(0,0,0,0.25)] ${className}`}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">{eyebrow}</div>
@@ -99,10 +99,10 @@ function Shell({ eyebrow, title, description, actions, className = '', children 
 
 function Stat({ label, value, caption }) {
   return (
-    <div className="rounded-[1.4rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
-      <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
-      <div className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">{value}</div>
-      {caption && <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{caption}</div>}
+    <div className="rounded-xl border border-white/12 bg-white/8 p-4">
+      <div className="text-xs font-medium uppercase tracking-[0.18em] text-white/50">{label}</div>
+      <div className="mt-2 font-mono text-xl font-semibold text-white">{value}</div>
+      {caption && <div className="mt-2 text-sm text-white/45">{caption}</div>}
     </div>
   );
 }
@@ -110,9 +110,9 @@ function Stat({ label, value, caption }) {
 function PartyCard({ icon, label, name, detail }) {
   const IconComponent = icon;
   return (
-    <div className="rounded-[1.4rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
+    <div className="rounded-xl border border-stone-300/50 bg-white/60 p-4 shadow-sm dark:border-white/6 dark:bg-white/3">
       <div className="flex items-start gap-3">
-        <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-900 text-white dark:bg-amber-500 dark:text-zinc-950">
+        <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#1C3A22] text-white dark:bg-amber-500 dark:text-[#1C3A22]">
           <IconComponent size={18} />
         </div>
         <div>
@@ -330,7 +330,7 @@ export default function SheetDetailPage() {
 
   if (loading) {
     return (
-      <div className="rounded-[1.5rem] border border-zinc-200/80 bg-white/90 p-6 text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-300">
+      <div className="rounded-xl border border-stone-300/50 bg-stone-100/60 p-6 text-stone-700 shadow-sm dark:border-white/6 dark:bg-white/3 dark:text-white/60">
         Cargando...
       </div>
     );
@@ -344,7 +344,7 @@ export default function SheetDetailPage() {
   }
   if (!sheet) {
     return (
-      <div className="rounded-[1.5rem] border border-zinc-200/80 bg-white/90 p-6 text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-300">
+      <div className="rounded-xl border border-stone-300/50 bg-stone-100/60 p-6 text-stone-700 shadow-sm dark:border-white/6 dark:bg-white/3 dark:text-white/60">
         Planilla no encontrada.
       </div>
     );
@@ -352,27 +352,27 @@ export default function SheetDetailPage() {
 
   return (
     <div className="space-y-6 stagger">
-      <section className="overflow-hidden rounded-[2rem] border border-stone-200/60 bg-gradient-to-br from-amber-50/80 via-white to-sky-50/60 p-6 shadow-[0_22px_65px_rgba(120,53,15,0.06)] dark:border-zinc-800/60 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0c1620] dark:shadow-[0_28px_75px_rgba(0,0,0,0.35)]">
+      <section className="overflow-hidden rounded-2xl bg-[#1C3A22] p-6 shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-stone-500 dark:border-zinc-700/60 dark:bg-zinc-950/50 dark:text-zinc-400">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">
               <History size={13} />
               Planilla operativa
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Link to="/planillas" className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70">
+              <Link to="/planillas" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/8 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/15">
                 <ArrowLeft size={16} />
                 Volver a planillas
               </Link>
               <PaymentChip isPaid={sheet.isPaid} />
               {!isClient && (
-                <span className="inline-flex rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                <span className="inline-flex rounded-full border border-white/15 bg-white/8 px-3 py-1 text-xs font-semibold text-white/70">
                   {headerStateLabel}
                 </span>
               )}
             </div>
-            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Planilla {sheet.visibleNumber}</h1>
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">{new Date(sheet.date).toLocaleString()} · Revisa encabezado, resumen, reses y pago en el orden operativo del trabajo diario.</p>
+            <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Planilla {sheet.visibleNumber}</h1>
+            <p className="mt-3 text-sm leading-7 text-white/55">{new Date(sheet.date).toLocaleString()} · Revisa encabezado, resumen, reses y pago en el orden operativo del trabajo diario.</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[480px]">

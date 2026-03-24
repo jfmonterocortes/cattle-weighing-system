@@ -107,27 +107,27 @@ export default function PersonasPage() {
 
   return (
     <div className="space-y-6 stagger">
-      <section className="overflow-hidden rounded-[2rem] border border-stone-200/60 bg-gradient-to-br from-emerald-50/70 via-white to-amber-50/60 p-6 shadow-[0_22px_65px_rgba(16,185,129,0.06)] dark:border-zinc-800/60 dark:from-[#0d1812] dark:via-zinc-900 dark:to-[#18120b] dark:shadow-[0_28px_75px_rgba(0,0,0,0.35)]">
+      <section className="overflow-hidden rounded-2xl bg-[#1C3A22] p-6 shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-stone-500 dark:border-zinc-700/60 dark:bg-zinc-950/50 dark:text-zinc-400">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">
               <Users2 size={13} />
               Directorio operativo
             </div>
-            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Gestiona el directorio de vendedores y compradores con la vinculación a la vista.</h1>
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+            <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Gestiona el directorio de vendedores y compradores con la vinculación a la vista.</h1>
+            <p className="mt-3 text-sm leading-7 text-white/55">
               Las personas son la base de las planillas y de la visibilidad para clientes. Mantener este directorio claro evita errores de captura y problemas de enlace.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:w-[430px]">
-            <div className="rounded-[1.45rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
-              <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Personas en página</div>
-              <div className="mt-2 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{state.items.length}</div>
+            <div className="rounded-xl border border-white/12 bg-white/8 p-4">
+              <div className="text-xs font-medium uppercase tracking-[0.18em] text-white/50">Personas en página</div>
+              <div className="mt-2 font-mono text-2xl font-semibold text-white">{state.items.length}</div>
             </div>
-            <div className="rounded-[1.45rem] border border-zinc-200/80 bg-white/85 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
-              <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Con cuenta vinculada</div>
-              <div className="mt-2 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{linkedCount}</div>
+            <div className="rounded-xl border border-white/12 bg-white/8 p-4">
+              <div className="text-xs font-medium uppercase tracking-[0.18em] text-white/50">Con cuenta vinculada</div>
+              <div className="mt-2 font-mono text-2xl font-semibold text-white">{linkedCount}</div>
             </div>
           </div>
         </div>

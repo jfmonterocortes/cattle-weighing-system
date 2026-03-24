@@ -28,11 +28,12 @@ const toneStyles = {
 };
 
 function StatusChip({ children, tone = 'neutral' }) {
+  // Chips render inside dark forest hero — use glass styles
   const byTone = {
-    neutral: 'border-zinc-300 bg-white text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/70 dark:text-zinc-200',
-    success: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100',
-    warning: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100',
-    info: 'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-100',
+    neutral: 'border-white/15 bg-white/10 text-white/80',
+    success: 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200',
+    warning: 'border-amber-400/30 bg-amber-500/15 text-amber-200',
+    info:    'border-sky-400/20 bg-sky-500/12 text-sky-200',
   };
 
   return (
@@ -44,9 +45,9 @@ function StatusChip({ children, tone = 'neutral' }) {
 
 function DetailCard({ label, value }) {
   return (
-    <div className="rounded-[1.4rem] border border-zinc-200/80 bg-white/80 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/60">
-      <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
-      <div className="mt-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">{value}</div>
+    <div className="rounded-xl border border-white/12 bg-white/8 p-4">
+      <div className="text-xs font-medium uppercase tracking-[0.18em] text-white/50">{label}</div>
+      <div className="mt-2 text-sm font-semibold text-white">{value}</div>
     </div>
   );
 }
@@ -198,15 +199,15 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 stagger">
-      <section className="overflow-hidden rounded-[2rem] border border-stone-200/60 bg-gradient-to-br from-amber-50/80 via-white to-emerald-50/60 p-6 shadow-[0_22px_65px_rgba(120,53,15,0.06)] dark:border-zinc-800/60 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0d1812] dark:shadow-[0_28px_75px_rgba(0,0,0,0.35)]">
+      <section className="overflow-hidden rounded-2xl bg-[#1C3A22] p-6 shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-stone-500 dark:border-zinc-700/60 dark:bg-zinc-950/50 dark:text-zinc-400">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">
               <Sparkles size={13} />
               Mi cuenta
             </div>
-            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Administra tu cuenta sin perder el contexto operativo.</h1>
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+            <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">Administra tu cuenta sin perder el contexto operativo.</h1>
+            <p className="mt-3 text-sm leading-7 text-white/55">
               Este espacio queda para mantenimiento de cuenta, seguridad y vinculación. El seguimiento diario de planillas sigue concentrado en la vista principal.
             </p>
 
@@ -233,7 +234,7 @@ export default function SettingsPage() {
             <div className="mt-4 flex xl:mt-0 xl:justify-end">
               <Link
                 to="/planillas"
-                className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/8 px-4 py-3 text-sm font-medium text-white/80 transition hover:bg-white/15"
               >
                 Volver a mis planillas
                 <ArrowRight size={16} />

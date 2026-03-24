@@ -17,23 +17,30 @@ import { getSession } from '../utils/authSession';
 
 function SummaryCard({ icon, label, value, caption, tone = 'neutral' }) {
   const CardIcon = icon;
+  // Cards sit inside the dark forest green hero — use glass/white style
   const toneStyles = {
-    neutral: 'border-zinc-200/80 bg-white/90 dark:border-zinc-800 dark:bg-zinc-950/60',
-    amber: 'border-amber-200/80 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-500/10',
-    emerald: 'border-emerald-200/80 bg-emerald-50/80 dark:border-emerald-500/20 dark:bg-emerald-500/10',
-    blue: 'border-sky-200/80 bg-sky-50/80 dark:border-sky-500/20 dark:bg-sky-500/10',
+    neutral: 'border-white/12 bg-white/8',
+    amber:   'border-amber-400/25 bg-amber-500/10',
+    emerald: 'border-white/12 bg-white/8',
+    blue:    'border-sky-400/20 bg-sky-500/8',
+  };
+  const iconStyles = {
+    neutral: 'bg-white/15 text-white',
+    amber:   'bg-amber-500 text-[#1C3A22]',
+    emerald: 'bg-white/15 text-white',
+    blue:    'bg-sky-500/80 text-white',
   };
 
   return (
-    <div className={`rounded-[1.5rem] border p-4 shadow-sm ${toneStyles[tone] || toneStyles.neutral}`}>
+    <div className={`rounded-2xl border p-4 ${toneStyles[tone] || toneStyles.neutral}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">{label}</div>
-          <div className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{value}</div>
-          <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{caption}</div>
+          <div className="text-xs font-medium uppercase tracking-[0.18em] text-white/50">{label}</div>
+          <div className="mt-3 font-mono text-2xl font-semibold tracking-tight text-white">{value}</div>
+          <div className="mt-2 text-sm text-white/50">{caption}</div>
         </div>
-        <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-900 text-white dark:bg-amber-500 dark:text-zinc-950">
-          <CardIcon size={18} />
+        <div className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconStyles[tone] || iconStyles.neutral}`}>
+          <CardIcon size={17} />
         </div>
       </div>
     </div>
@@ -42,12 +49,12 @@ function SummaryCard({ icon, label, value, caption, tone = 'neutral' }) {
 
 function SectionCard({ eyebrow, title, description, actions, children }) {
   return (
-    <section className="rounded-[1.9rem] border border-zinc-200/80 bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-[0_24px_60px_rgba(0,0,0,0.42)]">
+    <section className="rounded-2xl border border-stone-300/50 bg-stone-100/60 p-5 shadow-[0_4px_20px_rgba(28,58,34,0.06)] dark:border-white/6 dark:bg-white/3 dark:shadow-[0_4px_24px_rgba(0,0,0,0.25)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-500">{eyebrow}</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500 dark:text-white/35">{eyebrow}</div>
           <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>
-          {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">{description}</p>}
+          {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600 dark:text-white/45">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
       </div>
@@ -60,18 +67,18 @@ function QuickAction({ to, label, caption, primary = false }) {
   return (
     <Link
       to={to}
-      className={`rounded-[1.35rem] border px-4 py-4 transition ${
+      className={`rounded-xl border px-4 py-4 transition-all duration-200 ${
         primary
-          ? 'border-emerald-900 bg-emerald-900 text-white shadow-md shadow-emerald-900/15 hover:bg-emerald-800 dark:border-amber-500 dark:bg-amber-500 dark:text-zinc-950 dark:shadow-amber-500/15 dark:hover:bg-amber-400'
-          : 'border-zinc-200 bg-white/80 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-950/80'
+          ? 'border-[#1C3A22] bg-[#1C3A22] text-white shadow-md shadow-[#1C3A22]/15 hover:bg-[#234d2c] dark:border-amber-500 dark:bg-amber-500 dark:text-[#1C3A22] dark:shadow-amber-500/15 dark:hover:bg-amber-400'
+          : 'border-stone-300/60 bg-white/60 hover:border-stone-400/50 hover:bg-white/80 dark:border-white/8 dark:bg-white/4 dark:hover:bg-white/8'
       }`}
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className={`text-sm font-semibold ${primary ? 'text-white dark:text-zinc-950' : 'text-zinc-900 dark:text-zinc-100'}`}>{label}</div>
-          <div className={`mt-1 text-sm ${primary ? 'text-emerald-100 dark:text-amber-900' : 'text-zinc-600 dark:text-zinc-400'}`}>{caption}</div>
+          <div className={`text-sm font-semibold ${primary ? 'text-white dark:text-[#1C3A22]' : 'text-zinc-900 dark:text-zinc-100'}`}>{label}</div>
+          <div className={`mt-1 text-sm ${primary ? 'text-white/70 dark:text-[#1C3A22]/70' : 'text-stone-600 dark:text-white/45'}`}>{caption}</div>
         </div>
-        <ArrowRight size={16} className={primary ? 'text-white dark:text-zinc-950' : 'text-zinc-500 dark:text-zinc-400'} />
+        <ArrowRight size={16} className={primary ? 'text-white/80 dark:text-[#1C3A22]' : 'text-stone-400 dark:text-white/35'} />
       </div>
     </Link>
   );
@@ -79,27 +86,27 @@ function QuickAction({ to, label, caption, primary = false }) {
 
 function RecentSheetItem({ sheet }) {
   return (
-    <div className="rounded-[1.35rem] border border-zinc-200/80 bg-white/80 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950/50">
+    <div className="rounded-xl border border-stone-300/50 bg-white/55 px-4 py-4 dark:border-white/6 dark:bg-white/3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Planilla {sheet.visibleNumber}</div>
             <span
-              className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+              className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
                 sheet.isPaid
-                  ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-100'
-                  : 'bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-100'
+                  ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-200'
+                  : 'bg-amber-100 text-amber-800 dark:bg-amber-500/12 dark:text-amber-300'
               }`}
             >
               {sheet.isPaid ? 'Pagada' : 'Pendiente'}
             </span>
           </div>
-          <div className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <div className="mt-2 text-sm text-stone-700 dark:text-white/60">
             <span className="font-medium text-zinc-900 dark:text-zinc-100">{sheet.seller?.name || 'Sin vendedor'}</span>
-            <span className="mx-2 text-zinc-400 dark:text-zinc-500">{'->'}</span>
+            <span className="mx-2 text-stone-400 dark:text-white/25">→</span>
             <span className="font-medium text-zinc-900 dark:text-zinc-100">{sheet.buyer?.name || 'Sin comprador'}</span>
           </div>
-          <div className="mt-2 flex flex-wrap gap-3 text-xs text-zinc-500 dark:text-zinc-500">
+          <div className="mt-2 flex flex-wrap gap-3 font-mono text-xs text-stone-500 dark:text-white/35">
             <span>Cabezas: {sheet.headCount ?? '-'}</span>
             <span>Peso total: {sheet.totalWeight ?? '-'}</span>
             <span>Valor: {sheet.totalValue ?? '-'}</span>
@@ -107,11 +114,11 @@ function RecentSheetItem({ sheet }) {
         </div>
 
         <Link
-          className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"
+          className="inline-flex items-center gap-2 rounded-xl border border-stone-300/70 bg-white/60 px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:border-stone-400/60 hover:bg-white/90 dark:border-white/8 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10"
           to={`/planillas/${sheet.id}`}
         >
           Ver detalle
-          <ArrowRight size={16} />
+          <ArrowRight size={15} />
         </Link>
       </div>
     </div>
@@ -260,17 +267,17 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 stagger">
-      <section className="overflow-hidden rounded-[2rem] border border-stone-200/60 bg-gradient-to-br from-amber-50/80 via-white to-sky-50/60 p-6 shadow-[0_22px_65px_rgba(120,53,15,0.06)] dark:border-zinc-800/60 dark:from-[#17120b] dark:via-zinc-900 dark:to-[#0c1620] dark:shadow-[0_28px_75px_rgba(0,0,0,0.35)]">
+      <section className="overflow-hidden rounded-2xl border border-[#1C3A22] bg-[#1C3A22] p-6 shadow-[0_8px_40px_rgba(28,58,34,0.30)] dark:border-[#162d1b] dark:bg-[#162d1b] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-stone-500 dark:border-zinc-700/60 dark:bg-zinc-950/50 dark:text-zinc-400">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">
               <ClipboardList size={13} />
               Centro operativo
             </div>
-            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+            <h1 className="mt-4 font-display text-4xl font-light tracking-tight text-white">
               {isAdmin ? 'Supervisa colas, pagos y vinculaciones sin perder el contexto.' : 'Retoma las planillas que importan y sigue con la captura.'}
             </h1>
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+            <p className="mt-3 text-sm leading-7 text-white/55">
               {isAdmin
                 ? 'Prioriza solicitudes pendientes, observa la carga de pago y entra rápido a las pantallas donde se destraba la operación.'
                 : 'Usa esta vista como punto de arranque para registrar nuevas planillas, revisar las que siguen abiertas y volver a los detalles que aún requieren acción.'}
@@ -315,7 +322,7 @@ export default function DashboardPage() {
           actions={
             <Link
               to="/usuarios"
-              className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70"
+              className="inline-flex items-center gap-2 rounded-xl border border-stone-300/70 bg-white/60 px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:border-stone-400/60 hover:bg-white/90 dark:border-white/8 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10"
             >
               Abrir cuentas y vinculaciones
               <ArrowRight size={16} />
@@ -324,7 +331,7 @@ export default function DashboardPage() {
         >
           <div className="space-y-3">
             {!state.loading && state.pendingLinks.length === 0 && (
-              <div className="rounded-[1.35rem] border border-dashed border-zinc-300/90 bg-zinc-50/80 px-4 py-5 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">
+              <div className="rounded-xl border border-dashed border-stone-300/80 bg-stone-100/50 px-4 py-5 text-sm text-stone-600 dark:border-white/8 dark:bg-white/3 dark:text-white/40">
                 No hay solicitudes pendientes en este momento.
               </div>
             )}
@@ -332,16 +339,16 @@ export default function DashboardPage() {
             {state.pendingLinks.slice(0, 4).map((request) => (
               <div
                 key={request.id}
-                className="rounded-[1.35rem] border border-zinc-200/80 bg-white/80 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950/50"
+                className="rounded-xl border border-stone-300/50 bg-white/55 px-4 py-4 dark:border-white/6 dark:bg-white/3"
               >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                      <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                        {request.user?.email || 'Cuenta'} {'->'} {request.person?.name || 'Persona'}
-                      </div>
-                    <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{request.notes || 'Sin notas adicionales.'}</div>
+                    <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      {request.user?.email || 'Cuenta'} → {request.person?.name || 'Persona'}
+                    </div>
+                    <div className="mt-1 text-sm text-stone-600 dark:text-white/45">{request.notes || 'Sin notas adicionales.'}</div>
                   </div>
-                  <div className="text-xs uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-500">
+                  <div className="font-mono text-xs uppercase tracking-[0.16em] text-stone-400 dark:text-white/30">
                     {request.requestedAt ? new Date(request.requestedAt).toLocaleString() : 'Pendiente'}
                   </div>
                 </div>
@@ -362,8 +369,8 @@ export default function DashboardPage() {
       >
         <div className="space-y-3">
           {!state.loading && state.recent.length === 0 && (
-            <div className="rounded-[1.35rem] border border-dashed border-zinc-300/90 bg-zinc-50/80 px-4 py-5 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">
-              Aun no hay planillas recientes para mostrar.
+            <div className="rounded-xl border border-dashed border-stone-300/80 bg-stone-100/50 px-4 py-5 text-sm text-stone-600 dark:border-white/8 dark:bg-white/3 dark:text-white/40">
+              Aún no hay planillas recientes para mostrar.
             </div>
           )}
 
