@@ -3,6 +3,38 @@
 ## Overview
 BASCULA LA ESPERANZA is a full-stack cattle weighing system for operational sheet capture, payment tracking, and role-based access control. The backend models real-world participants as `Person` records and authentication accounts as `User` records so weighing activity can exist before an account is created or linked.
 
+## Interface Preview
+
+### Dashboard
+Quick access to operational actions, pending link requests, payment status, and recent sheets.
+
+![Dashboard overview](./docs/screenshots/dashboard-overview.png)
+
+### Sheets
+Search, filter, export, and review weighing sheets from a single list view.
+
+![Sheets list and filters](./docs/screenshots/planillas-list-and-filters.png)
+
+### Register Sheet
+Create a new weighing sheet by selecting seller and buyer first, then continue to the detailed cattle flow.
+
+![Register weighing sheet](./docs/screenshots/register-weighing-sheet.png)
+
+### People Directory
+Manage the operational directory of sellers and buyers, including linked-account visibility.
+
+![People directory](./docs/screenshots/people-directory.png)
+
+### Accounts And Links
+Review pending link requests, create accounts, and manage operational users from the admin console.
+
+![Accounts and links](./docs/screenshots/accounts-and-links.png)
+
+### My Account
+Admins and liquidadores can now update their own alias, linked person data, and password from the account screen.
+
+![My account settings](./docs/screenshots/my-account-settings.png)
+
 ## Core Roles
 - `ADMIN`: manages users, reviews account-link requests, configures defaults, and can operate sheets.
 - `LIQUIDADOR`: creates and edits operational weighing sheets inside the allowed edit window.
@@ -41,6 +73,7 @@ PORT=3000
 JWT_SECRET=supersecretkey
 PASSWORD_RESET_SECRET=separate-reset-secret
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cattle_weighing_db
+DIRECT_URL=postgresql://postgres:postgres@localhost:5432/cattle_weighing_db
 TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cattle_weighing_test_db
 CORS_ORIGIN=http://localhost:5173
 FRONTEND_BASE_URL=http://localhost:5173
