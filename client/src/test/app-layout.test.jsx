@@ -1,7 +1,7 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { render, screen, waitFor } from '@testing-library/react';
 import AppLayout from '../components/AppLayout';
 
 const mockGet = vi.fn();
@@ -27,14 +27,17 @@ describe('AppLayout', () => {
           email: 'admin@bascula.com',
           role: 'ADMIN',
           isActive: true,
-          liquidadorAlias: null,
-          person: null,
+          liquidadorAlias: 'JPM',
+          person: {
+            id: 8,
+            name: 'Juan Pablo Montero Novoa',
+          },
         },
       },
     });
   });
 
-  it('shows workflow-based admin navigation and header context', async () => {
+  it('shows the admin navigation and refreshed alias context', async () => {
     render(
       <MemoryRouter initialEntries={['/dashboard']}>
         <Routes>
@@ -53,6 +56,6 @@ describe('AppLayout', () => {
     expect(screen.getByText('Cuentas y vinculaciones')).toBeInTheDocument();
     expect(screen.getByText('Mi cuenta')).toBeInTheDocument();
     expect(screen.getByTitle('admin@bascula.com')).toBeInTheDocument();
-    expect(screen.getByText('Supervisión operativa y control')).toBeInTheDocument();
+    expect(screen.getByText('Alias operativo: JPM')).toBeInTheDocument();
   });
 });

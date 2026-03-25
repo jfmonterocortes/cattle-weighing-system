@@ -1,7 +1,18 @@
-﻿const prisma = require('../db/prisma');
+const prisma = require('../db/prisma');
 const bcrypt = require('bcrypt');
 const { SYSTEM_SETTING_KEYS, ROLE } = require('../constants/domain');
-const { updatePersonRecord } = require('./person.service');
+const { normalizeSpace } = require('../utils/normalization');
+const { createPersonRecord, updatePersonRecord } = require('./person.service');
+
+const ownProfileSelect = {
+  id: true,
+  email: true,
+  role: true,
+  liquidadorAlias: true,
+  isActive: true,
+  personId: true,
+  person: { select: { id: true, name: true, phone: true, cedula: true } },
+};
 
 async function getDefaultPricePerHead() {
   const row = await prisma.systemSetting.findUnique({
@@ -25,15 +36,7 @@ async function getSettingsForUser(user) {
 
   const account = await prisma.user.findUnique({
     where: { id: user.userId },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      liquidadorAlias: true,
-      isActive: true,
-      personId: true,
-      person: { select: { id: true, name: true, phone: true, cedula: true } },
-    },
+    select: ownProfileSelect,
   });
 
   let linkRequest = null;
@@ -58,31 +61,95 @@ async function getSettingsForUser(user) {
   };
 }
 
-async function updateClientProfile({ user, phone, cedula }) {
-  if (user.role !== ROLE.CLIENT) {
-    const err = new Error('Forbidden');
-    err.statusCode = 403;
-    throw err;
-  }
-
+async function updateOwnProfile({ user, name, phone, cedula, liquidadorAlias }) {
   const account = await prisma.user.findUnique({
     where: { id: user.userId },
-    select: { id: true, personId: true },
+    select: ownProfileSelect,
   });
 
-  if (!account?.personId) {
-    const err = new Error('Debes vincular tu cuenta a una persona antes de actualizar teléfono o cédula.');
-    err.statusCode = 409;
+  if (!account) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
     throw err;
   }
 
-  const updated = await updatePersonRecord(account.personId, { phone, cedula }, user);
+  if (user.role === ROLE.CLIENT) {
+    if (!account.personId) {
+      const err = new Error('Debes vincular tu cuenta a una persona antes de actualizar telefono o cedula.');
+      err.statusCode = 409;
+      throw err;
+    }
+
+    const updatedPerson = await updatePersonRecord(account.personId, { phone, cedula }, user);
+    return {
+      profile: {
+        ...account,
+        person: {
+          id: updatedPerson.id,
+          name: updatedPerson.name,
+          phone: updatedPerson.phone,
+          cedula: updatedPerson.cedula,
+        },
+      },
+    };
+  }
+
+  const hasPersonInput = name !== undefined || phone !== undefined || cedula !== undefined;
+  const updateData = {};
+
+  if (liquidadorAlias !== undefined) {
+    updateData.liquidadorAlias = normalizeSpace(liquidadorAlias || '') || null;
+  }
+
+  let nextPerson = account.person || null;
+
+  if (hasPersonInput) {
+    if (account.personId) {
+      const updatedPerson = await updatePersonRecord(account.personId, { name, phone, cedula }, user);
+      nextPerson = {
+        id: updatedPerson.id,
+        name: updatedPerson.name,
+        phone: updatedPerson.phone,
+        cedula: updatedPerson.cedula,
+      };
+    } else {
+      const nextName = normalizeSpace(name || '');
+      if (!nextName) {
+        const err = new Error('Debes indicar el nombre para crear la persona vinculada.');
+        err.statusCode = 400;
+        throw err;
+      }
+
+      const createdPerson = await createPersonRecord({
+        name: nextName,
+        phone,
+        cedula,
+      });
+
+      updateData.personId = createdPerson.id;
+      nextPerson = {
+        id: createdPerson.id,
+        name: createdPerson.name,
+        phone: createdPerson.phone,
+        cedula: createdPerson.cedula,
+      };
+    }
+  }
+
+  if (!Object.keys(updateData).length) {
+    return { profile: account };
+  }
+
+  const updatedAccount = await prisma.user.update({
+    where: { id: user.userId },
+    data: updateData,
+    select: ownProfileSelect,
+  });
+
   return {
-    person: {
-      id: updated.id,
-      name: updated.name,
-      phone: updated.phone,
-      cedula: updated.cedula,
+    profile: {
+      ...updatedAccount,
+      person: nextPerson,
     },
   };
 }
@@ -101,13 +168,13 @@ async function updateOwnPassword({ userId, currentPassword, newPassword }) {
 
   const valid = await bcrypt.compare(currentPassword, account.passwordHash);
   if (!valid) {
-    const err = new Error('La contraseña actual no es correcta.');
+    const err = new Error('La contrasena actual no es correcta.');
     err.statusCode = 400;
     throw err;
   }
 
   if (currentPassword === newPassword) {
-    const err = new Error('La nueva contraseña debe ser diferente a la actual.');
+    const err = new Error('La nueva contrasena debe ser diferente a la actual.');
     err.statusCode = 400;
     throw err;
   }
@@ -121,6 +188,6 @@ module.exports = {
   getDefaultPricePerHead,
   setDefaultPricePerHead,
   getSettingsForUser,
-  updateClientProfile,
+  updateOwnProfile,
   updateOwnPassword,
 };

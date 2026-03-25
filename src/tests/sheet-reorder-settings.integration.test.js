@@ -94,7 +94,7 @@ describe('sheet reorder + client settings profile/password', () => {
       .send({ phone: '' });
 
     expect(profileUpdate.statusCode).toBe(200);
-    expect(profileUpdate.body.person.phone).toBeNull();
+    expect(profileUpdate.body.profile.person.phone).toBeNull();
 
     const unlinkedEmail = `unlinked.${stamp}@bascula.com`;
     const unlinkedCreate = await request(app)
@@ -115,6 +115,43 @@ describe('sheet reorder + client settings profile/password', () => {
 
     expect(blocked.statusCode).toBe(409);
     expect(blocked.body.message).toContain('Debes vincular tu cuenta a una persona');
+  });
+
+  it('lets admin update own alias and create a linked person from settings', async () => {
+    const adminToken = await login('admin@bascula.com', 'Admin123!');
+    const stamp = Date.now();
+
+    const registered = await request(app)
+      .post('/auth/register-managed')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        email: `self.admin.${stamp}@bascula.com`,
+        password: 'Admin123!',
+        role: 'CLIENT',
+      });
+    expect(registered.statusCode).toBe(201);
+
+    await request(app)
+      .patch(`/users/${registered.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ role: 'LIQUIDADOR' });
+
+    const promotedToken = await login(`self.admin.${stamp}@bascula.com`, 'Admin123!');
+    const profileUpdate = await request(app)
+      .patch('/settings/profile')
+      .set('Authorization', `Bearer ${promotedToken}`)
+      .send({
+        name: `Juan Pablo ${stamp}`,
+        phone: `393${String(stamp).slice(-7)}`,
+        cedula: `${stamp}`,
+        liquidadorAlias: 'JPM',
+      });
+
+    expect(profileUpdate.statusCode).toBe(200);
+    expect(profileUpdate.body.profile.liquidadorAlias).toBe('JPM');
+    expect(profileUpdate.body.profile.person.name).toBe(`Juan Pablo ${stamp}`);
+    expect(profileUpdate.body.profile.person.phone).toBe(`393${String(stamp).slice(-7)}`);
+    expect(profileUpdate.body.profile.person.cedula).toBe(`${stamp}`);
   });
 
   it('changes own password with current password validation', async () => {

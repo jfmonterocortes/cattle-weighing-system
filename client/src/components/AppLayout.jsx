@@ -15,15 +15,15 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { getAvailableRoles, setActiveRole } from '../utils/authSession';
+import { formatRole } from '../utils/format';
 import { parseJwt } from '../utils/jwt';
 import { applyTheme, initTheme } from '../utils/theme';
-import { formatRole } from '../utils/format';
-import { getAvailableRoles, setActiveRole } from '../utils/authSession';
 
 const navigationByRole = {
   ADMIN: [
     {
-      section: 'Operación',
+      section: 'Operacion',
       items: [
         { to: '/dashboard', label: 'Centro operativo', icon: LayoutDashboard },
         { to: '/planillas', label: 'Planillas', icon: ClipboardList },
@@ -31,7 +31,7 @@ const navigationByRole = {
       ],
     },
     {
-      section: 'Supervisión',
+      section: 'Supervision',
       items: [
         { to: '/personas', label: 'Personas', icon: Users },
         { to: '/usuarios', label: 'Cuentas y vinculaciones', icon: ShieldCheck },
@@ -44,7 +44,7 @@ const navigationByRole = {
   ],
   LIQUIDADOR: [
     {
-      section: 'Operación',
+      section: 'Operacion',
       items: [
         { to: '/dashboard', label: 'Centro operativo', icon: LayoutDashboard },
         { to: '/planillas', label: 'Planillas', icon: ClipboardList },
@@ -130,7 +130,7 @@ function Sidebar({ role, onNavigate }) {
                     className={({ isActive }) =>
                       `group flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 ${
                         isActive
-                          ? 'bg-amber-500 text-[#1C3A22] shadow-md shadow-amber-500/20 font-semibold'
+                          ? 'bg-amber-500 font-semibold text-[#1C3A22] shadow-md shadow-amber-500/20'
                           : 'text-white/60 hover:bg-white/8 hover:text-white/90'
                       }`
                     }
@@ -160,11 +160,11 @@ export default function AppLayout() {
 
   const [activeRole, setActiveRoleState] = useState(() => {
     if (!token) return null;
-    const u = parseJwt(token);
-    if (!u) return null;
+    const parsed = parseJwt(token);
+    if (!parsed) return null;
     const stored = localStorage.getItem('activeRole');
-    const available = getAvailableRoles(u.role);
-    return stored && available.includes(stored) ? stored : u.role;
+    const available = getAvailableRoles(parsed.role);
+    return stored && available.includes(stored) ? stored : parsed.role;
   });
 
   const availableRoles = useMemo(() => (user ? getAvailableRoles(user.role) : []), [user]);
@@ -176,8 +176,9 @@ export default function AppLayout() {
   const headerContext = useMemo(() => {
     if (!profile) return '';
     if (activeRole === 'CLIENT' && profile.person?.name) return `Persona vinculada: ${profile.person.name}`;
-    if (activeRole === 'LIQUIDADOR' && profile.liquidadorAlias) return `Alias operativo: ${profile.liquidadorAlias}`;
-    if (activeRole === 'ADMIN') return 'Supervisión operativa y control';
+    if (activeRole !== 'CLIENT' && profile.liquidadorAlias) return `Alias operativo: ${profile.liquidadorAlias}`;
+    if (activeRole !== 'CLIENT' && profile.person?.name) return `Persona vinculada: ${profile.person.name}`;
+    if (activeRole === 'ADMIN') return 'Supervision operativa y control';
     return profile.email || '';
   }, [profile, activeRole]);
 
@@ -201,23 +202,33 @@ export default function AppLayout() {
       }
     };
 
+    const handleProfileUpdated = () => {
+      loadProfile();
+    };
+
     if (user?.role) {
       loadProfile();
     }
 
+    window.addEventListener('profile-updated', handleProfileUpdated);
+
     return () => {
       cancelled = true;
+      window.removeEventListener('profile-updated', handleProfileUpdated);
     };
-  }, [user?.role]);
+  }, [user?.role, location.pathname]);
 
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
-    const handleOutside = (e) => {
-      if (roleMenuRef.current && !roleMenuRef.current.contains(e.target)) setRoleMenuOpen(false);
+    const handleOutside = (event) => {
+      if (roleMenuRef.current && !roleMenuRef.current.contains(event.target)) {
+        setRoleMenuOpen(false);
+      }
     };
+
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
   }, []);
@@ -237,12 +248,13 @@ export default function AppLayout() {
       >
         Saltar al contenido principal
       </a>
+
       <header className="sticky top-0 z-30 border-b border-stone-300/50 bg-[#EDE4CA]/92 backdrop-blur-xl dark:border-white/5 dark:bg-[#0D1810]/92">
         <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-4 py-2.5">
           <button
             className="rounded-lg border border-stone-300/70 bg-stone-100/80 p-1.5 text-zinc-600 shadow-sm transition hover:bg-stone-200/80 lg:hidden dark:border-white/8 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
             onClick={() => setMobileOpen((value) => !value)}
-            aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+            aria-label={mobileOpen ? 'Cerrar menu' : 'Abrir menu'}
           >
             {mobileOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
@@ -251,9 +263,7 @@ export default function AppLayout() {
             <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-stone-400 dark:text-zinc-500">
               {currentItem?.label || 'Panel operativo'}
             </div>
-            {headerContext && (
-              <div className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-500">{headerContext}</div>
-            )}
+            {headerContext && <div className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-500">{headerContext}</div>}
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -261,7 +271,7 @@ export default function AppLayout() {
               <div ref={roleMenuRef} className="relative hidden sm:block">
                 <button
                   type="button"
-                  onClick={() => setRoleMenuOpen((v) => !v)}
+                  onClick={() => setRoleMenuOpen((value) => !value)}
                   aria-expanded={roleMenuOpen}
                   aria-haspopup="listbox"
                   className="inline-flex items-center gap-1.5 rounded-full bg-[#1C3A22]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1C3A22] transition hover:bg-[#1C3A22]/20 dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20"
@@ -275,16 +285,23 @@ export default function AppLayout() {
                     aria-label="Cambiar rol activo"
                     className="absolute right-0 top-full z-50 mt-2 min-w-[160px] overflow-hidden rounded-xl border border-stone-200/80 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
                   >
-                    {availableRoles.map((r) => (
+                    {availableRoles.map((role) => (
                       <button
-                        key={r}
+                        key={role}
                         type="button"
                         role="option"
-                        aria-selected={r === activeRole}
-                        onMouseDown={(e) => { e.preventDefault(); switchRole(r); }}
-                        className={`w-full px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider transition ${r === activeRole ? 'bg-[#1C3A22]/8 text-[#1C3A22] dark:bg-amber-500/10 dark:text-amber-400' : 'text-zinc-600 hover:bg-stone-50 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}
+                        aria-selected={role === activeRole}
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          switchRole(role);
+                        }}
+                        className={`w-full px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider transition ${
+                          role === activeRole
+                            ? 'bg-[#1C3A22]/8 text-[#1C3A22] dark:bg-amber-500/10 dark:text-amber-400'
+                            : 'text-zinc-600 hover:bg-stone-50 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                        }`}
                       >
-                        {formatRole(r)}
+                        {formatRole(role)}
                       </button>
                     ))}
                   </div>
@@ -297,6 +314,7 @@ export default function AppLayout() {
                 </span>
               )
             )}
+
             <button
               className="rounded-lg p-2 text-zinc-500 transition hover:bg-stone-300/50 hover:text-zinc-800 dark:text-zinc-500 dark:hover:bg-white/8 dark:hover:text-zinc-300"
               onClick={() => {
@@ -309,27 +327,26 @@ export default function AppLayout() {
             >
               {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
+
             <button
               className="rounded-lg p-2 text-zinc-500 transition hover:bg-stone-300/50 hover:text-zinc-800 dark:text-zinc-500 dark:hover:bg-white/8 dark:hover:text-zinc-300"
               onClick={() => {
                 localStorage.removeItem('token');
                 navigate('/login', { replace: true });
               }}
-              title="Cerrar sesión"
-              aria-label="Cerrar sesión"
+              title="Cerrar sesion"
+              aria-label="Cerrar sesion"
             >
               <LogOut size={16} />
             </button>
+
             <UserAvatar email={profile?.email || user?.email} />
           </div>
         </div>
       </header>
 
       {mobileOpen && (
-        <div
-          className="animate-fade-in fixed inset-0 z-40 bg-black/25 backdrop-blur-sm lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="animate-fade-in fixed inset-0 z-40 bg-black/25 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
       {mobileOpen && (
@@ -341,7 +358,7 @@ export default function AppLayout() {
             <button
               className="rounded-lg p-1.5 text-white/50 transition hover:bg-white/10"
               onClick={() => setMobileOpen(false)}
-              aria-label="Cerrar menú lateral"
+              aria-label="Cerrar menu lateral"
             >
               <X size={18} />
             </button>

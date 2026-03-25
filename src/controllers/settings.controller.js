@@ -1,7 +1,7 @@
-﻿const {
+const {
   getSettingsForUser,
   setDefaultPricePerHead,
-  updateClientProfile,
+  updateOwnProfile,
   updateOwnPassword,
 } = require('../services/settings.service');
 
@@ -25,10 +25,12 @@ async function updateSettingsController(req, res, next) {
 
 async function updateOwnProfileController(req, res, next) {
   try {
-    const result = await updateClientProfile({
+    const result = await updateOwnProfile({
       user: req.user,
+      name: req.body.name,
       phone: req.body.phone,
       cedula: req.body.cedula,
+      liquidadorAlias: req.body.liquidadorAlias,
     });
     return res.json(result);
   } catch (error) {

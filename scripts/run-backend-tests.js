@@ -57,6 +57,7 @@ async function main() {
     ...process.env,
     NODE_ENV: 'test',
     DATABASE_URL: env.TEST_DATABASE_URL,
+    DIRECT_URL: env.TEST_DATABASE_URL,
     JWT_SECRET: env.JWT_SECRET,
     PASSWORD_RESET_SECRET: env.PASSWORD_RESET_SECRET,
     CORS_ORIGIN: env.CORS_ORIGIN,

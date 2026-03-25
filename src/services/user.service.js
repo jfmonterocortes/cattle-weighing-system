@@ -99,12 +99,6 @@ async function adminLinkUserToPerson({ userId, personId }) {
     throw err;
   }
 
-  if (user.role === ROLE.ADMIN) {
-    const err = new Error('El administrador no requiere vinculación a persona.');
-    err.statusCode = 400;
-    throw err;
-  }
-
   if (personId === null) {
     return prisma.user.update({ where: { id: userId }, data: { personId: null } });
   }
